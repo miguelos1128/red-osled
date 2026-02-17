@@ -1,0 +1,9 @@
+# Dependencias de Node (son muy pesadas y se instalan solas)
+node_modules/
+
+# Variables de entorno (¡NUNCA subas tus contraseñas!)
+.env
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db

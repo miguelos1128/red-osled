@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Pagos</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="login-card">
+        <h2>Acceso al Sistema</h2>
+        <input type="email" id="correo" placeholder="Correo electrónico" required>
+        <input type="password" id="password" placeholder="Contraseña" required>
+        <button onclick="login()">Entrar al Panel</button>
+        <p id="mensaje" class="error-msg"></p>
+    </div>
+
+    <div id="modalCliente" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h2>Nuevo Cliente</h2>
+            <form id="formCliente">
+                <input type="text" id="nom_cli" placeholder="Nombre Completo" required>
+                <input type="text" id="tel_cli" placeholder="Teléfono">
+                <input type="email" id="cor_cli" placeholder="Correo Electrónico">
+                <textarea id="dir_cli" placeholder="Dirección" style="width:100%; margin: 10px 0; border-radius: 6px; padding: 10px; border: 1px solid #ddd;"></textarea>
+                <button type="submit">Guardar Cliente</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function login() {
+            const correo = document.getElementById('correo').value;
+            const password = document.getElementById('password').value;
+            const mensajeError = document.getElementById('mensaje');
+
+            try {
+                const response = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ correo, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Guardamos la sesión localmente
+                    sessionStorage.setItem('usuario', JSON.stringify(data.user));
+                    window.location.href = 'dashboard.html';
+                } else {
+                    mensajeError.innerText = data.mensaje;
+                }
+            } catch (error) {
+                mensajeError.innerText = "Error de conexión con el servidor";
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Control - Sistema de Pagos</title>
+    <link rel="stylesheet" href="css/styles.css">
+    
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Bienvenido, <span id="user-name">...</span></h1>
+            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+        </div>
+
+        <div id="admin-section" class="admin-only">
+            <h3>Gestión de Clientes (Solo Admin)</h3>
+            <div class="actions">
+                <button class="btn-add" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
+            </div>
+        </div>
+
+        <div class="main-section">
+            <h3>Clientes Registrados</h3>
+            <table id="tabla-clientes">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-clientes-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modalCliente" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h2>Nuevo Cliente</h2>
+            <form id="formCliente">
+                <input type="text" id="nom_cli" placeholder="Nombre Completo" required>
+                <input type="text" id="tel_cli" placeholder="Teléfono">
+                <input type="email" id="cor_cli" placeholder="Correo Electrónico">
+                <textarea id="dir_cli" placeholder="Dirección" style="width:100%; margin: 10px 0; border-radius: 6px; padding: 10px; border: 1px solid #ddd;"></textarea>
+                <button type="submit">Guardar Cliente</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        // 1. Verificar si hay una sesión activa
+        const usuarioJson = sessionStorage.getItem('usuario');
+        if (!usuarioJson) {
+            window.location.href = 'index.html';
+        }
+
+        const usuario = JSON.parse(usuarioJson);
+        document.getElementById('user-name').innerText = usuario.nombre;
+
+        // 2. Lógica de Roles: Mostrar sección de admin si rol_id es 2
+        if (usuario.rol === 2) {
+            document.getElementById('admin-section').style.display = 'block';
+        }
+
+        // 3. Función para cerrar sesión
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        // 4. Cargar clientes desde el servidor
+        async function cargarClientes() {
+            try {
+                const response = await fetch('http://localhost:3000/api/clientes');
+                const clientes = await response.json();
+                const tbody = document.getElementById('lista-clientes-body');
+                
+                tbody.innerHTML = '';
+                clientes.forEach(c => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${c.id}</td>
+                            <td>${c.nombre_completo}</td>
+                            <td>${c.estado_servicio}</td>
+                            <td>
+                                <button onclick="irAPagar(${c.id})">Registrar Pago</button>
+                                ${usuario.rol === 2 ? `<button style="background:red" onclick="eliminarCliente(${c.id})">Eliminar</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error al cargar clientes", error);
+            }
+        }
+
+        function irAPagar(id) {
+            alert("Redirigiendo a pago del cliente " + id);
+            // Aquí luego crearemos la lógica de cobro
+        }
+
+        cargarClientes();
+
+        // Funciones para el Modal------------
+        function mostrarFormularioCliente() {
+            document.getElementById('modalCliente').classList.remove('hidden');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalCliente').classList.add('hidden');
+            document.getElementById('formCliente').reset();
+        }
+
+        // Procesar el formulario
+        document.getElementById('formCliente').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const nuevoCliente = {
+                nombre_completo: document.getElementById('nom_cli').value,
+                telefono: document.getElementById('tel_cli').value,
+                correo: document.getElementById('cor_cli').value,
+                direccion: document.getElementById('dir_cli').value
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/api/clientes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nuevoCliente)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert("¡Cliente agregado!");
+                    cerrarModal();
+                    cargarClientes(); // Recargamos la tabla automáticamente
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (error) {
+                console.error("Error en la petición:", error);
+            }
+        });
+    </script>
+</body>
+</html>

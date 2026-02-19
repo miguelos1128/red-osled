@@ -22,12 +22,21 @@ const db = mysql.createConnection({
 });
 
 // Conectar a la base de datos
+// Conectar a la base de datos
 db.connect((err) => {
     if (err) {
         console.error('Error al conectar a MySQL: ', err);
         return;
     }
-    console.log('✅ Conectado exitosamente a la base de datos MySQL');
+    console.log('------------------------------------------------');
+    console.log('✅ Conectado a la Base de Datos: ' + process.env.DB_NAME);
+    console.log('------------------------------------------------');
+    
+    if(process.env.DB_NAME === 'sistema_pagos_produccion') {
+        console.warn('⚠️  CUIDADO: ESTÁS EN MODO PRODUCCIÓN (DATOS REALES) ⚠️');
+    } else {
+        console.log('🛠️  Modo Pruebas (Puedes hacer desastres con confianza)');
+    }
 });
 
 // 4. Rutas de prueba (Endpoints)

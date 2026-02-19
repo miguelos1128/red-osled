@@ -85,22 +85,22 @@ app.listen(PORT, () => {
 });
 
 // Ruta para agregar un nuevo cliente (POST)
+// Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', (req, res) => {
-    const { nombre_completo, telefono, correo, direccion } = req.body;
+    const { 
+        nombre_completo, telefono, correo, direccion, 
+        fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual 
+    } = req.body;
 
-    // Validación básica
-    if (!nombre_completo) {
-        return res.status(400).json({ error: "El nombre es obligatorio" });
-    }
-
-    const query = `INSERT INTO clientes (nombre_completo, telefono, correo, direccion) 
-                   VALUES (?, ?, ?, ?)`;
+    const query = `INSERT INTO clientes 
+                   (nombre_completo, telefono, correo, direccion, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     
-    db.query(query, [nombre_completo, telefono, correo, direccion], (err, result) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ error: "Error al guardar el cliente" });
-        }
-        res.json({ success: true, mensaje: "Cliente registrado con éxito", id: result.insertId });
+    db.query(query, [
+        nombre_completo, telefono, correo, direccion, 
+        fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual
+    ], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, mensaje: "Cliente creado con éxito" });
     });
 });

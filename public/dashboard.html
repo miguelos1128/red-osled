@@ -42,11 +42,47 @@
             <span class="close" onclick="cerrarModal()">&times;</span>
             <h2>Nuevo Cliente</h2>
             <form id="formCliente">
-                <input type="text" id="nom_cli" placeholder="Nombre Completo" required>
-                <input type="text" id="tel_cli" placeholder="Teléfono">
+                <label>Nombre Completo:</label>
+                <input type="text" id="nom_cli" placeholder="Ej. Juan Pérez" required>
+
+                <label>Teléfono (10 dígitos):</label>
+                <input type="text" id="tel_cli" placeholder="Ej. 5512345678" maxlength="10" 
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+
                 <input type="email" id="cor_cli" placeholder="Correo Electrónico">
-                <textarea id="dir_cli" placeholder="Dirección" style="width:100%; margin: 10px 0; border-radius: 6px; padding: 10px; border: 1px solid #ddd;"></textarea>
-                <button type="submit">Guardar Cliente</button>
+                <textarea id="dir_cli" placeholder="Dirección completa" required style="width:100%; margin: 10px 0; border: 1px solid #ddd;"></textarea>
+
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1">
+                        <label>Fecha Instalación:</label>
+                        <input type="date" id="fecha_ins" required>
+                    </div>
+                    <div style="flex:1">
+                        <label>Día de Pago:</label>
+                        <input type="number" id="dia_pago" placeholder="1-30" min="1" max="30" required>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1">
+                        <label>IP:</label>
+                        <input type="number" id="ip_cli" placeholder="Ej. 128" min="1" max="254" required>
+                    </div>
+                    <div style="flex:1">
+                        <label>Señal (30-90):</label>
+                        <input type="number" id="senal_cli" placeholder="Ej. 60" min="30" max="90" required>
+                    </div>
+                </div>
+
+                <select id="paquete_cli" onchange="actualizarCosto()" required>
+                    <option value="">Selecciona Paquete</option>
+                    <option value="5M">5 Megas</option>
+                    <option value="8M">8 Megas</option>
+                    <option value="16M">16 Megas</option>
+                </select>
+                <input type="number" id="costo_cli" placeholder="Costo Mensual ($)" required>
+
+                <button type="submit" style="margin-top:15px;">Guardar Cliente</button>
             </form>
         </div>
     </div>
@@ -115,16 +151,78 @@
         }
 
         // Procesar el formulario
+        // 1. Configurar la fecha máxima como "HOY" al cargar la página
+        window.onload = function() {
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('fecha_ins').setAttribute('max', hoy);
+            cargarClientes(); // Tu función existente
+        };
+
+        // 2. Lógica de validación y envío
         document.getElementById('formCliente').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // Recolectar valores
+            const nombre = document.getElementById('nom_cli').value.trim();
+            const telefono = document.getElementById('tel_cli').value.trim();
+            const correo = document.getElementById('cor_cli').value.trim();
+            const direccion = document.getElementById('dir_cli').value.trim();
+            const fecha = document.getElementById('fecha_ins').value;
+            const diaPago = parseInt(document.getElementById('dia_pago').value);
+            const ip = parseInt(document.getElementById('ip_cli').value);
+            const senal = parseInt(document.getElementById('senal_cli').value);
+            const paquete = document.getElementById('paquete_cli').value;
+            const costo = document.getElementById('costo_cli').value;
+
+            // --- LISTA DE ERRORES ---
+            let errores = [];
+
+            // Validar vacíos y reglas específicas
+            if (!nombre) errores.push("- El Nombre es obligatorio.");
+            if (!direccion) errores.push("- La Dirección es obligatoria.");
+            
+            // Validación Teléfono (10 dígitos exactos)
+            if (telefono.length !== 10) errores.push("- El Teléfono debe tener exactamente 10 dígitos.");
+            
+            // Validación Día de Pago
+            if (isNaN(diaPago) || diaPago < 1 || diaPago > 30) {
+                errores.push("- El Día de Pago debe ser entre 1 y 30.");
+            }
+
+            // Validación IP (1 a 254)
+            if (isNaN(ip) || ip < 1 || ip > 254) {
+                errores.push("- La IP debe ser un número entre 1 y 254.");
+            }
+
+            // Validación Señal (30 a 90)
+            if (isNaN(senal) || senal < 30 || senal > 90) {
+                errores.push("- La Señal debe ser un valor entre 30 y 90.");
+            }
+
+            if (!paquete) errores.push("- Debes seleccionar un Paquete.");
+            if (!fecha) errores.push("- La Fecha de Instalación es obligatoria.");
+
+            // --- MOSTRAR ERRORES SI EXISTEN ---
+            if (errores.length > 0) {
+                alert("Por favor corrige los siguientes errores:\n\n" + errores.join("\n"));
+                return; // Detenemos el código aquí, no se envía nada al servidor
+            }
+
+            // Si todo está bien, preparamos el objeto
             const nuevoCliente = {
-                nombre_completo: document.getElementById('nom_cli').value,
-                telefono: document.getElementById('tel_cli').value,
-                correo: document.getElementById('cor_cli').value,
-                direccion: document.getElementById('dir_cli').value
+                nombre_completo: nombre,
+                telefono: telefono,
+                correo: correo,
+                direccion: direccion,
+                fecha_instalacion: fecha,
+                dia_pago: diaPago,
+                direccion_ip: ip,   // Ahora sí enviamos un número limpio
+                señal: senal,       // Número limpio
+                paquete: paquete,
+                costo_mensual: costo
             };
 
+            // Enviar al servidor
             try {
                 const response = await fetch('http://localhost:3000/api/clientes', {
                     method: 'POST',
@@ -135,16 +233,25 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert("¡Cliente agregado!");
+                    alert("¡Cliente guardado correctamente!");
                     cerrarModal();
-                    cargarClientes(); // Recargamos la tabla automáticamente
+                    cargarClientes();
                 } else {
-                    alert("Error: " + data.error);
+                    alert("Error del servidor: " + data.error);
                 }
             } catch (error) {
-                console.error("Error en la petición:", error);
+                console.error(error);
+                alert("No se pudo conectar con el servidor.");
             }
         });
+
+        function actualizarCosto() {
+        const paquete = document.getElementById('paquete_cli').value;
+        const costoInput = document.getElementById('costo_cli');
+        if(paquete === '5M') costoInput.value = 300;
+        if(paquete === '8M') costoInput.value = 400;
+        if(paquete === '16M') costoInput.value = 600;
+    }
     </script>
 </body>
 </html>

@@ -162,4 +162,94 @@ td {
     cursor: pointer;
 }
 
+
+
+.sugerencia-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+
+.card-pago {
+    background: #fff;
+    border: 2px solid #1a73e8;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+
+/* Contenedor principal de búsqueda */
+.search-box-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 30px;
+}
+
+.search-field {
+    flex: 1;
+    position: relative;
+}
+
+.search-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #444;
+}
+
+.search-field input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1em;
+}
+
+.search-divider {
+    font-weight: bold;
+    color: #999;
+    padding-top: 25px;
+}
+
+/* Lista de Sugerencias */
+.sugerencias-lista {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.sugerencia-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.sugerencia-item:hover {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+}
+
+/* Estilo del mensaje de adeudo */
+.msg-adeudo {
+    margin-top: 5px;
+    color: #d32f2f;
+    font-weight: 500;
+}
+
+.hidden { display: none; }
 .hidden { display: none !important; }

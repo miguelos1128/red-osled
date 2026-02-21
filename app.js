@@ -113,3 +113,18 @@ app.post('/api/clientes', (req, res) => {
         res.json({ success: true, mensaje: "Cliente creado con éxito" });
     });
 });
+
+// Ruta para buscar clientes por nombre o IP
+app.get('/api/buscar-clientes', (req, res) => {
+    const term = req.query.q; // Lo que el usuario escribe
+    const query = `
+        SELECT id, nombre_completo, direccion_ip, costo_mensual 
+        FROM clientes 
+        WHERE nombre_completo LIKE ? OR direccion_ip LIKE ?
+        LIMIT 10`;
+
+    db.query(query, [`%${term}%`, `%${term}%`], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});

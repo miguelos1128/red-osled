@@ -38,24 +38,24 @@
         </div>
 
         <div class="main-section">
-    <h3>Cobro de Mensualidad</h3>
-    <p class="instrucciones">Ingrese el nombre o la dirección IP del cliente para iniciar el cobro.</p>
-    
-    <div class="search-box-container">
-        <div class="search-field">
-            <label for="buscarNombre">Buscar por Nombre:</label>
-            <input type="text" id="buscarNombre" placeholder="Escriba el nombre..." autocomplete="off" oninput="controladorBusqueda('nombre')">
-            <div id="sugerenciasNombre" class="sugerencias-lista"></div>
-        </div>
+            <h3>Cobro de Mensualidad</h3>
+            <p class="instrucciones">Ingrese el nombre o la dirección IP del cliente para iniciar el cobro.</p>
+            
+            <div class="search-box-container">
+                <div class="search-field">
+                    <label for="buscarNombre">Buscar por Nombre:</label>
+                    <input type="text" id="buscarNombre" placeholder="Escriba el nombre..." autocomplete="off" oninput="controladorBusqueda('nombre')">
+                    <div id="sugerenciasNombre" class="sugerencias-lista"></div>
+                </div>
 
-        <div class="search-divider">O</div>
+                <div class="search-divider">O</div>
 
-        <div class="search-field">
-            <label for="buscarIP">Buscar por Número de Cliente:</label>
-            <input type="text" id="buscarIP" placeholder="Ej. 201" autocomplete="off" oninput="controladorBusqueda('ip')">
-            <div id="sugerenciasIP" class="sugerencias-lista"></div>
-        </div>
-    </div>
+                <div class="search-field">
+                    <label for="buscarIP">Buscar por Número de Cliente:</label>
+                    <input type="text" id="buscarIP" placeholder="Ej. 201" autocomplete="off" oninput="controladorBusqueda('ip')">
+                    <div id="sugerenciasIP" class="sugerencias-lista"></div>
+                </div>
+            </div>
 
             <div id="resultado-busqueda" class="hidden">
                 <div class="card-pago">
@@ -389,7 +389,7 @@ function cerrarModalPago() {
 }
 
 // 4. Lógica FINAL: Confirmación y Mensaje Exacto
-document.getElementById('formConfirmarPago').addEventListener('submit', async (e) => {
+/* document.getElementById('formConfirmarPago').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const mesSeleccionado = document.getElementById('mes-pago').value;
@@ -412,7 +412,9 @@ document.getElementById('formConfirmarPago').addEventListener('submit', async (e
         clienteSeleccionado = null;
     }
 });
+ */
 
+ 
     function prepararPago() {
         // Aquí abriremos el modal que ya teníamos para elegir el mes
         irAPagar(clienteSeleccionado.id, clienteSeleccionado.nombre_completo, clienteSeleccionado.costo_mensual);

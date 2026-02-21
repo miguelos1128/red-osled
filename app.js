@@ -128,3 +128,22 @@ app.get('/api/buscar-clientes', (req, res) => {
         res.json(results);
     });
 });
+
+// RUTA 1: Consultar el último pago de un cliente
+app.get('/api/ultimo-pago/:id', (req, res) => {
+    const { id } = req.params;
+    const query = `
+        SELECT mes_pagado, fecha_pago, monto 
+        FROM pagos 
+        WHERE cliente_id = ? 
+        ORDER BY fecha_pago DESC LIMIT 1`;
+
+    db.query(query, [id], (err, results) => {
+        if (err) {
+            console.error("Error en DB:", err);
+            return res.status(500).json({ error: "Error al consultar historial" });
+        }
+        // Si hay resultados, mandamos el primero, si no, mandamos null
+        res.json(results.length > 0 ? results[0] : null);
+    });
+});

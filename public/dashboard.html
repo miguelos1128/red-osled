@@ -369,6 +369,9 @@ async function controladorBusqueda(tipo) {
 
 // 2. Al hacer clic en un cliente de la lista
 async function seleccionarCliente(cliente) {
+    
+    // LIMPIEZA INICIAL
+    document.getElementById('resultado-busqueda').classList.add('hidden');
     clienteSeleccionado = cliente;
     
     // Limpiar las listas flotantes
@@ -497,7 +500,7 @@ function cerrarModalPago() {
     document.getElementById('monto-pago-input').value = ''; // Limpiar campo
 }
 
-// 4. Lógica FINAL: Confirmación y Mensaje Exacto
+/* // 4. Lógica FINAL: Confirmación y Mensaje Exacto
 document.getElementById('formConfirmarPago').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -529,7 +532,7 @@ document.getElementById('formConfirmarPago').addEventListener('submit', async (e
         console.error("Error:", error);
         alert("Hubo un fallo en la conexión con el servidor.");
     }
-});
+}); */
 
 // 1. Esta función recibe la respuesta del servidor (el detalle de la cascada)
 function mostrarResumenYPrepararImpresion(detalle) {

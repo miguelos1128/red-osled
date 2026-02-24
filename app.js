@@ -172,13 +172,17 @@ app.post('/api/registrar-pago', async (req, res) => {
         let fechaReferencia;
 
         if (ultimoPago.length > 0) {
-            // Si ya tiene pagos, empezamos desde el mes siguiente al último pago
-            // Para este ejemplo simplificado, asumiremos que el sistema guarda el orden cronológico
-            // (En un sistema real, usaríamos un objeto Date para iterar meses)
-            res.status(500).json({ error: "Lógica de continuación de meses en desarrollo" });
-            return;
+            // Si ya tiene pagos, extraemos el mes y año del string "Mes Año" (ej: "Enero 2025")
+            const partes = ultimoPago[0].mes_pagado.split(' ');
+            const mesTexto = partes[0];
+            const año = parseInt(partes[1]);
+            
+            const mesesMap = { "Enero":0, "Febrero":1, "Marzo":2, "Abril":3, "Mayo":4, "Junio":5, "Julio":6, "Agosto":7, "Septiembre":8, "Octubre":9, "Noviembre":10, "Diciembre":11 };
+            
+            // Creamos la fecha de referencia un mes DESPUÉS del último pago
+            fechaReferencia = new Date(año, mesesMap[mesTexto] + 1, 1);
         } else {
-            // CLIENTE NUEVO: Empezamos desde la fecha de instalación
+            // Cliente nuevo
             fechaReferencia = new Date(fecha_instalacion);
         }
 

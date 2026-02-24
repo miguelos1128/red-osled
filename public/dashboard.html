@@ -351,31 +351,62 @@ async function seleccionarCliente(cliente) {
     } else {
         document.getElementById('buscarIP').value = cliente.direccion_ip;
     }
+    console.log(cliente)//-----------------------------------------------------
 
     // Consultar el último pago en la BD de QA
     try {
         const response = await fetch(`http://localhost:3000/api/ultimo-pago/${cliente.id}`);
         const ultimo = await response.json();
 
-        // Llenar la tarjeta con los datos
         document.getElementById('res-nombre').innerText = cliente.nombre_completo;
         document.getElementById('res-ip').innerText = cliente.direccion_ip;
         document.getElementById('res-costo').innerText = cliente.costo_mensual;
         
         const msgUltimoPago = document.getElementById('res-ultimo-pago');
+
         if (ultimo) {
-            msgUltimoPago.innerText = `✅ Último mes pagado: ${ultimo.mes_pagado} (el ${new Date(ultimo.fecha_pago).toLocaleDateString()})`;
-            msgUltimoPago.style.color = "#2e7d32"; // Verde
+            msgUltimoPago.innerHTML = `<span style="color: #2e7d32;">✅ Último pago: ${ultimo.mes_pagado}</span>`;
         } else {
-            msgUltimoPago.innerText = "⚠️ Este es un cliente nuevo. No hay pagos previos registrados.";
-            msgUltimoPago.style.color = "#d32f2f"; // Rojo
+            // AQUÍ APLICAMOS TU LÓGICA DE FECHA DE INSTALACIÓN
+            const deuda = calcularAdeudoInicial(cliente.fecha_instalacion, cliente.costo_mensual);
+            
+            if (deuda.mesesDeuda > 0) {
+                msgUltimoPago.innerHTML = `
+                    <span style="color: #d32f2f;">⚠️ Cliente sin pagos previos.</span><br>
+                    <strong>Fecha de instalación (${cliente.fecha_instalacion.split('T')[0]}):</strong><br>
+                    ${deuda.mesesDeuda} mes(es) pendientes = <span style="font-size: 1.2em;">$${deuda.montoTotal}</span>
+                `;
+            } else {
+                msgUltimoPago.innerHTML = `<span style="color: #1a73e8;">🆕 Instalación reciente. Al corriente.</span>`;
+            }
         }
 
-        // Mostrar la tarjeta
         document.getElementById('resultado-busqueda').classList.remove('hidden');
     } catch (error) {
-        console.error("Error al obtener último pago:", error);
+        console.error("Error:", error);
     }
+}
+
+function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {
+    if (!fechaInstalacion) return { meses: 0, total: 0 };
+
+    const fInstala = new Date(fechaInstalacion);
+    const fHoy = new Date();
+    
+    // Diferencia total de meses
+    let meses = (fHoy.getFullYear() - fInstala.getFullYear()) * 12;
+    meses += fHoy.getMonth() - fInstala.getMonth();
+
+    // Si aún no llegamos al día del mes de la instalación, ese mes no se cuenta
+    if (fHoy.getDate() < fInstala.getDate()) {
+        meses--;
+    }
+
+    const mesesDeuda = meses <= 0 ? 0 : meses;
+    return {
+        meses: mesesDeuda,
+        total: mesesDeuda * costoMensual
+    };
 }
 
 // 3. Abrir el modal de pago
@@ -414,7 +445,35 @@ function cerrarModalPago() {
 });
  */
 
- 
+    // Función para calcular adeudo inicial
+    function calcularAdeudoInicial(fechaInstalacion, costoMensual) {
+        const inicio = new Date(fechaInstalacion);
+        const hoy = new Date();
+
+        console.log("fecha inicial:"+ fechaInstalacion + " fecha actual = " +hoy)
+        
+        // Calculamos la diferencia en meses
+        let meses = (hoy.getFullYear() - inicio.getFullYear()) * 12;
+        meses -= inicio.getMonth();
+        meses += hoy.getMonth();
+
+        // Si el día de hoy es menor al día de instalación, aún no se cumple el mes completo
+        if (hoy.getDate() < inicio.getDate()) {
+            meses--;
+        }
+
+        // El adeudo no puede ser negativo
+        const mesesDeuda = meses < 0 ? 0 : meses;
+        const montoTotal = mesesDeuda * costoMensual;
+
+        console.log("meses deuda: "+ mesesDeuda + "montoTotal: " + montoTotal)
+
+        return {
+            mesesDeuda,
+            montoTotal
+        };
+    }
+
     function prepararPago() {
         // Aquí abriremos el modal que ya teníamos para elegir el mes
         irAPagar(clienteSeleccionado.id, clienteSeleccionado.nombre_completo, clienteSeleccionado.costo_mensual);

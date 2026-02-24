@@ -116,9 +116,10 @@ app.post('/api/clientes', (req, res) => {
 
 // Ruta para buscar clientes por nombre o IP
 app.get('/api/buscar-clientes', (req, res) => {
-    const term = req.query.q; // Lo que el usuario escribe
+    const term = req.query.q; //Lo que el cliente escribe
+    // Agregamos fecha_instalacion a la consulta
     const query = `
-        SELECT id, nombre_completo, direccion_ip, costo_mensual 
+        SELECT id, nombre_completo, direccion_ip, costo_mensual, fecha_instalacion 
         FROM clientes 
         WHERE nombre_completo LIKE ? OR direccion_ip LIKE ?
         LIMIT 10`;

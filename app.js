@@ -148,3 +148,80 @@ app.get('/api/ultimo-pago/:id', (req, res) => {
         res.json(results.length > 0 ? results[0] : null);
     });
 });
+
+app.post('/api/registrar-pago', async (req, res) => {
+    const { clienteId, montoRecibido, usuarioId } = req.body;
+
+    try {
+        // 1. Obtener datos del cliente (Costo y Fecha Instalación)
+        const [cliente] = await db.promise().query(
+            'SELECT costo_mensual, fecha_instalacion FROM clientes WHERE id = ?', 
+            [clienteId]
+        );
+
+        if (!cliente.length) return res.status(404).json({ error: "Cliente no encontrado" });
+        const { costo_mensual, fecha_instalacion } = cliente[0];
+
+        // 2. Obtener el último mes pagado (si existe)
+        const [ultimoPago] = await db.promise().query(
+            'SELECT mes_pagado, fecha_pago FROM pagos WHERE cliente_id = ? ORDER BY id DESC LIMIT 1',
+            [clienteId]
+        );
+
+        let saldoRestante = parseFloat(montoRecibido);
+        let fechaReferencia;
+
+        if (ultimoPago.length > 0) {
+            // Si ya tiene pagos, empezamos desde el mes siguiente al último pago
+            // Para este ejemplo simplificado, asumiremos que el sistema guarda el orden cronológico
+            // (En un sistema real, usaríamos un objeto Date para iterar meses)
+            res.status(500).json({ error: "Lógica de continuación de meses en desarrollo" });
+            return;
+        } else {
+            // CLIENTE NUEVO: Empezamos desde la fecha de instalación
+            fechaReferencia = new Date(fecha_instalacion);
+        }
+
+        const registros = [];
+        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+        // 3. BUCLE DE CASCADA 🌊
+        while (saldoRestante > 0) {
+            let mesNombre = nombresMeses[fechaReferencia.getMonth()];
+            let año = fechaReferencia.getFullYear();
+            let etiquetaMes = `${mesNombre} ${año}`;
+            
+            let montoAAplicar = 0;
+            let tipo = 'completo';
+
+            if (saldoRestante >= costo_mensual) {
+                // Cubre el mes completo
+                montoAAplicar = costo_mensual;
+                saldoRestante -= costo_mensual;
+                tipo = 'completo';
+            } else {
+                // Es un abono parcial
+                montoAAplicar = saldoRestante;
+                saldoRestante = 0;
+                tipo = 'abono';
+            }
+
+            // Guardar en la base de datos
+            await db.promise().query(
+                'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
+                [clienteId, usuarioId, montoAAplicar, etiquetaMes, tipo]
+            );
+
+            registros.push({ mes: etiquetaMes, monto: montoAAplicar, tipo });
+            
+            // Avanzar al siguiente mes para la siguiente iteración
+            fechaReferencia.setMonth(fechaReferencia.getMonth() + 1);
+        }
+
+        res.json({ success: true, detalle: registros });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al procesar el pago en cascada" });
+    }
+});

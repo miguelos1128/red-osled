@@ -76,6 +76,34 @@
         </div>
     </div>
 
+    <div id="modalPago" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModalPago()">&times;</span>
+            <h2 style="margin-bottom: 10px;">Registrar Cobro</h2>
+            <p style="margin-bottom: 20px; color: #555;">
+                Cliente: <strong id="modal-nombre-cliente"></strong>
+            </p>
+
+            <div class="input-group">
+                <label style="display: block; font-weight: bold; margin-bottom: 8px;">
+                    Monto recibido en efectivo ($):
+                </label>
+                <input type="number" id="monto-pago-input" 
+                    placeholder="Ej: 1000" 
+                    style="width: 100%; padding: 12px; font-size: 1.5em; border: 2px solid #1a73e8; border-radius: 8px; text-align: center;">
+                
+                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                    * El sistema distribuirá este monto automáticamente empezando por el mes más antiguo pendiente.
+                </p>
+            </div>
+
+            <button onclick="procesarPagoFinal()" class="btn-success" 
+                    style="width: 100%; padding: 15px; margin-top: 20px; font-size: 1.1em; background-color: #28a745; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">
+                Confirmar y Pagar
+            </button>
+        </div>
+    </div>
+
     <div id="modalCliente" class="modal hidden">
         <div class="modal-content">
             <span class="close" onclick="cerrarModal()">&times;</span>
@@ -163,7 +191,9 @@
                             <td>${c.nombre_completo}</td>
                             <td>${c.estado_servicio}</td>
                             <td>
-                                <button onclick="irAPagar(${c.id})">Registrar Pago</button>
+                                <button onclick="seleccionarClienteDirecto(${JSON.stringify(c).replace(/"/g, '&quot;')})">
+                                    Registrar Pago
+                                </button>
                                 ${usuario.rol === 2 ? `<button style="background:red" onclick="eliminarCliente(${c.id})">Eliminar</button>` : ''}
                             </td>
                         </tr>
@@ -411,40 +441,204 @@ function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {
 
 // 3. Abrir el modal de pago
 function prepararPago() {
-    document.getElementById('monto-confirmar').innerText = `$${clienteSeleccionado.costo_mensual}`;
+
+   if (!clienteSeleccionado) return;
+
+    document.getElementById('modal-nombre-cliente').innerText = clienteSeleccionado.nombre_completo;
+    
+    // Dejamos el campo vacío para que el cobrador escriba lo que recibió
+    const inputMonto = document.getElementById('monto-pago-input');
+    inputMonto.value = ''; 
+    
     document.getElementById('modalPago').classList.remove('hidden');
+
+    // Ponemos el cursor automáticamente en el cuadro de texto
+    setTimeout(() => inputMonto.focus(), 200);
+
+    
+    /* document.getElementById('monto-confirmar').innerText = `$${clienteSeleccionado.costo_mensual}`;
+    document.getElementById('modalPago').classList.remove('hidden'); */
+
 }
+
+
+    // Esta función va dentro del evento submit de tu formulario de pago
+    async function procesarPagoFinal() {
+        const monto = parseFloat(document.getElementById('monto-pago-input').value);
+        
+        if (!monto || monto <= 0) {
+            alert("Por favor ingresa un monto válido");
+            return;
+        }
+
+        // Llamada al backend que ya hicimos
+        const response = await fetch('/api/registrar-pago', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                clienteId: clienteSeleccionado.id,
+                montoRecibido: monto,
+                usuarioId: sessionStorage.getItem('usuarioId') // Asegúrate de tener esto
+            })
+        });
+
+        const resultado = await response.json();
+
+        if (resultado.success) {
+            // Aquí disparamos el ticket que vimos antes
+            generarTicketImpresion(resultado.detalle);
+        } else {
+            alert("Error: " + resultado.error);
+        }
+    }
 
 function cerrarModalPago() {
     document.getElementById('modalPago').classList.add('hidden');
+    document.getElementById('monto-pago-input').value = ''; // Limpiar campo
 }
 
 // 4. Lógica FINAL: Confirmación y Mensaje Exacto
-/* document.getElementById('formConfirmarPago').addEventListener('submit', async (e) => {
+document.getElementById('formConfirmarPago').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const mesSeleccionado = document.getElementById('mes-pago').value;
-    const montoPagar = clienteSeleccionado.costo_mensual;
+    const montoRecibido = parseFloat(document.getElementById('monto-pago-input').value);
+    const clienteId = clienteSeleccionado.id;
+    const usuarioId = sessionStorage.getItem('usuarioId') || 1; // Ajusta según tu login
+
+    // Mensaje de confirmación inicial
+    const confirmacion = confirm(`¿Confirmar recibo de $${montoRecibido} para el cliente ${clienteSeleccionado.nombre_completo}?`);
     
-    // El mensaje de alerta que pediste exactamente
-    const mensaje = `Está realizando el pago por el monto $${montoPagar} correspondiente al mes de ${mesSeleccionado}.\n\n¿Desea confirmar el registro?`;
-    
-    if (confirm(mensaje)) {
-        // --- AQUÍ HAREMOS LA INSERCIÓN A LA BASE DE DATOS LUEGO ---
-        // Por ahora simulamos el éxito:
-        
-        alert(`✅ Pago registrado con éxito.`);
-        
-        // Limpiamos todo para el siguiente cobro
-        cerrarModalPago();
-        document.getElementById('resultado-busqueda').classList.add('hidden');
-        document.getElementById('buscarNombre').value = '';
-        document.getElementById('buscarIP').value = '';
-        clienteSeleccionado = null;
+    if (!confirmacion) return;
+
+    try {
+        const response = await fetch('http://localhost:3000/api/registrar-pago', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clienteId, montoRecibido, usuarioId })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            cerrarModalPago();
+            mostrarResumenYPrepararImpresion(data.detalle);
+        } else {
+            alert("Error al procesar: " + data.error);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Hubo un fallo en la conexión con el servidor.");
     }
 });
- */
 
+// 1. Esta función recibe la respuesta del servidor (el detalle de la cascada)
+function mostrarResumenYPrepararImpresion(detalle) {
+    let resumenTexto = "✅ PAGO REGISTRADO CON ÉXITO\n\n";
+    resumenTexto += "El sistema ha distribuido el pago así:\n";
+    
+    // Construimos el mensaje inteligente mes por mes
+    detalle.forEach(item => {
+        const tipoLabel = item.tipo === 'completo' ? "Monto Completo" : "Abono a cuenta";
+        resumenTexto += `• ${item.mes}: $${item.monto} (${tipoLabel})\n`;
+    });
+
+    resumenTexto += "\n¿Desea imprimir el comprobante para el cliente?";
+
+    // Si el cobrador acepta, abrimos la ventana de impresión
+    if (confirm(resumenTexto)) {
+        generarTicketImpresion(detalle);
+    } else {
+        // Si no, simplemente refrescamos para quedar listos para el siguiente cliente
+        location.reload();
+    }
+}
+
+// 2. Función que crea el ticket visual
+function generarTicketImpresion(detalle) {
+    const ventana = window.open('', '_blank', 'width=450,height=600');
+    
+    // Generamos las filas de la tabla del ticket
+    let filasTicket = detalle.map(item => `
+        <tr>
+            <td style="padding: 5px 0;">${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}</td>
+            <td align="right" style="padding: 5px 0;">$${item.monto}</td>
+        </tr>
+    `).join('');
+
+    const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
+
+    // Escribimos el HTML del ticket (Estilo Recibo Térmico)
+    ventana.document.write(`
+        <html>
+        <head>
+            <title>Recibo RED OSLED</title>
+            <style>
+                body { font-family: 'Courier New', Courier, monospace; padding: 20px; color: #000; }
+                .text-center { text-align: center; }
+                .divider { border-top: 1px dashed #000; margin: 10px 0; }
+                table { width: 100%; border-collapse: collapse; }
+                .footer { font-size: 12px; margin-top: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="text-center">
+                <h2 style="margin:0;">RED OSLED</h2>
+                <p style="margin:5px 0;">Internet de Alta Velocidad</p>
+                <p style="font-size:12px;">Fecha: ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p><strong>Cliente:</strong> ${clienteSeleccionado.nombre_completo}<br>
+            <strong>IP:</strong> ${clienteSeleccionado.direccion_ip}</p>
+            
+            <div class="divider"></div>
+            
+            <table>
+                <thead>
+                    <tr style="border-bottom: 1px solid #000;">
+                        <th align="left">Concepto / Mes</th>
+                        <th align="right">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasTicket}
+                </tbody>
+            </table>
+            
+            <div class="divider" style="border-top: 2px solid #000;"></div>
+            
+            <div align="right" style="font-size: 18px;">
+                <strong>TOTAL PAGADO: $${total}</strong>
+            </div>
+            
+            <div class="footer text-center">
+                <p>¡Gracias por su preferencia!</p>
+                <p>Este es un comprobante de pago oficial generado por el sistema.</p>
+            </div>
+
+            <script>
+                // Esto hace que la ventana se mande a imprimir sola al cargar
+                window.onload = function() { 
+                    window.print(); 
+                    window.close(); 
+                    window.opener.location.reload(); // Recarga la pestaña principal
+                };
+            <\/script>
+        </body>
+        </html>
+    `);
+    
+    ventana.document.close();
+}
+
+function seleccionarClienteDirecto(cliente) {
+    // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    
+    // 2. Ejecutamos la lógica de selección que ya tenemos programada
+    seleccionarCliente(cliente);
+}
     // Función para calcular adeudo inicial
     function calcularAdeudoInicial(fechaInstalacion, costoMensual) {
         const inicio = new Date(fechaInstalacion);
@@ -474,10 +668,31 @@ function cerrarModalPago() {
         };
     }
 
-    function prepararPago() {
+  /*   function prepararPago() {
         // Aquí abriremos el modal que ya teníamos para elegir el mes
         irAPagar(clienteSeleccionado.id, clienteSeleccionado.nombre_completo, clienteSeleccionado.costo_mensual);
-    }
+    } */
     </script>
+
+    <!-- <div id="modalPago" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModalPago()">&times;</span>
+            <h2>Confirmar Cobro</h2>
+            <hr>
+            <div class="modal-body">
+                <p>Cliente: <strong id="modal-nombre-cliente"></strong></p>
+                <p>Deuda Total: <strong id="modal-deuda-total" style="color: red;"></strong></p>
+                
+                <div class="input-group" style="margin-top: 20px;">
+                    <label>Monto recibido en efectivo ($):</label>
+                    <input type="number" id="monto-pago-input" placeholder="0.00" step="0.01" style="width: 100%; padding: 10px; font-size: 1.2em;">
+                </div>
+                
+                <button onclick="procesarPagoFinal()" class="btn-success" style="margin-top: 20px; padding: 15px;">
+                    Registrar y Generar Ticket
+                </button>
+            </div>
+        </div>
+    </div> -->
 </body>
 </html>

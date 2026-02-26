@@ -396,9 +396,25 @@ async function seleccionarCliente(cliente) {
         document.getElementById('res-costo').innerText = cliente.costo_mensual;
         
         const msgUltimoPago = document.getElementById('res-ultimo-pago');
-
+        const costoMensual = parseFloat(cliente.costo_mensual);
+        console.log(ultimo) 
+        // En dashboard.html -> seleccionarCliente
         if (ultimo) {
-            msgUltimoPago.innerHTML = `<span style="color: #2e7d32;">✅ Último pago: ${ultimo.mes_pagado}</span>`;
+            
+            //msgUltimoPago.innerHTML = `<span style="color: #2e7d32;">✅ Último pago: ${ultimo.mes_pagado}</span>`;
+            if (ultimo.tipo_pago === 'abono') {
+                console.log(ultimo.tipo_pago)
+                const pendiente = costoMensual - parseFloat(ultimo.monto);
+                msgUltimoPago.innerHTML = `
+                    <span style="color: #d32f2f; font-weight: bold;">
+                        ⚠️ SALDO PENDIENTE: $${pendiente.toFixed(2)} en ${ultimo.mes_pagado}
+                    </span>`;
+            } else {
+                msgUltimoPago.innerHTML = `
+                    <span style="color: #2e7d32;">
+                        ✅ Último pago completo: ${ultimo.mes_pagado}
+                    </span>`;
+            }
         } else {
             // AQUÍ APLICAMOS TU LÓGICA DE FECHA DE INSTALACIÓN
             const deuda = calcularAdeudoInicial(cliente.fecha_instalacion, cliente.costo_mensual);
@@ -558,7 +574,13 @@ function mostrarResumenYPrepararImpresion(detalle) {
 
 // 2. Función que crea el ticket visual
 function generarTicketImpresion(detalle) {
-    const ventana = window.open('', '_blank', 'width=450,height=600');
+    console.log(detalle)
+    if (!detalle || detalle.length === 0) {
+        alert("Error: No hay datos para el ticket. El pago se registró pero el desglose falló.");
+        location.reload();
+        return;
+    }
+    const ventana = window.open('', '_blank', 'width=900,height=1200');
     
     // Generamos las filas de la tabla del ticket
     let filasTicket = detalle.map(item => `

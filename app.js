@@ -134,7 +134,7 @@ app.get('/api/buscar-clientes', (req, res) => {
 app.get('/api/ultimo-pago/:id', (req, res) => {
     const { id } = req.params;
     const query = `
-        SELECT mes_pagado, fecha_pago, monto 
+        SELECT mes_pagado, fecha_pago, monto,  tipo_pago
         FROM pagos 
         WHERE cliente_id = ? 
         ORDER BY fecha_pago DESC LIMIT 1`;
@@ -151,7 +151,7 @@ app.get('/api/ultimo-pago/:id', (req, res) => {
 
 app.post('/api/registrar-pago', async (req, res) => {
     const { clienteId, montoRecibido, usuarioId } = req.body;
-
+        const registros = [];
     try {
         // 1. Obtener datos del cliente (Costo y Fecha Instalación)
         const [cliente] = await db.promise().query(
@@ -164,29 +164,72 @@ app.post('/api/registrar-pago', async (req, res) => {
 
         // 2. Obtener el último mes pagado (si existe)
         const [ultimoPago] = await db.promise().query(
-            'SELECT mes_pagado, fecha_pago FROM pagos WHERE cliente_id = ? ORDER BY id DESC LIMIT 1',
+            'SELECT mes_pagado, monto, tipo_pago FROM pagos WHERE cliente_id = ? ORDER BY id DESC LIMIT 1',
             [clienteId]
         );
 
+        console.log("--- DEBUG COBRO ---");
+        console.log("Último registro encontrado:", ultimoPago[0]);
+        console.log("Monto del paquete:", costo_mensual);
+
         let saldoRestante = parseFloat(montoRecibido);
         let fechaReferencia;
+        let mesYaIniciado = false;
 
         if (ultimoPago.length > 0) {
-            // Si ya tiene pagos, extraemos el mes y año del string "Mes Año" (ej: "Enero 2025")
-            const partes = ultimoPago[0].mes_pagado.split(' ');
-            const mesTexto = partes[0];
-            const año = parseInt(partes[1]);
-            
+            const ultimo = ultimoPago[0];
+            const partes = ultimo.mes_pagado.split(' ');
             const mesesMap = { "Enero":0, "Febrero":1, "Marzo":2, "Abril":3, "Mayo":4, "Junio":5, "Julio":6, "Agosto":7, "Septiembre":8, "Octubre":9, "Noviembre":10, "Diciembre":11 };
             
-            // Creamos la fecha de referencia un mes DESPUÉS del último pago
-            fechaReferencia = new Date(año, mesesMap[mesTexto] + 1, 1);
+            // Si el último registro fue un abono, nos quedamos en ese mismo mes para completarlo
+            if (ultimo.tipo_pago === 'abono') {
+                fechaReferencia = new Date(parseInt(partes[1]), mesesMap[partes[0]], 1);
+                
+                // Calculamos cuánto falta para completar este mes
+                const pendienteMes = costo_mensual - parseFloat(ultimo.monto);
+                
+                console.log(`Completando mes: ${ultimo.mes_pagado}. Falta: ${pendienteMes}`);
+
+                if (saldoRestante >= pendienteMes) {
+                    // El dinero alcanza para completar el mes
+                    await db.promise().query(
+                        'UPDATE pagos SET monto = ?, tipo_pago = "completo" WHERE id = (SELECT id FROM (SELECT id FROM pagos WHERE cliente_id = ? ORDER BY id DESC LIMIT 1) as t)',
+                        [costo_mensual, clienteId]
+                    );
+                    registros.push({ 
+                        mes: ultimo.mes_pagado, 
+                        monto: pendienteMes, // Lo que acaba de entregar el cliente
+                        tipo: 'abono' 
+                    });
+                    saldoRestante -= pendienteMes;
+                    // Avanzamos a la siguiente fecha para el bucle while
+                    fechaReferencia.setMonth(fechaReferencia.getMonth() + 1);
+                } else {
+                    console.log("el dinero no alcanza")
+                    // El dinero NO alcanza, solo actualizamos el abono
+                    const nuevoMontoAbono = parseFloat(ultimo.monto) + saldoRestante;
+                    await db.promise().query(
+                        'UPDATE pagos SET monto = ? WHERE id = (SELECT id FROM (SELECT id FROM pagos WHERE cliente_id = ? ORDER BY id DESC LIMIT 1) as t)',
+                        [nuevoMontoAbono, clienteId]
+                    );
+                    console.log("mes: "+ultimo.mes_pagado + "monto "+saldoRestante )
+                    // IMPORTANTE: Agregamos este objeto al detalle para que el ticket no salga en blanco
+                     registros.push({ 
+                        mes: ultimo.mes_pagado, 
+                        monto: saldoRestante, // Lo que acaba de entregar el cliente
+                        tipo: 'abono (completando)' 
+                    }); 
+                    saldoRestante = 0; // Se acabó el dinero
+                }
+            } else {
+                // Si fue completo, empezamos desde el mes siguiente
+                fechaReferencia = new Date(parseInt(partes[1]), mesesMap[partes[0]] + 1, 1);
+            }
         } else {
-            // Cliente nuevo
             fechaReferencia = new Date(fecha_instalacion);
         }
 
-        const registros = [];
+    
         const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
         // 3. BUCLE DE CASCADA 🌊

@@ -204,8 +204,6 @@
             }
         }
 
-
-
         cargarClientes();
 
         // Funciones para el Modal------------
@@ -265,7 +263,7 @@
             // Validación Señal (30 a 90)
             if (isNaN(senal) || senal < 30 || senal > 90) {
                 errores.push("- La Señal debe ser un valor entre 30 y 90.");
-            }
+            }   
 
             if (!paquete) errores.push("- Debes seleccionar un Paquete.");
             if (!fecha) errores.push("- La Fecha de Instalación es obligatoria.");
@@ -314,410 +312,348 @@
         });
 
         function actualizarCosto() {
-        const paquete = document.getElementById('paquete_cli').value;
-        const costoInput = document.getElementById('costo_cli');
-        if(paquete === '5M') costoInput.value = 300;
-        if(paquete === '8M') costoInput.value = 400;
-        if(paquete === '16M') costoInput.value = 600;
-    }
+            const paquete = document.getElementById('paquete_cli').value;
+            const costoInput = document.getElementById('costo_cli');
+            if(paquete === '5M') costoInput.value = 300;
+            if(paquete === '8M') costoInput.value = 400;
+            if(paquete === '16M') costoInput.value = 600;
+        }
 
-    let clienteSeleccionado = null;
+        let clienteSeleccionado = null;
 
-// 1. Controlador inteligente de búsqueda (Alterna entre Nombre e IP)
-async function controladorBusqueda(tipo) {
-    const inputNombre = document.getElementById('buscarNombre');
-    const inputIP = document.getElementById('buscarIP');
-    const listaNombre = document.getElementById('sugerenciasNombre');
-    const listaIP = document.getElementById('sugerenciasIP');
+        // 1. Controlador inteligente de búsqueda (Alterna entre Nombre e IP)
+        async function controladorBusqueda(tipo) {
+            const inputNombre = document.getElementById('buscarNombre');
+            const inputIP = document.getElementById('buscarIP');
+            const listaNombre = document.getElementById('sugerenciasNombre');
+            const listaIP = document.getElementById('sugerenciasIP');
 
-    let query = '';
+            let query = '';
 
-    // Si escribo en "Nombre", limpio la caja de "IP" y viceversa
-    if (tipo === 'nombre') {
-        inputIP.value = '';
-        listaIP.innerHTML = '';
-        query = inputNombre.value;
-    } else {
-        inputNombre.value = '';
-        listaNombre.innerHTML = '';
-        query = inputIP.value;
-    }
-
-    const listaActiva = tipo === 'nombre' ? listaNombre : listaIP;
-
-    // Si hay menos de 2 letras, no buscamos nada para no saturar la BD
-    if (query.length < 2) {
-        listaActiva.innerHTML = '';
-        document.getElementById('resultado-busqueda').classList.add('hidden');
-        return;
-    }
-
-    try {
-        const response = await fetch(`http://localhost:3000/api/buscar-clientes?q=${query}`);
-        const clientes = await response.json();
-
-        // Mostrar los resultados en la lista correspondiente
-        listaActiva.innerHTML = clientes.map(c => `
-            <div class="sugerencia-item" onclick='seleccionarCliente(${JSON.stringify(c).replace(/"/g, "&quot;")})'>
-                <strong>${c.nombre_completo}</strong> - IP: ${c.direccion_ip}
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error("Error al buscar:", error);
-    }
-}
-
-// 2. Al hacer clic en un cliente de la lista
-async function seleccionarCliente(cliente) {
-    
-    // LIMPIEZA INICIAL
-    document.getElementById('resultado-busqueda').classList.add('hidden');
-    clienteSeleccionado = cliente;
-    
-    // Limpiar las listas flotantes
-    document.getElementById('sugerenciasNombre').innerHTML = '';
-    document.getElementById('sugerenciasIP').innerHTML = '';
-    
-    // Rellenar la caja con el dato exacto
-    if (document.getElementById('buscarNombre').value !== '') {
-        document.getElementById('buscarNombre').value = cliente.nombre_completo;
-    } else {
-        document.getElementById('buscarIP').value = cliente.direccion_ip;
-    }
-    console.log(cliente)//-----------------------------------------------------
-
-    // Consultar el último pago en la BD de QA
-    try {
-        const response = await fetch(`http://localhost:3000/api/ultimo-pago/${cliente.id}`);
-        const ultimo = await response.json();
-
-        document.getElementById('res-nombre').innerText = cliente.nombre_completo;
-        document.getElementById('res-ip').innerText = cliente.direccion_ip;
-        document.getElementById('res-costo').innerText = cliente.costo_mensual;
-        
-        const msgUltimoPago = document.getElementById('res-ultimo-pago');
-        const costoMensual = parseFloat(cliente.costo_mensual);
-        console.log(ultimo) 
-        // En dashboard.html -> seleccionarCliente
-        if (ultimo) {
-            
-            //msgUltimoPago.innerHTML = `<span style="color: #2e7d32;">✅ Último pago: ${ultimo.mes_pagado}</span>`;
-            if (ultimo.tipo_pago === 'abono') {
-                console.log(ultimo.tipo_pago)
-                const pendiente = costoMensual - parseFloat(ultimo.monto);
-                msgUltimoPago.innerHTML = `
-                    <span style="color: #d32f2f; font-weight: bold;">
-                        ⚠️ SALDO PENDIENTE: $${pendiente.toFixed(2)} en ${ultimo.mes_pagado}
-                    </span>`;
+            // Si escribo en "Nombre", limpio la caja de "IP" y viceversa
+            if (tipo === 'nombre') {
+                inputIP.value = '';
+                listaIP.innerHTML = '';
+                query = inputNombre.value;
             } else {
-                msgUltimoPago.innerHTML = `
-                    <span style="color: #2e7d32;">
-                        ✅ Último pago completo: ${ultimo.mes_pagado}
-                    </span>`;
+                inputNombre.value = '';
+                listaNombre.innerHTML = '';
+                query = inputIP.value;
             }
-        } else {
-            // AQUÍ APLICAMOS TU LÓGICA DE FECHA DE INSTALACIÓN
-            const deuda = calcularAdeudoInicial(cliente.fecha_instalacion, cliente.costo_mensual);
-            
-            if (deuda.mesesDeuda > 0) {
-                msgUltimoPago.innerHTML = `
-                    <span style="color: #d32f2f;">⚠️ Cliente sin pagos previos.</span><br>
-                    <strong>Fecha de instalación (${cliente.fecha_instalacion.split('T')[0]}):</strong><br>
-                    ${deuda.mesesDeuda} mes(es) pendientes = <span style="font-size: 1.2em;">$${deuda.montoTotal}</span>
-                `;
-            } else {
-                msgUltimoPago.innerHTML = `<span style="color: #1a73e8;">🆕 Instalación reciente. Al corriente.</span>`;
+
+            const listaActiva = tipo === 'nombre' ? listaNombre : listaIP;
+
+            // Si hay menos de 2 letras, no buscamos nada para no saturar la BD
+            if (query.length < 2) {
+                listaActiva.innerHTML = '';
+                document.getElementById('resultado-busqueda').classList.add('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/buscar-clientes?q=${query}`);
+                const clientes = await response.json();
+
+                // Mostrar los resultados en la lista correspondiente
+                listaActiva.innerHTML = clientes.map(c => `
+                    <div class="sugerencia-item" onclick='seleccionarCliente(${JSON.stringify(c).replace(/"/g, "&quot;")})'>
+                        <strong>${c.nombre_completo}</strong> - IP: ${c.direccion_ip}
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error("Error al buscar:", error);
             }
         }
 
-        document.getElementById('resultado-busqueda').classList.remove('hidden');
-    } catch (error) {
-        console.error("Error:", error);
-    }
-}
+        // 2. Al hacer clic en un cliente de la lista
+        async function seleccionarCliente(cliente) {
+            
+            // LIMPIEZA INICIAL
+            document.getElementById('resultado-busqueda').classList.add('hidden');
+            clienteSeleccionado = cliente;
+            
+            // Limpiar las listas flotantes
+            document.getElementById('sugerenciasNombre').innerHTML = '';
+            document.getElementById('sugerenciasIP').innerHTML = '';
+            
+            // Rellenar la caja con el dato exacto
+            if (document.getElementById('buscarNombre').value !== '') {
+                document.getElementById('buscarNombre').value = cliente.nombre_completo;
+            } else {
+                document.getElementById('buscarIP').value = cliente.direccion_ip;
+            }
+            console.log(cliente)//-----------------------------------------------------
 
-function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {
-    if (!fechaInstalacion) return { meses: 0, total: 0 };
+            // Consultar el último pago en la BD de QA
+            try {
+                const response = await fetch(`http://localhost:3000/api/ultimo-pago/${cliente.id}`);
+                const ultimo = await response.json();
 
-    const fInstala = new Date(fechaInstalacion);
-    const fHoy = new Date();
-    
-    // Diferencia total de meses
-    let meses = (fHoy.getFullYear() - fInstala.getFullYear()) * 12;
-    meses += fHoy.getMonth() - fInstala.getMonth();
+                document.getElementById('res-nombre').innerText = cliente.nombre_completo;
+                document.getElementById('res-ip').innerText = cliente.direccion_ip;
+                document.getElementById('res-costo').innerText = cliente.costo_mensual;
+                
+                const msgUltimoPago = document.getElementById('res-ultimo-pago');
+                const costoMensual = parseFloat(cliente.costo_mensual);
+                console.log(ultimo) 
+                // En dashboard.html -> seleccionarCliente
+                if (ultimo) {
+                    
+                    //msgUltimoPago.innerHTML = `<span style="color: #2e7d32;">✅ Último pago: ${ultimo.mes_pagado}</span>`;
+                    if (ultimo.tipo_pago === 'abono') {
+                        console.log(ultimo.tipo_pago)
+                        const pendiente = costoMensual - parseFloat(ultimo.monto);
+                        msgUltimoPago.innerHTML = `
+                            <span style="color: #d32f2f; font-weight: bold;">
+                                ⚠️ SALDO PENDIENTE: $${pendiente.toFixed(2)} en ${ultimo.mes_pagado}
+                            </span>`;
+                    } else {
+                        msgUltimoPago.innerHTML = `
+                            <span style="color: #2e7d32;">
+                                ✅ Último pago completo: ${ultimo.mes_pagado}
+                            </span>`;
+                    }
+                } else {
+                    // AQUÍ APLICAMOS TU LÓGICA DE FECHA DE INSTALACIÓN
+                    const deuda = calcularAdeudoInicial(cliente.fecha_instalacion, cliente.costo_mensual);
+                    
+                    if (deuda.mesesDeuda > 0) {
+                        msgUltimoPago.innerHTML = `
+                            <span style="color: #d32f2f;">⚠️ Cliente sin pagos previos.</span><br>
+                            <strong>Fecha de instalación (${cliente.fecha_instalacion.split('T')[0]}):</strong><br>
+                            ${deuda.mesesDeuda} mes(es) pendientes = <span style="font-size: 1.2em;">$${deuda.montoTotal}</span>
+                        `;
+                    } else {
+                        msgUltimoPago.innerHTML = `<span style="color: #1a73e8;">🆕 Instalación reciente. Al corriente.</span>`;
+                    }
+                }
 
-    // Si aún no llegamos al día del mes de la instalación, ese mes no se cuenta
-    if (fHoy.getDate() < fInstala.getDate()) {
-        meses--;
-    }
-
-    const mesesDeuda = meses <= 0 ? 0 : meses;
-    return {
-        meses: mesesDeuda,
-        total: mesesDeuda * costoMensual
-    };
-}
-
-// 3. Abrir el modal de pago
-function prepararPago() {
-
-   if (!clienteSeleccionado) return;
-
-    document.getElementById('modal-nombre-cliente').innerText = clienteSeleccionado.nombre_completo;
-    
-    // Dejamos el campo vacío para que el cobrador escriba lo que recibió
-    const inputMonto = document.getElementById('monto-pago-input');
-    inputMonto.value = ''; 
-    
-    document.getElementById('modalPago').classList.remove('hidden');
-
-    // Ponemos el cursor automáticamente en el cuadro de texto
-    setTimeout(() => inputMonto.focus(), 200);
-
-    
-    /* document.getElementById('monto-confirmar').innerText = `$${clienteSeleccionado.costo_mensual}`;
-    document.getElementById('modalPago').classList.remove('hidden'); */
-
-}
-
-
-    // Esta función va dentro del evento submit de tu formulario de pago
-    async function procesarPagoFinal() {
-        const monto = parseFloat(document.getElementById('monto-pago-input').value);
-        
-        if (!monto || monto <= 0) {
-            alert("Por favor ingresa un monto válido");
-            return;
+                document.getElementById('resultado-busqueda').classList.remove('hidden');
+            } catch (error) {
+                console.error("Error:", error);
+            }
         }
 
-        // Llamada al backend que ya hicimos
-        const response = await fetch('/api/registrar-pago', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                clienteId: clienteSeleccionado.id,
-                montoRecibido: monto,
-                usuarioId: sessionStorage.getItem('usuarioId') // Asegúrate de tener esto
-            })
-        });
+        function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {
+            if (!fechaInstalacion) return { meses: 0, total: 0 };
 
-        const resultado = await response.json();
-
-        if (resultado.success) {
-            // Aquí disparamos el ticket que vimos antes
-            generarTicketImpresion(resultado.detalle);
-        } else {
-            alert("Error: " + resultado.error);
-        }
-    }
-
-function cerrarModalPago() {
-    document.getElementById('modalPago').classList.add('hidden');
-    document.getElementById('monto-pago-input').value = ''; // Limpiar campo
-}
-
-/* // 4. Lógica FINAL: Confirmación y Mensaje Exacto
-document.getElementById('formConfirmarPago').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const montoRecibido = parseFloat(document.getElementById('monto-pago-input').value);
-    const clienteId = clienteSeleccionado.id;
-    const usuarioId = sessionStorage.getItem('usuarioId') || 1; // Ajusta según tu login
-
-    // Mensaje de confirmación inicial
-    const confirmacion = confirm(`¿Confirmar recibo de $${montoRecibido} para el cliente ${clienteSeleccionado.nombre_completo}?`);
-    
-    if (!confirmacion) return;
-
-    try {
-        const response = await fetch('http://localhost:3000/api/registrar-pago', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clienteId, montoRecibido, usuarioId })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            cerrarModalPago();
-            mostrarResumenYPrepararImpresion(data.detalle);
-        } else {
-            alert("Error al procesar: " + data.error);
-        }
-    } catch (error) {
-        console.error("Error:", error);
-        alert("Hubo un fallo en la conexión con el servidor.");
-    }
-}); */
-
-// 1. Esta función recibe la respuesta del servidor (el detalle de la cascada)
-function mostrarResumenYPrepararImpresion(detalle) {
-    let resumenTexto = "✅ PAGO REGISTRADO CON ÉXITO\n\n";
-    resumenTexto += "El sistema ha distribuido el pago así:\n";
-    
-    // Construimos el mensaje inteligente mes por mes
-    detalle.forEach(item => {
-        const tipoLabel = item.tipo === 'completo' ? "Monto Completo" : "Abono a cuenta";
-        resumenTexto += `• ${item.mes}: $${item.monto} (${tipoLabel})\n`;
-    });
-
-    resumenTexto += "\n¿Desea imprimir el comprobante para el cliente?";
-
-    // Si el cobrador acepta, abrimos la ventana de impresión
-    if (confirm(resumenTexto)) {
-        generarTicketImpresion(detalle);
-    } else {
-        // Si no, simplemente refrescamos para quedar listos para el siguiente cliente
-        location.reload();
-    }
-}
-
-// 2. Función que crea el ticket visual
-function generarTicketImpresion(detalle) {
-    console.log(detalle)
-    if (!detalle || detalle.length === 0) {
-        alert("Error: No hay datos para el ticket. El pago se registró pero el desglose falló.");
-        location.reload();
-        return;
-    }
-    const ventana = window.open('', '_blank', 'width=900,height=1200');
-    
-    // Generamos las filas de la tabla del ticket
-    let filasTicket = detalle.map(item => `
-        <tr>
-            <td style="padding: 5px 0;">${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}</td>
-            <td align="right" style="padding: 5px 0;">$${item.monto}</td>
-        </tr>
-    `).join('');
-
-    const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
-
-    // Escribimos el HTML del ticket (Estilo Recibo Térmico)
-    ventana.document.write(`
-        <html>
-        <head>
-            <title>Recibo RED OSLED</title>
-            <style>
-                body { font-family: 'Courier New', Courier, monospace; padding: 20px; color: #000; }
-                .text-center { text-align: center; }
-                .divider { border-top: 1px dashed #000; margin: 10px 0; }
-                table { width: 100%; border-collapse: collapse; }
-                .footer { font-size: 12px; margin-top: 20px; }
-            </style>
-        </head>
-        <body>
-            <div class="text-center">
-                <h2 style="margin:0;">RED OSLED</h2>
-                <p style="margin:5px 0;">Internet de Alta Velocidad</p>
-                <p style="font-size:12px;">Fecha: ${new Date().toLocaleString()}</p>
-            </div>
+            const fInstala = new Date(fechaInstalacion);
+            const fHoy = new Date();
             
-            <div class="divider"></div>
-            
-            <p><strong>Cliente:</strong> ${clienteSeleccionado.nombre_completo}<br>
-            <strong>IP:</strong> ${clienteSeleccionado.direccion_ip}</p>
-            
-            <div class="divider"></div>
-            
-            <table>
-                <thead>
-                    <tr style="border-bottom: 1px solid #000;">
-                        <th align="left">Concepto / Mes</th>
-                        <th align="right">Monto</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filasTicket}
-                </tbody>
-            </table>
-            
-            <div class="divider" style="border-top: 2px solid #000;"></div>
-            
-            <div align="right" style="font-size: 18px;">
-                <strong>TOTAL PAGADO: $${total}</strong>
-            </div>
-            
-            <div class="footer text-center">
-                <p>¡Gracias por su preferencia!</p>
-                <p>Este es un comprobante de pago oficial generado por el sistema.</p>
-            </div>
+            // Diferencia total de meses
+            let meses = (fHoy.getFullYear() - fInstala.getFullYear()) * 12;
+            meses += fHoy.getMonth() - fInstala.getMonth();
 
-            <script>
-                // Esto hace que la ventana se mande a imprimir sola al cargar
-                window.onload = function() { 
-                    window.print(); 
-                    window.close(); 
-                    window.opener.location.reload(); // Recarga la pestaña principal
-                };
-            <\/script>
-        </body>
-        </html>
-    `);
-    
-    ventana.document.close();
-}
+            // Si aún no llegamos al día del mes de la instalación, ese mes no se cuenta
+            if (fHoy.getDate() < fInstala.getDate()) {
+                meses--;
+            }
 
-function seleccionarClienteDirecto(cliente) {
-    // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    
-    // 2. Ejecutamos la lógica de selección que ya tenemos programada
-    seleccionarCliente(cliente);
-}
-    // Función para calcular adeudo inicial
-    function calcularAdeudoInicial(fechaInstalacion, costoMensual) {
-        const inicio = new Date(fechaInstalacion);
-        const hoy = new Date();
-
-        console.log("fecha inicial:"+ fechaInstalacion + " fecha actual = " +hoy)
-        
-        // Calculamos la diferencia en meses
-        let meses = (hoy.getFullYear() - inicio.getFullYear()) * 12;
-        meses -= inicio.getMonth();
-        meses += hoy.getMonth();
-
-        // Si el día de hoy es menor al día de instalación, aún no se cumple el mes completo
-        if (hoy.getDate() < inicio.getDate()) {
-            meses--;
+            const mesesDeuda = meses <= 0 ? 0 : meses;
+            return {
+                meses: mesesDeuda,
+                total: mesesDeuda * costoMensual
+            };
         }
 
-        // El adeudo no puede ser negativo
-        const mesesDeuda = meses < 0 ? 0 : meses;
-        const montoTotal = mesesDeuda * costoMensual;
+        // 3. Abrir el modal de pago
+        function prepararPago() {
 
-        console.log("meses deuda: "+ mesesDeuda + "montoTotal: " + montoTotal)
+            if (!clienteSeleccionado) return;
 
-        return {
-            mesesDeuda,
-            montoTotal
-        };
-    }
+            document.getElementById('modal-nombre-cliente').innerText = clienteSeleccionado.nombre_completo;
+            
+            // Dejamos el campo vacío para que el cobrador escriba lo que recibió
+            const inputMonto = document.getElementById('monto-pago-input');
+            inputMonto.value = ''; 
+            
+            document.getElementById('modalPago').classList.remove('hidden');
 
-  /*   function prepararPago() {
-        // Aquí abriremos el modal que ya teníamos para elegir el mes
-        irAPagar(clienteSeleccionado.id, clienteSeleccionado.nombre_completo, clienteSeleccionado.costo_mensual);
-    } */
+            // Ponemos el cursor automáticamente en el cuadro de texto
+            setTimeout(() => inputMonto.focus(), 200);
+        }
+
+        // Esta función va dentro del evento submit de tu formulario de pago
+        async function procesarPagoFinal() {
+            const monto = parseFloat(document.getElementById('monto-pago-input').value);
+            
+            if (!monto || monto <= 0) {
+                alert("Por favor ingresa un monto válido");
+                return;
+            }
+
+            // Llamada al backend que ya hicimos
+            const response = await fetch('/api/registrar-pago', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    clienteId: clienteSeleccionado.id,
+                    montoRecibido: monto,
+                    usuarioId: sessionStorage.getItem('usuarioId') // Asegúrate de tener esto
+                })
+            });
+
+            const resultado = await response.json();
+
+            if (resultado.success) {
+                // Aquí disparamos el ticket que vimos antes
+                generarTicketImpresion(resultado.detalle);
+            } else {
+                alert("Error: " + resultado.error);
+            }
+        }
+
+        function cerrarModalPago() {
+            document.getElementById('modalPago').classList.add('hidden');
+            document.getElementById('monto-pago-input').value = ''; // Limpiar campo
+        }
+
+
+        // 1. Esta función recibe la respuesta del servidor (el detalle de la cascada)
+        function mostrarResumenYPrepararImpresion(detalle) {
+            let resumenTexto = "✅ PAGO REGISTRADO CON ÉXITO\n\n";
+            resumenTexto += "El sistema ha distribuido el pago así:\n";
+            
+            // Construimos el mensaje inteligente mes por mes
+            detalle.forEach(item => {
+                const tipoLabel = item.tipo === 'completo' ? "Monto Completo" : "Abono a cuenta";
+                resumenTexto += `• ${item.mes}: $${item.monto} (${tipoLabel})\n`;
+            });
+
+            resumenTexto += "\n¿Desea imprimir el comprobante para el cliente?";
+
+            // Si el cobrador acepta, abrimos la ventana de impresión
+            if (confirm(resumenTexto)) {
+                generarTicketImpresion(detalle);
+            } else {
+                // Si no, simplemente refrescamos para quedar listos para el siguiente cliente
+                location.reload();
+            }
+        }
+
+        // 2. Función que crea el ticket visual
+        function generarTicketImpresion(detalle) {
+            console.log(detalle)
+            if (!detalle || detalle.length === 0) {
+                alert("Error: No hay datos para el ticket. El pago se registró pero el desglose falló.");
+                location.reload();
+                return;
+            }
+            const ventana = window.open('', '_blank', 'width=900,height=1200');
+            
+            // Generamos las filas de la tabla del ticket
+            let filasTicket = detalle.map(item => `
+                <tr>
+                    <td style="padding: 5px 0;">${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}</td>
+                    <td align="right" style="padding: 5px 0;">$${item.monto}</td>
+                </tr>
+            `).join('');
+
+            const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
+
+            // Escribimos el HTML del ticket (Estilo Recibo Térmico)
+            ventana.document.write(`
+                <html>
+                <head>
+                    <title>Recibo RED OSLED</title>
+                    <style>
+                        body { font-family: 'Courier New', Courier, monospace; padding: 20px; color: #000; }
+                        .text-center { text-align: center; }
+                        .divider { border-top: 1px dashed #000; margin: 10px 0; }
+                        table { width: 100%; border-collapse: collapse; }
+                        .footer { font-size: 12px; margin-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="text-center">
+                        <h2 style="margin:0;">RED OSLED</h2>
+                        <p style="margin:5px 0;">Internet de Alta Velocidad</p>
+                        <p style="font-size:12px;">Fecha: ${new Date().toLocaleString()}</p>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    <p><strong>Cliente:</strong> ${clienteSeleccionado.nombre_completo}<br>
+                    <strong>IP:</strong> ${clienteSeleccionado.direccion_ip}</p>
+                    
+                    <div class="divider"></div>
+                    
+                    <table>
+                        <thead>
+                            <tr style="border-bottom: 1px solid #000;">
+                                <th align="left">Concepto / Mes</th>
+                                <th align="right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filasTicket}
+                        </tbody>
+                    </table>
+                    
+                    <div class="divider" style="border-top: 2px solid #000;"></div>
+                    
+                    <div align="right" style="font-size: 18px;">
+                        <strong>TOTAL PAGADO: $${total}</strong>
+                    </div>
+                    
+                    <div class="footer text-center">
+                        <p>¡Gracias por su preferencia!</p>
+                        <p>Este es un comprobante de pago oficial generado por el sistema.</p>
+                    </div>
+
+                    <script>
+                        // Esto hace que la ventana se mande a imprimir sola al cargar
+                        window.onload = function() { 
+                            window.print(); 
+                            window.close(); 
+                            window.opener.location.reload(); // Recarga la pestaña principal
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            
+            ventana.document.close();
+        }
+
+        function seleccionarClienteDirecto(cliente) {
+            // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            
+            // 2. Ejecutamos la lógica de selección que ya tenemos programada
+            seleccionarCliente(cliente);
+        }
+
+        // Función para calcular adeudo inicial
+        function calcularAdeudoInicial(fechaInstalacion, costoMensual) {
+            const inicio = new Date(fechaInstalacion);
+            const hoy = new Date();
+
+            console.log("fecha inicial:"+ fechaInstalacion + " fecha actual = " +hoy)
+            
+            // Calculamos la diferencia en meses
+            let meses = (hoy.getFullYear() - inicio.getFullYear()) * 12;
+            meses -= inicio.getMonth();
+            meses += hoy.getMonth();
+
+            // Si el día de hoy es menor al día de instalación, aún no se cumple el mes completo
+            if (hoy.getDate() < inicio.getDate()) {
+                meses--;
+            }
+
+            // El adeudo no puede ser negativo
+            const mesesDeuda = meses < 0 ? 0 : meses;
+            const montoTotal = mesesDeuda * costoMensual;
+
+            console.log("meses deuda: "+ mesesDeuda + "montoTotal: " + montoTotal)
+
+            return {
+                mesesDeuda,
+                montoTotal
+            };
+        }
+
+  
     </script>
-
-    <!-- <div id="modalPago" class="modal hidden">
-        <div class="modal-content">
-            <span class="close" onclick="cerrarModalPago()">&times;</span>
-            <h2>Confirmar Cobro</h2>
-            <hr>
-            <div class="modal-body">
-                <p>Cliente: <strong id="modal-nombre-cliente"></strong></p>
-                <p>Deuda Total: <strong id="modal-deuda-total" style="color: red;"></strong></p>
-                
-                <div class="input-group" style="margin-top: 20px;">
-                    <label>Monto recibido en efectivo ($):</label>
-                    <input type="number" id="monto-pago-input" placeholder="0.00" step="0.01" style="width: 100%; padding: 10px; font-size: 1.2em;">
-                </div>
-                
-                <button onclick="procesarPagoFinal()" class="btn-success" style="margin-top: 20px; padding: 15px;">
-                    Registrar y Generar Ticket
-                </button>
-            </div>
-        </div>
-    </div> -->
 </body>
 </html>

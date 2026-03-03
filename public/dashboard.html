@@ -384,8 +384,47 @@
             }
             console.log(cliente)//-----------------------------------------------------
 
-            // Consultar el último pago en la BD de QA
             try {
+                // Consultamos TODO el dinero que ha pagado en su historia
+                const response = await fetch(`http://localhost:3000/api/estado-cuenta/${cliente.id}`);
+                const data = await response.json();
+                const totalPagadoHistorico = parseFloat(data.total_pagado);
+
+                // Llenamos los datos básicos
+                document.getElementById('res-nombre').innerText = cliente.nombre_completo;
+                document.getElementById('res-ip').innerText = cliente.direccion_ip;
+                document.getElementById('res-costo').innerText = cliente.costo_mensual;
+                
+                const msgUltimoPago = document.getElementById('res-ultimo-pago');
+                
+                // Calculamos la deuda teórica (como si nunca hubiera pagado)
+                const deudaTeorica = calcularAdeudoEvolucionado(cliente.fecha_instalacion, cliente.costo_mensual);
+                
+                // LA MAGIA: Deuda Real = (Lo que debería haber pagado) - (Lo que realmente ha pagado)
+                const deudaReal = deudaTeorica.total - totalPagadoHistorico;
+
+                if (deudaReal > 0) {
+                    msgUltimoPago.innerHTML = `
+                        <span style="color: #d32f2f; font-weight: bold; font-size: 1.1em;">
+                            ⚠️ ADEUDO ACTUAL: $${deudaReal.toFixed(2)}
+                        </span><br>
+                        <span style="color: #555; font-size: 0.9em;">
+                            Meses transcurridos: ${deudaTeorica.meses} | Total abonado en historial: $${totalPagadoHistorico}
+                        </span>
+                    `;
+                } else if (deudaReal < 0) {
+                    msgUltimoPago.innerHTML = `<span style="color: #1a73e8; font-weight: bold;">✅ Saldo a favor: $${Math.abs(deudaReal).toFixed(2)}</span>`;
+                } else {
+                    msgUltimoPago.innerHTML = `<span style="color: #2e7d32; font-weight: bold;">✅ Cuenta al corriente (Sin adeudos)</span>`;
+                }
+
+                document.getElementById('resultado-busqueda').classList.remove('hidden');
+            } catch (error) {
+                console.error("Error:", error);
+            }
+
+            // Consultar el último pago en la BD de QA
+            /* try {
                 const response = await fetch(`http://localhost:3000/api/ultimo-pago/${cliente.id}`);
                 const ultimo = await response.json();
 
@@ -431,7 +470,7 @@
                 document.getElementById('resultado-busqueda').classList.remove('hidden');
             } catch (error) {
                 console.error("Error:", error);
-            }
+            } */
         }
 
         function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {

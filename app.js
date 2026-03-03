@@ -151,124 +151,81 @@ app.get('/api/ultimo-pago/:id', (req, res) => {
 
 app.post('/api/registrar-pago', async (req, res) => {
     const { clienteId, montoRecibido, usuarioId } = req.body;
-        const registros = [];
-    try {
-        // 1. Obtener datos del cliente (Costo y Fecha Instalación)
-        const [cliente] = await db.promise().query(
-            'SELECT costo_mensual, fecha_instalacion FROM clientes WHERE id = ?', 
-            [clienteId]
-        );
 
+    try {
+        const [cliente] = await db.promise().query('SELECT costo_mensual, fecha_instalacion FROM clientes WHERE id = ?', [clienteId]);
         if (!cliente.length) return res.status(404).json({ error: "Cliente no encontrado" });
         const { costo_mensual, fecha_instalacion } = cliente[0];
 
-        // 2. Obtener el último mes pagado (si existe)
-        const [ultimoPago] = await db.promise().query(
-            'SELECT mes_pagado, monto, tipo_pago FROM pagos WHERE cliente_id = ? ORDER BY id DESC LIMIT 1',
+        // 1. Traemos TODO el historial agrupado por mes de este cliente
+        const [pagosAgrupados] = await db.promise().query(
+            'SELECT mes_pagado, SUM(monto) as pagado FROM pagos WHERE cliente_id = ? GROUP BY mes_pagado',
             [clienteId]
         );
 
-        console.log("--- DEBUG COBRO ---");
-        console.log("Último registro encontrado:", ultimoPago[0]);
-        console.log("Monto del paquete:", costo_mensual);
+        // Convertimos a un diccionario para lectura súper rápida (Ej: { "Mayo 2023": 600, "Junio 2023": 200 })
+        const historial = {};
+        pagosAgrupados.forEach(p => { historial[p.mes_pagado] = parseFloat(p.pagado); });
 
-        let saldoRestante = parseFloat(montoRecibido);
-        let fechaReferencia;
-        let mesYaIniciado = false;
-
-        if (ultimoPago.length > 0) {
-            const ultimo = ultimoPago[0];
-            const partes = ultimo.mes_pagado.split(' ');
-            const mesesMap = { "Enero":0, "Febrero":1, "Marzo":2, "Abril":3, "Mayo":4, "Junio":5, "Julio":6, "Agosto":7, "Septiembre":8, "Octubre":9, "Noviembre":10, "Diciembre":11 };
-            
-            // Si el último registro fue un abono, nos quedamos en ese mismo mes para completarlo
-            if (ultimo.tipo_pago === 'abono') {
-                fechaReferencia = new Date(parseInt(partes[1]), mesesMap[partes[0]], 1);
-                
-                // Calculamos cuánto falta para completar este mes
-                const pendienteMes = costo_mensual - parseFloat(ultimo.monto);
-                
-                console.log(`Completando mes: ${ultimo.mes_pagado}. Falta: ${pendienteMes}`);
-
-                if (saldoRestante >= pendienteMes) {
-                    // El dinero alcanza para completar el mes
-                    await db.promise().query(
-                        'UPDATE pagos SET monto = ?, tipo_pago = "completo" WHERE id = (SELECT id FROM (SELECT id FROM pagos WHERE cliente_id = ? ORDER BY id DESC LIMIT 1) as t)',
-                        [costo_mensual, clienteId]
-                    );
-                    registros.push({ 
-                        mes: ultimo.mes_pagado, 
-                        monto: pendienteMes, // Lo que acaba de entregar el cliente
-                        tipo: 'abono' 
-                    });
-                    saldoRestante -= pendienteMes;
-                    // Avanzamos a la siguiente fecha para el bucle while
-                    fechaReferencia.setMonth(fechaReferencia.getMonth() + 1);
-                } else {
-                    console.log("el dinero no alcanza")
-                    // El dinero NO alcanza, solo actualizamos el abono
-                    const nuevoMontoAbono = parseFloat(ultimo.monto) + saldoRestante;
-                    await db.promise().query(
-                        'UPDATE pagos SET monto = ? WHERE id = (SELECT id FROM (SELECT id FROM pagos WHERE cliente_id = ? ORDER BY id DESC LIMIT 1) as t)',
-                        [nuevoMontoAbono, clienteId]
-                    );
-                    console.log("mes: "+ultimo.mes_pagado + "monto "+saldoRestante )
-                    // IMPORTANTE: Agregamos este objeto al detalle para que el ticket no salga en blanco
-                     registros.push({ 
-                        mes: ultimo.mes_pagado, 
-                        monto: saldoRestante, // Lo que acaba de entregar el cliente
-                        tipo: 'abono (completando)' 
-                    }); 
-                    saldoRestante = 0; // Se acabó el dinero
-                }
-            } else {
-                // Si fue completo, empezamos desde el mes siguiente
-                fechaReferencia = new Date(parseInt(partes[1]), mesesMap[partes[0]] + 1, 1);
-            }
-        } else {
-            fechaReferencia = new Date(fecha_instalacion);
-        }
-
-    
+        // 2. EL ESCÁNER CRONOLÓGICO
+        let fechaReferencia = new Date(fecha_instalacion);
         const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        let saldoRestante = parseFloat(montoRecibido);
+        const registros = [];
 
-        // 3. BUCLE DE CASCADA 🌊
+        // Caminamos mes a mes hacia el futuro
         while (saldoRestante > 0) {
-            let mesNombre = nombresMeses[fechaReferencia.getMonth()];
-            let año = fechaReferencia.getFullYear();
-            let etiquetaMes = `${mesNombre} ${año}`;
-            
-            let montoAAplicar = 0;
-            let tipo = 'completo';
+            let mesActual = nombresMeses[fechaReferencia.getMonth()];
+            let anioActual = fechaReferencia.getFullYear();
+            let etiquetaMes = `${mesActual} ${anioActual}`;
 
-            if (saldoRestante >= costo_mensual) {
-                // Cubre el mes completo
-                montoAAplicar = costo_mensual;
-                saldoRestante -= costo_mensual;
-                tipo = 'completo';
-            } else {
-                // Es un abono parcial
-                montoAAplicar = saldoRestante;
-                saldoRestante = 0;
-                tipo = 'abono';
+            let pagadoEnEsteMes = historial[etiquetaMes] || 0;
+            let pendienteMes = costo_mensual - pagadoEnEsteMes;
+
+            // Si este mes tiene deuda (ya sea completo o falta un abono)
+            if (pendienteMes > 0) {
+                let montoAAplicar = Math.min(saldoRestante, pendienteMes);
+                let nuevoTipo = (montoAAplicar >= pendienteMes && pagadoEnEsteMes === 0) ? 'completo' : 'abono';
+                
+                // Forzamos que si completa el mes con este abono, diga completo.
+                if (pagadoEnEsteMes + montoAAplicar >= costo_mensual) nuevoTipo = 'completo';
+
+                // INSERTAMOS EL PAGO
+                await db.promise().query(
+                    'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
+                    [clienteId, usuarioId, montoAAplicar, etiquetaMes, nuevoTipo]
+                );
+
+                registros.push({ mes: etiquetaMes, monto: montoAAplicar, tipo: nuevoTipo });
+                
+                saldoRestante -= montoAAplicar;
+                historial[etiquetaMes] = pagadoEnEsteMes + montoAAplicar; // Actualizamos memoria local
             }
 
-            // Guardar en la base de datos
-            await db.promise().query(
-                'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
-                [clienteId, usuarioId, montoAAplicar, etiquetaMes, tipo]
-            );
-
-            registros.push({ mes: etiquetaMes, monto: montoAAplicar, tipo });
-            
-            // Avanzar al siguiente mes para la siguiente iteración
+            // Avanzamos al siguiente mes
             fechaReferencia.setMonth(fechaReferencia.getMonth() + 1);
+
+            // Seguro de vida: Si por error de fechas se va al año 2050, detenemos el bucle
+            if (fechaReferencia.getFullYear() > new Date().getFullYear() + 2) break; 
         }
 
         res.json({ success: true, detalle: registros });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Error al procesar el pago en cascada" });
+        res.status(500).json({ error: "Error interno procesando el cobro" });
+    }
+});
+
+app.get('/api/estado-cuenta/:id', async (req, res) => {
+    try {
+        const clienteId = req.params.id;
+        const [resultado] = await db.promise().query(
+            'SELECT SUM(monto) as total_pagado FROM pagos WHERE cliente_id = ?',
+            [clienteId]
+        );
+        res.json({ total_pagado: resultado[0].total_pagado || 0 });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });

@@ -402,14 +402,16 @@
                 
                 // LA MAGIA: Deuda Real = (Lo que debería haber pagado) - (Lo que realmente ha pagado)
                 const deudaReal = deudaTeorica.total - totalPagadoHistorico;
+                // LA MAGIA AQUÍ: Calculamos los meses exactos en adeudo (con 1 decimal)
+                const mesesAdeudo = (deudaReal / parseFloat(cliente.costo_mensual)).toFixed(1);
 
                 if (deudaReal > 0) {
                     msgUltimoPago.innerHTML = `
                         <span style="color: #d32f2f; font-weight: bold; font-size: 1.1em;">
                             ⚠️ ADEUDO ACTUAL: $${deudaReal.toFixed(2)}
                         </span><br>
-                        <span style="color: #555; font-size: 0.9em;">
-                            Meses transcurridos: ${deudaTeorica.meses} | Total abonado en historial: $${totalPagadoHistorico}
+                        <span style="color: #555; font-size: 0.95em; font-weight: 500;">
+                            Mes(es) en adeudo: ${mesesAdeudo}
                         </span>
                     `;
                 } else if (deudaReal < 0) {

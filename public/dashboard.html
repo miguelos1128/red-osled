@@ -522,6 +522,20 @@
                 alert("Por favor ingresa un monto válido");
                 return;
             }
+            
+            const confirmacion = confirm(`¿Confirmas que recibiste $${monto} de ${clienteSeleccionado.nombre_completo}?`);
+            if (!confirmacion) return;
+
+            // 🔴 SOLUCIÓN DEL USUARIO_ID 🔴
+            // Revisa en las Herramientas de Desarrollador (F12) -> Pestaña "Application" -> "Session Storage"
+            // cuál es la llave exacta con la que guardaste el ID al hacer login.
+            let idCobrador = usuario.id
+            // Seguro de vida: Si no encuentra el usuario, no permite cobrar para no generar NULLs
+            if (!idCobrador) {
+                alert("Error de sesión: No se detecta qué cobrador está activo. Vuelve a iniciar sesión.");
+                return;
+            }
+
 
             // Llamada al backend que ya hicimos
             const response = await fetch('/api/registrar-pago', {
@@ -530,7 +544,7 @@
                 body: JSON.stringify({
                     clienteId: clienteSeleccionado.id,
                     montoRecibido: monto,
-                    usuarioId: sessionStorage.getItem('usuarioId') // Asegúrate de tener esto
+                    usuarioId: idCobrador // Asegúrate de tener esto
                 })
             });
 

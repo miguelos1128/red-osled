@@ -229,3 +229,51 @@ app.get('/api/estado-cuenta/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// 1. Ruta para obtener el total y la lista de pagos sin entregar (estado_corte = 0)
+app.get('/api/corte-caja/:usuarioId', async (req, res) => {
+    const { usuarioId } = req.params;
+    try {
+        const [resumen] = await db.promise().query(
+            'SELECT COUNT(id) as total_cobros, SUM(monto) as total_dinero FROM pagos WHERE usuario_id = ? AND estado_corte = 0',
+            [usuarioId]
+        );
+        const [detalles] = await db.promise().query(
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, p.mes_pagado, p.monto 
+             FROM pagos p 
+             JOIN clientes c ON p.cliente_id = c.id 
+             WHERE p.usuario_id = ? AND p.estado_corte = 0 
+             ORDER BY p.fecha_pago DESC`,
+            [usuarioId]
+        );
+        res.json({ resumen: resumen[0], detalles: detalles });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 2. Ruta para AUTORIZAR y procesar el corte
+app.post('/api/procesar-corte', async (req, res) => {
+    const { usuarioId, adminUser, adminPassword } = req.body;
+    try {
+        // A) Validamos al administrador (Ajusta 'usuarios' según el nombre real de tu tabla de login)
+        const [admins] = await db.promise().query(
+            'SELECT id FROM usuarios WHERE usuario = ? AND password = ? AND rol = "admin"', 
+            [adminUser, adminPassword]
+        );
+        
+        if (admins.length === 0) {
+            return res.status(401).json({ error: "Credenciales de administrador incorrectas." });
+        }
+
+        // B) Si el admin es correcto, cambiamos el estado de 0 a 1
+        await db.promise().query(
+            'UPDATE pagos SET estado_corte = 1 WHERE usuario_id = ? AND estado_corte = 0',
+            [usuarioId]
+        );
+        
+        res.json({ success: true, message: "Corte autorizado y procesado con éxito." });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});

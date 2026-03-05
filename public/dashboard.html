@@ -37,6 +37,14 @@
             
         </div>
 
+        <div id="widget-corte" style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #1976d2; cursor: pointer; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;" onclick="abrirModalCorte()">
+            <div>
+                <span style="font-size: 1.2em; font-weight: bold; color: #1976d2;">💰 Efectivo en Caja: $<span id="lbl-caja-total">0.00</span></span>
+                <br><span style="color: #555; font-size: 0.9em;">Pagos por entregar: <span id="lbl-caja-cobros">0</span></span>
+            </div>
+            <button style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
+        </div>
+
         <div class="main-section">
             <h3>Cobro de Mensualidad</h3>
             <p class="instrucciones">Ingrese el nombre o la dirección IP del cliente para iniciar el cobro.</p>
@@ -154,6 +162,38 @@
         </div>
     </div>
 
+    <div id="modal-corte" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 20px; border-radius: 8px; width: 80%; max-height: 80vh; overflow-y: auto;">
+            <div id="area-imprimible-corte">
+                <h2>Reporte de Corte de Caja</h2>
+                <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="background-color: #f5f5f5;">
+                            <th>Fecha</th><th>Cliente</th><th>Mes Pagado</th><th>Monto</th><th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-corte-body">
+                        </tbody>
+                </table>
+                <h3 style="text-align: right; margin-top: 15px;">Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button onclick="document.getElementById('modal-corte').classList.add('hidden')" style="padding: 10px; background: #ccc; border: none; border-radius: 5px; margin-right: 10px;">Cerrar</button>
+                <button onclick="abrirModalAdmin()" style="padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 5px;">Solicitar Cierre al Administrador</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-admin" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+        <div style="background: white; padding: 25px; border-radius: 8px; width: 300px; text-align: center;">
+            <h3 style="color: #d32f2f;">🔒 Autorización Requerida</h3>
+            <p>El administrador debe validar la entrega del efectivo para liberar el corte.</p>
+            <input type="text" id="admin-user" placeholder="Usuario Admin" style="width: 100%; margin-bottom: 10px; padding: 8px;"><br>
+            <input type="password" id="admin-pass" placeholder="Contraseña Admin" style="width: 100%; margin-bottom: 15px; padding: 8px;"><br>
+            <button onclick="document.getElementById('modal-admin').classList.add('hidden')" style="padding: 10px; margin-right: 10px;">Cancelar</button>
+            <button onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
+        </div>
+    </div>
    
     <script>
         // 1. Verificar si hay una sesión activa
@@ -175,7 +215,8 @@
             sessionStorage.clear();
             window.location.href = 'index.html';
         }
-
+        let idCobrador = usuario.id
+        cargarWidgetCorte();
         // 4. Cargar clientes desde el servidor
         async function cargarClientes() {
             try {
@@ -529,7 +570,7 @@
             // 🔴 SOLUCIÓN DEL USUARIO_ID 🔴
             // Revisa en las Herramientas de Desarrollador (F12) -> Pestaña "Application" -> "Session Storage"
             // cuál es la llave exacta con la que guardaste el ID al hacer login.
-            let idCobrador = usuario.id
+            
             // Seguro de vida: Si no encuentra el usuario, no permite cobrar para no generar NULLs
             if (!idCobrador) {
                 alert("Error de sesión: No se detecta qué cobrador está activo. Vuelve a iniciar sesión.");
@@ -708,6 +749,85 @@
             };
         }
 
+        async function cargarWidgetCorte() {
+            if(!idCobrador) return;
+            const response = await fetch(`http://localhost:3000/api/corte-caja/${idCobrador}`);
+            const data = await response.json();
+            
+            const total = data.resumen.total_dinero || 0;
+            const cobros = data.resumen.total_cobros || 0;
+            
+            document.getElementById('lbl-caja-total').innerText = parseFloat(total).toFixed(2);
+            document.getElementById('lbl-caja-cobros').innerText = cobros;
+            document.getElementById('lbl-corte-total-modal').innerText = parseFloat(total).toFixed(2);
+            
+            // Llenamos la tabla oculta
+            const tbody = document.getElementById('tabla-corte-body');
+            tbody.innerHTML = '';
+            data.detalles.forEach(pago => {
+                const fecha = new Date(pago.fecha_pago).toLocaleString();
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${fecha}</td>
+                        <td>${pago.cliente}</td>
+                        <td>${pago.mes_pagado}</td>
+                        <td>$${parseFloat(pago.monto).toFixed(2)}</td>
+                        <td style="color: #d32f2f; font-weight: bold;">Pendiente</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 2. Control de ventanas
+        function abrirModalCorte() {
+            document.getElementById('modal-corte').classList.remove('hidden');
+        }
+
+        function abrirModalAdmin() {
+            document.getElementById('modal-admin').classList.remove('hidden');
+        }
+
+        // 3. La ejecución final: Validar -> PDF -> Limpiar DB
+        async function ejecutarCorteFinal() {
+            const user = document.getElementById('admin-user').value;
+            const pass = document.getElementById('admin-pass').value;
+
+            if(!user || !pass) {
+                alert("El administrador debe ingresar sus datos.");
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/procesar-corte', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuarioId: idCobrador, adminUser: user, adminPassword: pass })
+                });
+                
+                const data = await response.json();
+
+                if (response.ok) {
+                    // ¡El admin autorizó! Primero imprimimos el PDF
+                    alert("✅ Corte autorizado. Generando reporte PDF...");
+                    
+                    // Truco rápido para imprimir solo la tabla como PDF
+                    const contenido = document.getElementById('area-imprimible-corte').innerHTML;
+                    const ventanaImpresion = window.open('', '', 'width=800,height=600');
+                    ventanaImpresion.document.write('<html><head><title>Reporte de Corte</title></head><body>');
+                    ventanaImpresion.document.write(contenido);
+                    ventanaImpresion.document.write('</body></html>');
+                    ventanaImpresion.document.close();
+                    ventanaImpresion.print();
+
+                    // Refrescamos la página para limpiar todo visualmente
+                    location.reload(); 
+                } else {
+                    alert("❌ Error: " + data.error);
+                }
+            } catch (error) {
+                console.error("Error al procesar corte:", error);
+            }
+        }
   
     </script>
 </body>

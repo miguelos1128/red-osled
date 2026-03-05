@@ -258,7 +258,7 @@ app.post('/api/procesar-corte', async (req, res) => {
     try {
         // A) Validamos al administrador (Ajusta 'usuarios' según el nombre real de tu tabla de login)
         const [admins] = await db.promise().query(
-            'SELECT id FROM usuarios WHERE usuario = ? AND password = ? AND rol = "admin"', 
+            'SELECT id FROM usuarios WHERE correo = ? AND password = ? AND rol_id = "2"', 
             [adminUser, adminPassword]
         );
         

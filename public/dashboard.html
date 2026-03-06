@@ -196,6 +196,9 @@
     </div>
    
     <script>
+        const host = window.location.hostname; 
+        const puerto = "3000";
+        const urlBase = `http://${host}:${puerto}`;
         // 1. Verificar si hay una sesión activa
         const usuarioJson = sessionStorage.getItem('usuario');
         if (!usuarioJson) {
@@ -220,7 +223,7 @@
         // 4. Cargar clientes desde el servidor
         async function cargarClientes() {
             try {
-                const response = await fetch('http://localhost:3000/api/clientes');
+                const response = await fetch(`${urlBase}/api/clientes`);
                 const clientes = await response.json();
                 const tbody = document.getElementById('lista-clientes-body');
                 
@@ -331,7 +334,7 @@
 
             // Enviar al servidor
             try {
-                const response = await fetch('http://localhost:3000/api/clientes', {
+                const response = await fetch(`${urlBase}/api/clientes`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(nuevoCliente)
@@ -392,7 +395,7 @@
             }
 
             try {
-                const response = await fetch(`http://localhost:3000/api/buscar-clientes?q=${query}`);
+                const response = await fetch(`${urlBase}/api/buscar-clientes?q=${query}`);
                 const clientes = await response.json();
 
                 // Mostrar los resultados en la lista correspondiente
@@ -427,7 +430,7 @@
 
             try {
                 // Consultamos TODO el dinero que ha pagado en su historia
-                const response = await fetch(`http://localhost:3000/api/estado-cuenta/${cliente.id}`);
+                const response = await fetch(`${urlBase}/api/estado-cuenta/${cliente.id}`);
                 const data = await response.json();
                 const totalPagadoHistorico = parseFloat(data.total_pagado);
 
@@ -468,7 +471,7 @@
 
             // Consultar el último pago en la BD de QA
             /* try {
-                const response = await fetch(`http://localhost:3000/api/ultimo-pago/${cliente.id}`);
+                const response = await fetch(`${urlBase}/api/ultimo-pago/${cliente.id}`);
                 const ultimo = await response.json();
 
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
@@ -751,7 +754,7 @@
 
         async function cargarWidgetCorte() {
             if(!idCobrador) return;
-            const response = await fetch(`http://localhost:3000/api/corte-caja/${idCobrador}`);
+            const response = await fetch(`${urlBase}/api/corte-caja/${idCobrador}`);
             const data = await response.json();
             
             const total = data.resumen.total_dinero || 0;
@@ -798,7 +801,7 @@
             }
 
             try {
-                const response = await fetch('http://localhost:3000/api/procesar-corte', {
+                const response = await fetch(`${urlBase}/api/procesar-corte`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ usuarioId: idCobrador, adminUser: user, adminPassword: pass })

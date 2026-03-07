@@ -1,0 +1,61 @@
+cuando se paga un mes en dos abonos o mas no muestra ese ultimo mes como ultimo pago completo si no muestra un anterior: ejecrcico pagar maury 1000 600 Agosto y 400 septiembre, luego 200 restante de septiembre y al visualizar el ultimo pago completo dice agosto. (solución pedir que modifique la fecha pago cuando atualice un abono)----OK
+
+en el mensaje de ultimo pago también deberá decir cuanto es su saldo actual a la fecha del día de hoy----OK
+
+no esta registrando el usuario id que esta registrando este pago --- OK
+
+configurar una vista para que el usuario sepa cuantos pagos a recibido y están sin hacer corte ---- OK
+
+realizar corte con el administrador. --- OK
+
+MOSTRAR FECHA DE PAGO DEL CLIENTE 
+
+que el usuario pueda desglozar el histórico de pagos de un cliente
+
+que el usuario de bañe solo pueda ver los pagos de de bañe el de santa ana de santa ana 
+
+
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Hector Ricardo Panaderia4272786167miguelos1128@gmail.com
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES (', 'Hector Ricardo Panaderia, '4272786167, 'miguelos1128@gmail.com
+
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Hector Ricardo Panaderia', '4272786167', 'miguelos1128@gmail.com', '
+
+
+
+
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Hector Ricardo Panaderia', '4272786167', 'miguelos1128@gmail.com', 'Bañe', 'activo', '44218', '3', '42', '65', '8M', '200
+
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Hector Ricardo Panaderia', '4272786167', 'miguelos1128@truper.com', 'Bañe', 'activo', '2021-01-22', '3', '42', '65', '8M', '200.00');
+
+
+
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Bernardino Perez Resendiz', '4271325337', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2021-01-29', '25', '174', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Ana Patricia Hernandez', '4271966471', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2021-02-02', '10', '175', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Arcomex Ramiro Morales ', '7291100845', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2023-12-30', '30', '181', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Alejandro González ', '5534467549', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2024-01-03', '3', '182', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Gabriela Gonzalez', '7122171798', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2024-02-06', '6', '183', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Lorena Ledezma Dorantes', '4271238207', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2024-03-07', '7', '179', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Yeni Ledezma ', '7121483657', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2024-03-30', '30', '177', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Papá Richar Hector Trejo Ugalde', '4271211993', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2024-05-01', '1', '172', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Carlos eduardo Gonzalez Resendiz (insector) Karla', '4271263027', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2024-05-18', '18', '176', '65', '16M', '600');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Victor Taxista', '4271047826', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2024-06-29', '29', '178', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Jimena Garcia Huerta', '5561982251', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2024-10-23', '23', '185', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Carlos Rios VALADEZ', '5514327163', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-04-08', '8', '186', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Rosario Valadez Garcia', '4274273514', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-06-29', '29', '189', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('RENTA Ricardo Daniel Rios Velazquez (Magdalena Rios)', '712 381 4787', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-06-08', '8', '188', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Fidel Acevedo Rios', '5631899273', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-05-30', '30', '187', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('RENTA - Ignacio CALLEJAS Resendiz -Margarito', '4272421199', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-08-07', '7', '201', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Isidro Ledesma', '4272033680', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-09-07', '7', '202', '65', '16M', '600');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('RENTA - Argelia Velzquez', '5534542565', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-10-05', '5', '203', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Francisco Javier Velazquez', '4272014418', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-11-01', '1', '204', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Rosalinda Ledesma Morales', '4272739711', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-12-06', '6', '205', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('RENTA juan Ledezma / Lorena Ledezma Dorantes 2', '4271238207', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2025-12-24', '24', '206', '65', '8M', '400');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Simon Ledesma Hernandez', '5613206939', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2026-01-10', '10', '207', '65', '16M', '600');
+INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Juan Miguel Martínez López', '4463367319', 'miguelos1128@gmail.com', 'Bañe', 'activo', '2026-01-17', '17', '209', '65', '16M', '600');
+
+
+
+
+
+
+

@@ -153,7 +153,7 @@ app.post('/api/registrar-pago', async (req, res) => {
     const { clienteId, montoRecibido, usuarioId } = req.body;
 
     try {
-        const [cliente] = await db.promise().query('SELECT costo_mensual, fecha_instalacion FROM clientes WHERE id = ?', [clienteId]);
+        const [cliente] = await db.promise().query('SELECT costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?', [clienteId]);
         if (!cliente.length) return res.status(404).json({ error: "Cliente no encontrado" });
         const { costo_mensual, fecha_instalacion } = cliente[0];
 
@@ -166,9 +166,15 @@ app.post('/api/registrar-pago', async (req, res) => {
         // Convertimos a un diccionario para lectura súper rápida (Ej: { "Mayo 2023": 600, "Junio 2023": 200 })
         const historial = {};
         pagosAgrupados.forEach(p => { historial[p.mes_pagado] = parseFloat(p.pagado); });
+        console.log('PAgos Agrupados '+ pagosAgrupados)
 
         // 2. EL ESCÁNER CRONOLÓGICO
         let fechaReferencia = new Date(fecha_instalacion);
+
+        // --- CAMBIO AQUÍ: Saltamos al mes siguiente de la instalación ---
+        fechaReferencia.setMonth(fechaReferencia.getMonth() + 1);
+        // ----------------------------------------------------------------
+
         const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         let saldoRestante = parseFloat(montoRecibido);
         const registros = [];

@@ -14,30 +14,33 @@ app.use(cors()); // Permite peticiones desde otros puertos (tu HTML)
 app.use(express.json()); // Permite que el servidor entienda formato JSON
 
 // 3. Configuración de la conexión a MySQL
-const db = mysql.createConnection({
+const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000
 });
 
-// Conectar a la base de datos
-// Conectar a la base de datos
-db.connect((err) => {
-    if (err) {
-        console.error('Error al conectar a MySQL: ', err);
-        return;
-    }
-    console.log('------------------------------------------------');
-    console.log('✅ Conectado a la Base de Datos: ' + process.env.DB_NAME);
-    console.log('------------------------------------------------');
-    
-    if(process.env.DB_NAME === 'sistema_pagos_produccion') {
-        console.warn('⚠️  CUIDADO: ESTÁS EN MODO PRODUCCIÓN (DATOS REALES) ⚠️');
-    } else {
-        console.log('🛠️  Modo Pruebas (Puedes hacer desastres con confianza)');
-    }
-});
+// Convertimos el pool a versión Promesas inmediatamente
+const db = pool.promise();
+
+// Exportamos para usar en otras partes del código
+module.exports = db;
+
+// VALIDACIÓN DE CONEXIÓN (Usando la sintaxis de Promesas correctamente)
+db.getConnection()
+    .then(connection => {
+        console.log('✅ Conectado a la Base de Datos: ' + process.env.DB_NAME);
+        connection.release(); // Liberar la conexión al pool
+    })
+    .catch(err => {
+        console.error('❌ Error al conectar a MySQL: ', err.message);
+    });
 
 // 4. Rutas de prueba (Endpoints)
 

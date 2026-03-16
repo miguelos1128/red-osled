@@ -55,7 +55,7 @@ app.get('/api/clientes', async (req, res) => {
     try{
         const [results] = await db.query(query);
         res.json(results);    
-    }catch{
+    }catch(err){
         res.status(500).json({ error: err.message });
     }
     db.query(query, (err, results) => {
@@ -127,7 +127,7 @@ app.post('/api/clientes', async (req, res) => {
         ]);
         // 4a. Si todo sale bien, respondemos aquí
         res.json({ success: true, mensaje: "Cliente creado con éxito" });
-    }catch{
+    }catch(err){
         // 4b. Si hay un error, el 'catch' lo atrapa automáticamente
         console.error("Error al crear cliente:", error);
         res.status(500).json("error al guardar en la BD"+{ error: err.message });

@@ -50,8 +50,14 @@ app.get('/', (req, res) => {
 });
 
 // Ejemplo: Obtener todos los clientes (Para ver si la DB responde)
-app.get('/api/clientes', (req, res) => {
+app.get('/api/clientes', async (req, res) => {
     const query = 'SELECT * FROM clientes';
+    try{
+        const [results] = await db.query(query);
+        res.json(results);    
+    }catch{
+        res.status(500).json({ error: err.message });
+    }
     db.query(query, (err, results) => {
         if (err) {
             return res.status(500).json({ error: err.message });
@@ -61,17 +67,19 @@ app.get('/api/clientes', (req, res) => {
 });
 
 // Ruta para iniciar sesión (Login)
-app.post('/api/login', (req, res) => {
+// Agregamos "async" aquí
+app.post('/api/login', async (req, res) => {
     const { correo, password } = req.body;
-
-    const query = 'SELECT id, nombre, rol_id FROM usuarios WHERE correo = ? AND password = ?';
     
-    db.query(query, [correo, password], (err, results) => {
-        if (err) return res.status(500).json({ error: "Error en el servidor" });
+    const query = 'SELECT id, nombre, rol_id FROM usuarios WHERE correo = ? AND password = ?';
+
+    try {
+        // Usamos "await" y extraemos los resultados en un arreglo [results]
+        const [results] = await db.query(query, [correo, password]);
 
         if (results.length > 0) {
             // Usuario encontrado
-            console.log('Usuario encontrado')
+            console.log('Usuario encontrado');
             const usuario = results[0];
             res.json({
                 success: true,
@@ -84,12 +92,15 @@ app.post('/api/login', (req, res) => {
             });
         } else {
             // Datos incorrectos
-            console.log('Usuario no encontrado')
+            console.log('Usuario no encontrado');
             res.status(401).json({ success: false, mensaje: "Correo o contraseña incorrectos" });
         }
-    });
+    } catch (err) {
+        // Si hay un error en MySQL, cae aquí
+        console.error('Error en login:', err);
+        res.status(500).json({ error: "Error en el servidor" });
+    }
 });
-
 // 5. Iniciar el servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
@@ -98,7 +109,7 @@ app.listen(PORT, () => {
 
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
-app.post('/api/clientes', (req, res) => {
+app.post('/api/clientes', async (req, res) => {
     const { 
         nombre_completo, telefono, correo, direccion, 
         fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual 
@@ -107,14 +118,20 @@ app.post('/api/clientes', (req, res) => {
     const query = `INSERT INTO clientes 
                    (nombre_completo, telefono, correo, direccion, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual) 
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    
-    db.query(query, [
-        nombre_completo, telefono, correo, direccion, 
-        fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual
-    ], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+    // 2. Abrimos el bloque try/catch
+    try{
+        // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
+        const [result] = await db.query(query, [
+            nombre_completo, telefono, correo, direccion, 
+            fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual
+        ]);
+        // 4a. Si todo sale bien, respondemos aquí
         res.json({ success: true, mensaje: "Cliente creado con éxito" });
-    });
+    }catch{
+        // 4b. Si hay un error, el 'catch' lo atrapa automáticamente
+        console.error("Error al crear cliente:", error);
+        res.status(500).json("error al guardar en la BD"+{ error: err.message });
+    }
 });
 
 // Ruta para buscar clientes por nombre o IP

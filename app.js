@@ -60,18 +60,19 @@ app.get('/api/clientes', (req, res) => {
     });
 });
 
-// Ruta para iniciar sesión (Login)
-app.post('/api/login', (req, res) => {
+// Ruta para iniciar sesión (Login)// Agregamos "async" aquí
+app.post('/api/login', async (req, res) => {
     const { correo, password } = req.body;
-
-    const query = 'SELECT id, nombre, rol_id FROM usuarios WHERE correo = ? AND password = ?';
     
-    db.query(query, [correo, password], (err, results) => {
-        if (err) return res.status(500).json({ error: "Error en el servidor" });
+    const query = 'SELECT id, nombre, rol_id FROM usuarios WHERE correo = ? AND password = ?';
+
+    try {
+        // Usamos "await" y extraemos los resultados en un arreglo [results]
+        const [results] = await db.query(query, [correo, password]);
 
         if (results.length > 0) {
             // Usuario encontrado
-            console.log('Usuario encontrado')
+            console.log('Usuario encontrado');
             const usuario = results[0];
             res.json({
                 success: true,
@@ -84,10 +85,14 @@ app.post('/api/login', (req, res) => {
             });
         } else {
             // Datos incorrectos
-            console.log('Usuario no encontrado')
+            console.log('Usuario no encontrado');
             res.status(401).json({ success: false, mensaje: "Correo o contraseña incorrectos" });
         }
-    });
+    } catch (err) {
+        // Si hay un error en MySQL, cae aquí
+        console.error('Error en login:', err);
+        res.status(500).json({ error: "Error en el servidor" });
+    }
 });
 
 // 5. Iniciar el servidor

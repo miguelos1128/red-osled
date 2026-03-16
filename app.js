@@ -135,19 +135,30 @@ app.post('/api/clientes', async (req, res) => {
 });
 
 // Ruta para buscar clientes por nombre o IP
-app.get('/api/buscar-clientes', (req, res) => {
-    const term = req.query.q; //Lo que el cliente escribe
+// 1. Agregamos async aquí
+app.get('/api/buscar-clientes', async (req, res) => {
+    const term = req.query.q; // Lo que el cliente escribe
+    
     // Agregamos fecha_instalacion a la consulta
     const query = `
-        SELECT id, nombre_completo, direccion_ip, costo_mensual, fecha_instalacion 
-        FROM clientes 
+        SELECT id, nombre_completo, direccion_ip, costo_mensual, fecha_instalacion
+        FROM clientes
         WHERE nombre_completo LIKE ? OR direccion_ip LIKE ?
         LIMIT 10`;
 
-    db.query(query, [`%${term}%`, `%${term}%`], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+    // 2. Envolvemos en try/catch
+    try {
+        // 3. Hacemos el await y destructuramos [results]. Mantenemos tus variables dinámicas intactas.
+        const [results] = await db.query(query, [`%${term}%`, `%${term}%`]);
+        
+        // 4. Si todo va bien, enviamos el resultado
         res.json(results);
-    });
+
+    } catch (error) {
+        // Manejamos el error en el catch
+        console.error("Error al buscar clientes:", error);
+        res.status(500).json({ error: "Error interno al realizar la búsqueda en la base de datos" });
+    }
 });
 
 // RUTA 1: Consultar el último pago de un cliente

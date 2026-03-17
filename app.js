@@ -280,11 +280,11 @@ app.get('/api/estado-cuenta/:id', async (req, res) => {
 app.get('/api/corte-caja/:usuarioId', async (req, res) => {
     const { usuarioId } = req.params;
     try {
-        const [resumen] = await db.promise().query(
+        const [resumen] = await db.query(
             'SELECT COUNT(id) as total_cobros, SUM(monto) as total_dinero FROM pagos WHERE usuario_id = ? AND estado_corte = 0',
             [usuarioId]
         );
-        const [detalles] = await db.promise().query(
+        const [detalles] = await db.query(
             `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, p.mes_pagado, p.monto 
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 

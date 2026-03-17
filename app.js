@@ -193,12 +193,12 @@ app.post('/api/registrar-pago', async (req, res) => {
     const { clienteId, montoRecibido, usuarioId } = req.body;
 
     try {
-        const [cliente] = await db.promise().query('SELECT costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?', [clienteId]);
+        const [cliente] = await db.query('SELECT costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?', [clienteId]);
         if (!cliente.length) return res.status(404).json({ error: "Cliente no encontrado" });
         const { costo_mensual, fecha_instalacion } = cliente[0];
 
         // 1. Traemos TODO el historial agrupado por mes de este cliente
-        const [pagosAgrupados] = await db.promise().query(
+        const [pagosAgrupados] = await db.query(
             'SELECT mes_pagado, SUM(monto) as pagado FROM pagos WHERE cliente_id = ? GROUP BY mes_pagado',
             [clienteId]
         );
@@ -206,7 +206,7 @@ app.post('/api/registrar-pago', async (req, res) => {
         // Convertimos a un diccionario para lectura súper rápida (Ej: { "Mayo 2023": 600, "Junio 2023": 200 })
         const historial = {};
         pagosAgrupados.forEach(p => { historial[p.mes_pagado] = parseFloat(p.pagado); });
-        console.log('PAgos Agrupados '+ pagosAgrupados)
+        console.log('Pagos Agrupados '+ pagosAgrupados)
 
         // 2. EL ESCÁNER CRONOLÓGICO
         let fechaReferencia = new Date(fecha_instalacion);
@@ -237,7 +237,7 @@ app.post('/api/registrar-pago', async (req, res) => {
                 if (pagadoEnEsteMes + montoAAplicar >= costo_mensual) nuevoTipo = 'completo';
 
                 // INSERTAMOS EL PAGO
-                await db.promise().query(
+                await db.query(
                     'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
                     [clienteId, usuarioId, montoAAplicar, etiquetaMes, nuevoTipo]
                 );

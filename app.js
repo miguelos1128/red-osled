@@ -164,22 +164,29 @@ app.get('/api/buscar-clientes', async (req, res) => {
 });
 
 // RUTA 1: Consultar el último pago de un cliente
-app.get('/api/ultimo-pago/:id', (req, res) => {
+app.get('/api/ultimo-pago/:id', async (req, res) => {
     const { id } = req.params;
     const query = `
         SELECT mes_pagado, fecha_pago, monto,  tipo_pago
         FROM pagos 
         WHERE cliente_id = ? 
         ORDER BY fecha_pago DESC LIMIT 1`;
-
-    db.query(query, [id], (err, results) => {
+    try{
+        const [result] = await db.query(query, [id]);
+        // Si hay resultados, mandamos el primero, si no, mandamos null
+        res.json(result.length > 0 ? result[0] : null);
+    }catch(err){
+        console.error("Error en DB:", err);
+            return res.status(500).json({ error: "Error al consultar historial" });
+    }
+    /* db.query(query, [id], (err, results) => {
         if (err) {
             console.error("Error en DB:", err);
             return res.status(500).json({ error: "Error al consultar historial" });
         }
         // Si hay resultados, mandamos el primero, si no, mandamos null
         res.json(results.length > 0 ? results[0] : null);
-    });
+    }); */
 });
 
 app.post('/api/registrar-pago', async (req, res) => {
@@ -259,7 +266,7 @@ app.post('/api/registrar-pago', async (req, res) => {
 app.get('/api/estado-cuenta/:id', async (req, res) => {
     try {
         const clienteId = req.params.id;
-        const [resultado] = await db.promise().query(
+        const [resultado] = await db.query(
             'SELECT SUM(monto) as total_pagado FROM pagos WHERE cliente_id = ?',
             [clienteId]
         );

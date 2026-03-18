@@ -303,7 +303,7 @@ app.post('/api/procesar-corte', async (req, res) => {
     const { usuarioId, adminUser, adminPassword } = req.body;
     try {
         // A) Validamos al administrador (Ajusta 'usuarios' según el nombre real de tu tabla de login)
-        const [admins] = await db.promise().query(
+        const [admins] = await db.query(
             'SELECT id FROM usuarios WHERE correo = ? AND password = ? AND rol_id = "2"', 
             [adminUser, adminPassword]
         );
@@ -313,7 +313,7 @@ app.post('/api/procesar-corte', async (req, res) => {
         }
 
         // B) Si el admin es correcto, cambiamos el estado de 0 a 1
-        await db.promise().query(
+        await db.query(
             'UPDATE pagos SET estado_corte = 1 WHERE usuario_id = ? AND estado_corte = 0',
             [usuarioId]
         );

@@ -58,12 +58,7 @@ app.get('/api/clientes', async (req, res) => {
     }catch(err){
         res.status(500).json({ error: err.message });
     }
-    db.query(query, (err, results) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(results);
-    });
+    
 });
 
 

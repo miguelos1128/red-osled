@@ -174,14 +174,6 @@ app.get('/api/ultimo-pago/:id', async (req, res) => {
         console.error("Error en DB:", err);
             return res.status(500).json({ error: "Error al consultar historial" });
     }
-    /* db.query(query, [id], (err, results) => {
-        if (err) {
-            console.error("Error en DB:", err);
-            return res.status(500).json({ error: "Error al consultar historial" });
-        }
-        // Si hay resultados, mandamos el primero, si no, mandamos null
-        res.json(results.length > 0 ? results[0] : null);
-    }); */
 });
 
 app.post('/api/registrar-pago', async (req, res) => {

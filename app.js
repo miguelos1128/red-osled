@@ -285,7 +285,7 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
             [usuarioId]
         );
         const [detalles] = await db.query(
-            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, p.mes_pagado, p.monto 
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto  
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 
              WHERE p.usuario_id = ? AND p.estado_corte = 0 

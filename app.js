@@ -68,32 +68,41 @@ app.get('/api/clientes', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     const { correo, password } = req.body;
     
-    const query = 'SELECT id, nombre, rol_id FROM usuarios WHERE correo = ? AND password = ?';
+    // Consulta 1: Verificamos credenciales
+    const queryUsuario = 'SELECT id, nombre, rol_id FROM usuarios WHERE correo = ? AND password = ?';
 
     try {
-        // Usamos "await" y extraemos los resultados en un arreglo [results]
-        const [results] = await db.query(query, [correo, password]);
+        const [results] = await db.query(queryUsuario, [correo, password]);
 
         if (results.length > 0) {
-            // Usuario encontrado
-            console.log('Usuario encontrado');
             const usuario = results[0];
+            
+            // --- NUEVO CÓDIGO: Buscar localidades autorizadas ---
+            const queryLocalidades = 'SELECT localidad_id FROM usuario_localidad WHERE usuario_id = ?';
+            const [localidadesDb] = await db.query(queryLocalidades, [usuario.id]);
+            
+            // Transformamos el resultado [{localidad_id: 1}, {localidad_id: 3}] en un arreglo simple [1, 3]
+            const localidadesPermitidas = localidadesDb.map(loc => loc.localidad_id);
+            // ----------------------------------------------------
+
+            console.log(`Usuario ${usuario.nombre} logueado. Localidades:`, localidadesPermitidas);
+
+            // Devolvemos la info al frontend
             res.json({
                 success: true,
                 mensaje: "Bienvenido",
                 user: {
                     id: usuario.id,
                     nombre: usuario.nombre,
-                    rol: usuario.rol_id // 1 = Recepcionista, 2 = Admin
+                    rol: usuario.rol_id, // 1 = Cobrador, 2 = Admin
+                    localidades: localidadesPermitidas // <-- ¡AQUÍ VIAJAN LOS PERMISOS!
                 }
             });
         } else {
-            // Datos incorrectos
             console.log('Usuario no encontrado');
             res.status(401).json({ success: false, mensaje: "Correo o contraseña incorrectos" });
         }
     } catch (err) {
-        // Si hay un error en MySQL, cae aquí
         console.error('Error en login:', err);
         res.status(500).json({ error: "Error en el servidor" });
     }

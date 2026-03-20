@@ -51,6 +51,10 @@
                 if (data.success) {
                     // Guardamos la sesión localmente
                     sessionStorage.setItem('usuario', JSON.stringify(data.user));
+                    
+                    localStorage.setItem('usuario_actual', JSON.stringify(data.user)); //////////////////-----
+                    console.log("Datos guardados en memoria:", data.user);
+
                     window.location.href = 'dashboard.html';
                 } else {
                     mensajeError.innerText = data.mensaje;

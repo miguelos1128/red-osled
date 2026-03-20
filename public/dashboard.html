@@ -209,7 +209,18 @@
         if (!usuarioJson) {
             window.location.href = 'index.html';
         }
+         
 
+         const usuarioString = localStorage.getItem('usuario_actual');
+
+        if (usuarioString) {
+            const usuario = JSON.parse(usuarioString);
+            console.log("El rol de este usuario es:", usuario.rol);
+            console.log("Sus localidades son:", usuario.localidades); // Ej: [1, 3]
+        } else {
+            // Si no hay datos, significa que no se ha logueado, lo regresamos al login
+            window.location.href = '/index.html';
+        }
         const usuario = JSON.parse(usuarioJson);
         document.getElementById('user-name').innerText = usuario.nombre;
 

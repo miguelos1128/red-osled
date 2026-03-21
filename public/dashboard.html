@@ -410,8 +410,20 @@
                 return;
             }
 
+            // 1. Leemos quién es el usuario desde la memoria
+            const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
+
+            // 2. Preparamos los datos para enviarlos en la URL
+            const rol = usuarioActual.rol;
+            // Convertimos el arreglo [1, 3] a texto "[1,3]" para poder mandarlo por la URL
+            const localidadesStr = JSON.stringify(usuarioActual.localidades); 
+
+            // 3. Hacemos la petición agregando los datos al final de la ruta
+            const url = `${urlBase}/api/buscar-clientes?q=${query}&rol=${rol}&localidades=${localidadesStr}`;
+
             try {
-                const response = await fetch(`${urlBase}/api/buscar-clientes?q=${query}`);
+                //const response = await fetch(`${urlBase}/api/buscar-clientes?q=${query}`);
+                const response = await fetch(url);
                 const clientes = await response.json();
 
                 // Mostrar los resultados en la lista correspondiente
@@ -420,6 +432,7 @@
                         <strong>${c.nombre_completo}</strong> - IP: ${c.direccion_ip}
                     </div>
                 `).join('');
+                console.log("Clientes cargados:", clientes);
             } catch (error) {
                 console.error("Error al buscar:", error);
             }

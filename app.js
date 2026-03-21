@@ -143,19 +143,40 @@ app.post('/api/clientes', async (req, res) => {
 // Ruta para buscar clientes por nombre o IP
 // 1. Agregamos async aquí
 app.get('/api/buscar-clientes', async (req, res) => {
-    const term = req.query.q; // Lo que el cliente escribe
-    
-    // Agregamos fecha_instalacion a la consulta
-    const query = `
-        SELECT id, nombre_completo, direccion_ip, costo_mensual, fecha_instalacion 
-        FROM clientes 
-        WHERE nombre_completo LIKE ? OR direccion_ip LIKE ?
-        LIMIT 10`;
-
-    // 2. Envolvemos en try/catch
     try {
+        const term = req.query.q; // Lo que el cliente escribe
+        // 1. Recibimos el "gafete" del frontend desde la URL
+        const rol = parseInt(req.query.rol);
+        // Convertimos el texto "[1,3]" de vuelta a un arreglo real de Javascript [1, 3]
+        let localidadesPermitidas = [];
+        if (req.query.localidades) {
+            localidadesPermitidas = JSON.parse(req.query.localidades);
+        }
+        
+        // 2. Preparamos la consulta base
+        let query = `
+            SELECT id, nombre_completo, direccion_ip, costo_mensual, fecha_instalacion 
+            FROM clientes  WHERE  (nombre_completo LIKE ? OR direccion_ip LIKE ? )
+            `;
+        let params = [`%${term}%`, `%${term}%`]
+
+        // 3. LA MAGIA: Aplicamos el filtro si NO es Administrador (Asumiendo que Admin es rol 2)
+        if (rol !== 2) { 
+            if (localidadesPermitidas.length > 0) {
+                // Filtramos solo por las localidades permitidas usando IN (?)
+                query += '  AND localidad_id IN (?)';
+                params.push(localidadesPermitidas);
+            } else {
+                // Medida de seguridad: Si es cobrador pero no le han asignado localidades, devolvemos una lista vacía
+                return res.json([]); 
+            }
+        }
+
+        query += ` LIMIT 10`;
+
+        console.log("query" + query+ " params "+params)
         // 3. Hacemos el await y destructuramos [results]. Mantenemos tus variables dinámicas intactas.
-        const [results] = await db.query(query, [`%${term}%`, `%${term}%`]);
+        const [results] = await db.query(query, params);
         
         // 4. Si todo va bien, enviamos el resultado
         res.json(results);

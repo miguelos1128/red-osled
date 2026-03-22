@@ -331,6 +331,8 @@
             if (!nombre) errores.push("- El Nombre es obligatorio.");
             if (!direccion) errores.push("- La Dirección es obligatoria.");
             
+            if (!localidad) errores.push("- Debes selecionar una localidad");
+
             // Validación Teléfono (10 dígitos exactos)
             if (telefono.length !== 10) errores.push("- El Teléfono debe tener exactamente 10 dígitos.");
             

@@ -127,6 +127,13 @@
                 <input type="email" id="cor_cli" placeholder="Correo Electrónico">
                 <textarea id="dir_cli" placeholder="Dirección completa" required style="width:100%; margin: 10px 0; border: 1px solid #ddd;"></textarea>
 
+                <div class="mb-3">
+                    <label class="form-label">Localidad:</label>
+                    <select id="selectLocalidad" class="form-select" required>
+                        <option value="">Seleccione una localidad...</option>
+                        </select>
+                </div>
+
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1">
                         <label>Fecha Instalación:</label>
@@ -284,6 +291,22 @@
             cargarClientes(); // Tu función existente
         };
 
+        async function cargarLocalidades() {
+            const response = await fetch('/api/localidades');
+            const localidades = await response.json();
+            const select = document.getElementById('selectLocalidad');
+            
+            localidades.forEach(loc => {
+                const option = document.createElement('option');
+                option.value = loc.id;
+                option.textContent = loc.nombre;
+                select.appendChild(option);
+            });
+        }
+
+        // Ejecuta esta función al cargar el panel
+        cargarLocalidades();
+
         // 2. Lógica de validación y envío
         document.getElementById('formCliente').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -299,6 +322,7 @@
             const senal = parseInt(document.getElementById('senal_cli').value);
             const paquete = document.getElementById('paquete_cli').value;
             const costo = document.getElementById('costo_cli').value;
+            const localidad = document.getElementById('selectLocalidad').value;
 
             // --- LISTA DE ERRORES ---
             let errores = [];
@@ -345,7 +369,8 @@
                 direccion_ip: ip,   // Ahora sí enviamos un número limpio
                 señal: senal,       // Número limpio
                 paquete: paquete,
-                costo_mensual: costo
+                costo_mensual: costo,
+                localidad_id: localidad
             };
 
             // Enviar al servidor

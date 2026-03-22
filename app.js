@@ -118,25 +118,29 @@ app.listen(PORT, () => {
 app.post('/api/clientes', async (req, res) => {
     const { 
         nombre_completo, telefono, correo, direccion, 
-        fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual 
+        fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id
     } = req.body;
 
+   
+
     const query = `INSERT INTO clientes 
-                   (nombre_completo, telefono, correo, direccion, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                   (nombre_completo, telefono, correo, direccion, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+     console.log("Query", query);
+     console.log("Datos recibidos para el nuevo cliente:", req.body);
     // 2. Abrimos el bloque try/catch
     try{
         // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
         const [result] = await db.query(query, [
         nombre_completo, telefono, correo, direccion, 
-        fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual
+        fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual,localidad_id
         ]);
         // 4a. Si todo sale bien, respondemos aquí
         res.json({ success: true, mensaje: "Cliente creado con éxito" });
-    }catch(err){
+    }catch(error){
         // 4b. Si hay un error, el 'catch' lo atrapa automáticamente
-        console.error("Error al crear cliente:", error);
-        res.status(500).json("error al guardar en la BD"+{ error: err.message });
+        console.error("Error al crear cliente:", err);
+        res.status(500).json({ error: "Error al guardar en la BD: " + error.message });
     }
 });
 
@@ -338,5 +342,16 @@ app.post('/api/procesar-corte', async (req, res) => {
         res.json({ success: true, message: "Corte autorizado y procesado con éxito." });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// Ruta para obtener todas las localidades (para el selector del formulario)
+app.get('/api/localidades', async (req, res) => {
+    try {
+        const [rows] = await db.query('SELECT id, nombre FROM localidades ORDER BY nombre ASC');
+        res.json(rows);
+    } catch (error) {
+        console.error("Error al obtener localidades:", error);
+        res.status(500).json({ error: "Error al cargar catálogo" });
     }
 });

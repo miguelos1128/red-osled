@@ -525,54 +525,7 @@
                 console.error("Error:", error);
             }
 
-            // Consultar el último pago en la BD de QA
-            /* try {
-                const response = await fetch(`${urlBase}/api/ultimo-pago/${cliente.id}`);
-                const ultimo = await response.json();
 
-                document.getElementById('res-nombre').innerText = cliente.nombre_completo;
-                document.getElementById('res-ip').innerText = cliente.direccion_ip;
-                document.getElementById('res-costo').innerText = cliente.costo_mensual;
-                
-                const msgUltimoPago = document.getElementById('res-ultimo-pago');
-                const costoMensual = parseFloat(cliente.costo_mensual);
-                console.log(ultimo) 
-                // En dashboard.html -> seleccionarCliente
-                if (ultimo) {
-                    
-                    //msgUltimoPago.innerHTML = `<span style="color: #2e7d32;">✅ Último pago: ${ultimo.mes_pagado}</span>`;
-                    if (ultimo.tipo_pago === 'abono') {
-                        console.log(ultimo.tipo_pago)
-                        const pendiente = costoMensual - parseFloat(ultimo.monto);
-                        msgUltimoPago.innerHTML = `
-                            <span style="color: #d32f2f; font-weight: bold;">
-                                ⚠️ SALDO PENDIENTE: $${pendiente.toFixed(2)} en ${ultimo.mes_pagado}
-                            </span>`;
-                    } else {
-                        msgUltimoPago.innerHTML = `
-                            <span style="color: #2e7d32;">
-                                ✅ Último pago completo: ${ultimo.mes_pagado}
-                            </span>`;
-                    }
-                } else {
-                    // AQUÍ APLICAMOS TU LÓGICA DE FECHA DE INSTALACIÓN
-                    const deuda = calcularAdeudoInicial(cliente.fecha_instalacion, cliente.costo_mensual);
-                    
-                    if (deuda.mesesDeuda > 0) {
-                        msgUltimoPago.innerHTML = `
-                            <span style="color: #d32f2f;">⚠️ Cliente sin pagos previos.</span><br>
-                            <strong>Fecha de instalación (${cliente.fecha_instalacion.split('T')[0]}):</strong><br>
-                            ${deuda.mesesDeuda} mes(es) pendientes = <span style="font-size: 1.2em;">$${deuda.montoTotal}</span>
-                        `;
-                    } else {
-                        msgUltimoPago.innerHTML = `<span style="color: #1a73e8;">🆕 Instalación reciente. Al corriente.</span>`;
-                    }
-                }
-
-                document.getElementById('resultado-busqueda').classList.remove('hidden');
-            } catch (error) {
-                console.error("Error:", error);
-            } */
         }
 
         function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {

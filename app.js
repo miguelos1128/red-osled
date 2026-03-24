@@ -210,6 +210,30 @@ app.get('/api/ultimo-pago/:id', async (req, res) => {
     }
 });
 
+// Ruta para obtener el historial de los últimos 6 pagos de un cliente
+app.get('/api/clientes/:id/historial-pagos', async (req, res) => {
+    const clienteId = req.params.id;
+
+    // Asumo que tu tabla se llama 'pagos' y tiene 'cliente_id' y 'usuario_id'
+    // Hacemos un JOIN con 'usuarios' para obtener el nombre de quien cobró
+    const query = `
+        SELECT p.fecha_pago, p.mes_pagado, p.monto, u.nombre AS cobrador 
+        FROM pagos p
+        LEFT JOIN usuarios u ON p.usuario_id = u.id
+        WHERE p.cliente_id = ?
+        ORDER BY p.fecha_pago DESC
+        LIMIT 6
+    `;
+
+    try {
+        const [pagos] = await db.query(query, [clienteId]);
+        res.json(pagos);
+    } catch (error) {
+        console.error("Error al obtener historial de pagos:", error);
+        res.status(500).json({ error: "Error al cargar el historial" });
+    }
+});
+
 app.post('/api/registrar-pago', async (req, res) => {
     const { clienteId, montoRecibido, usuarioId } = req.body;
 

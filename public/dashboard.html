@@ -599,7 +599,7 @@
         }
 
         // Función para ABRIR el modal y cargar datos
-        async function abrirHistorial(clienteId, nombreCliente) {
+        /* async function abrirHistorial(clienteId, nombreCliente) {
             // 1. Hacemos visible el modal (usamos 'flex' para que funcione el centrado del CSS)
             document.getElementById('modalHistorialCustom').style.display = 'flex';
             document.getElementById('nombreClienteHistorial').textContent = nombreCliente;
@@ -641,7 +641,55 @@
                 console.error("Error:", error);
                 lista.innerHTML = '<li style="color: red;">Error de conexión al cargar el historial.</li>';
             }
+        } */
+
+        async function abrirHistorial(clienteId, nombreCliente) {
+            document.getElementById('modalHistorialCustom').style.display = 'flex';
+            document.getElementById('nombreClienteHistorial').textContent = nombreCliente;
+            
+            const lista = document.getElementById('listaPagosHistorial');
+            lista.innerHTML = '<li style="text-align: center; padding: 20px;">Buscando historial...</li>';
+
+            try {
+                const response = await fetch(`/api/clientes/${clienteId}/historial-pagos`);
+                const pagos = await response.json();
+
+                if (pagos.length === 0) {
+                    lista.innerHTML = '<li style="text-align: center; color: #666; padding: 20px;">Aún no hay pagos registrados.</li>';
+                    return;
+                } 
+                
+                // 1. Insertamos el Encabezado (Oculto en móvil, visible en Escritorio)
+                lista.innerHTML = `
+                    <li class="encabezado-tabla">
+                        <div>Mes</div>
+                        <div>Fecha</div>
+                        <div>Cobró</div>
+                        <div>Cantidad</div>
+                    </li>
+                `;
+                
+                // 2. Dibujamos cada pago estructurado en columnas
+                pagos.forEach(pago => {
+                    const fecha = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+                    const li = document.createElement('li');
+                    li.className = 'item-pago'; // <-- Clase clave para el CSS Grid
+                    
+                    li.innerHTML = `
+                        <div class="col-mes"><span class="label-movil">Mes: </span>${pago.mes_pagado}</div>
+                        <div class="col-fecha"><span class="label-movil">Fecha: </span>${fecha}</div>
+                        <div class="col-cobro"><span class="label-movil">Cobró: </span>${pago.cobrador || 'Sistema'}</div>
+                        <div class="col-monto">$${pago.monto}</div>
+                    `;
+                    lista.appendChild(li);
+                });
+                
+            } catch (error) {
+                console.error("Error:", error);
+                lista.innerHTML = '<li style="color: red; text-align: center; padding: 20px;">Error de conexión al cargar el historial.</li>';
+            }
         }
+
         // Esta función va dentro del evento submit de tu formulario de pago
         async function procesarPagoFinal() {
             const monto = parseFloat(document.getElementById('monto-pago-input').value);

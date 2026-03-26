@@ -304,15 +304,16 @@ td {
 }
 
 /* La caja blanca del modal */
+/* --- BASE: DISEÑO PARA MÓVIL (Mobile First) --- */
 .modal-caja {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     width: 90%;
-    max-width: 450px;
+    max-width: 450px; /* Tamaño pequeño por defecto */
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: max-width 0.3s ease; /* Animación suave al cambiar de tamaño */
 }
-
 .modal-cabecera {
     display: flex;
     justify-content: space-between;
@@ -340,12 +341,39 @@ td {
     overflow-y: auto; /* Agrega scroll si hay muchos pagos */
 }
 
-.lista-pagos-ul li {
+/* .lista-pagos-ul li {
     border-bottom: 1px solid #eee;
     padding: 10px 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+} */
+
+/* Ocultamos los encabezados de tabla en móvil */
+.encabezado-tabla { 
+    display: none; 
+}
+
+/* Diseño del item del pago en móvil (Texto a la izq, Monto a la der) */
+.item-pago {
+    display: grid;
+    grid-template-columns: 1fr auto; /* Dos columnas: Detalles | Monto */
+    gap: 4px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.col-mes { grid-column: 1; grid-row: 1; font-weight: bold; }
+.col-fecha { grid-column: 1; grid-row: 2; font-size: 13px; color: #666; }
+.col-cobro { grid-column: 1; grid-row: 3; font-size: 13px; color: #666; }
+.col-monto { 
+    grid-column: 2; 
+    grid-row: 1 / span 3; /* El monto ocupa el alto de las 3 filas */
+    display: flex; 
+    align-items: center; 
+    font-size: 18px; 
+    font-weight: bold; 
+    color: #28a745; 
 }
 
 /* Botón de cerrar abajo */
@@ -361,3 +389,46 @@ td {
     font-weight: bold;
 }
 .btn-cerrar-modal:hover { background-color: #c82333; }
+
+/* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */
+@media (min-width: 1080px) {
+    .modal-caja { 
+        max-width: 700px; /* Hacemos la ventana más ancha */
+    }
+    
+    /* Mostramos los encabezados en rojo como en tu boceto */
+    .encabezado-tabla {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 1.5fr 1fr; /* 4 Columnas proporcionales */
+        font-weight: bold;
+        color: #dc3545; /* Color rojo */
+        padding-bottom: 10px;
+        border-bottom: 2px solid #ccc;
+        margin-bottom: 5px;
+        text-align: left;
+    }
+
+    /* Transformamos el item en una fila de tabla de 4 columnas */
+    .item-pago {
+        grid-template-columns: 1.2fr 1fr 1.5fr 1fr; /* Mismas columnas que el encabezado */
+        grid-template-rows: auto;
+        align-items: center; /* Centrado vertical */
+    }
+
+    /* Ajustamos los estilos para que se vea plano y no apilado */
+    .col-mes, .col-fecha, .col-cobro { 
+        grid-column: auto; 
+        grid-row: auto; 
+        font-size: 14px; 
+        color: #333;
+    }
+    .col-monto { 
+        grid-column: auto; 
+        grid-row: auto; 
+        display: block; 
+        font-size: 16px; 
+    }
+
+    /* Ocultamos las etiquetas "Mes:", "Fecha:", etc., porque ya hay encabezados */
+    .label-movil { display: none; } 
+}

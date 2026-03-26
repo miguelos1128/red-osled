@@ -79,9 +79,9 @@
                             <p id="res-ultimo-pago" class="msg-adeudo"></p>
                         </div>
                     </div>
-                    <div class="d-grid gap-2"> 
+                    <div class="grupo-botones-pago">
                         <button onclick="prepararPago()" class="btn-pago">Seleccionar Mes a Pagar</button>
-                        <button id="btn-ver-pagos" class="btn-pago" style="margin-top: 5px;">Ver Pagos</button>
+                        <button id="btn-ver-pagos" class="btn-pago">Ver Pagos</button>
                     </div>
                 </div>
             </div>
@@ -597,51 +597,6 @@
         function cerrarHistorial() {
             document.getElementById('modalHistorialCustom').style.display = 'none';
         }
-
-        // Función para ABRIR el modal y cargar datos
-        /* async function abrirHistorial(clienteId, nombreCliente) {
-            // 1. Hacemos visible el modal (usamos 'flex' para que funcione el centrado del CSS)
-            document.getElementById('modalHistorialCustom').style.display = 'flex';
-            document.getElementById('nombreClienteHistorial').textContent = nombreCliente;
-            
-            const lista = document.getElementById('listaPagosHistorial');
-            lista.innerHTML = '<li>Buscando historial...</li>';
-
-            try {
-                const response = await fetch(`/api/clientes/${clienteId}/historial-pagos`);
-                const pagos = await response.json();
-
-                lista.innerHTML = ''; 
-
-                if (pagos.length === 0) {
-                    lista.innerHTML = '<li style="text-align: center; color: #666;">Aún no hay pagos registrados.</li>';
-                    return;
-                } 
-                
-                pagos.forEach(pago => {
-                    const fecha = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
-                    const li = document.createElement('li');
-                    
-                    li.innerHTML = `
-                        <div>
-                            <strong>Mes: ${pago.mes_pagado}</strong><br>
-                            <span style="font-size: 13px; color: #666;">
-                                Fecha: ${fecha}<br>
-                                Cobró: ${pago.cobrador || 'Sistema'}
-                            </span>
-                        </div>
-                        <div>
-                            <strong style="color: #28a745; font-size: 18px;">$${pago.monto}</strong>
-                        </div>
-                    `;
-                    lista.appendChild(li);
-                });
-                
-            } catch (error) {
-                console.error("Error:", error);
-                lista.innerHTML = '<li style="color: red;">Error de conexión al cargar el historial.</li>';
-            }
-        } */
 
         async function abrirHistorial(clienteId, nombreCliente) {
             document.getElementById('modalHistorialCustom').style.display = 'flex';

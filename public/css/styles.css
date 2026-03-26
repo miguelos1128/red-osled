@@ -337,7 +337,7 @@ td {
     list-style-type: none;
     padding: 0;
     margin: 0;
-    max-height: 250px;
+    max-height: 350px;
     overflow-y: auto; /* Agrega scroll si hay muchos pagos */
 }
 
@@ -373,7 +373,6 @@ td {
     align-items: center; 
     font-size: 18px; 
     font-weight: bold; 
-    color: #28a745; 
 }
 
 /* Botón de cerrar abajo */
@@ -390,10 +389,16 @@ td {
 }
 .btn-cerrar-modal:hover { background-color: #c82333; }
 
+.grupo-botones-pago {
+    display: flex;
+    flex-direction: column; /* Apila uno sobre otro */
+    margin-top: 15px; /* Espacio con los datos de arriba */
+}
+
 /* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */
-@media (min-width: 1080px) {
+@media (min-width: 805px) {
     .modal-caja { 
-        max-width: 700px; /* Hacemos la ventana más ancha */
+        max-width: 705px; /* Hacemos la ventana más ancha */
     }
     
     /* Mostramos los encabezados en rojo como en tu boceto */
@@ -401,7 +406,6 @@ td {
         display: grid;
         grid-template-columns: 1.2fr 1fr 1.5fr 1fr; /* 4 Columnas proporcionales */
         font-weight: bold;
-        color: #dc3545; /* Color rojo */
         padding-bottom: 10px;
         border-bottom: 2px solid #ccc;
         margin-bottom: 5px;
@@ -431,4 +435,15 @@ td {
 
     /* Ocultamos las etiquetas "Mes:", "Fecha:", etc., porque ya hay encabezados */
     .label-movil { display: none; } 
+
+    .grupo-botones-pago {
+        gap: 10px; /* Espacio entre los botones */
+        flex-direction: row; /* Los pone en fila horizontal */
+    }
+    
+    /* Hacemos que ambos botones midan exactamente lo mismo (50% y 50%) */
+    .grupo-botones-pago .btn-pago {
+        flex: 1; 
+        margin-top: 0; /* Aseguramos que no queden márgenes raros */
+    }
 }

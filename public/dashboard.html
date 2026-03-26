@@ -72,13 +72,35 @@
                         <span id="res-ip" class="badge-ip"></span>
                     </div>
                     <div class="card-body">
+                        <p><strong>Fecha de pago:</strong> <span id="res-dia"></span></p>
                         <p><strong>Costo del Paquete:</strong> $<span id="res-costo"></span></p>
                         <div class="info-box">
                             <strong>Estado de Cuenta:</strong>
                             <p id="res-ultimo-pago" class="msg-adeudo"></p>
                         </div>
                     </div>
-                    <button onclick="prepararPago()" class="btn-pago">Seleccionar Mes a Pagar</button>
+                    <div class="d-grid gap-2"> 
+                        <button onclick="prepararPago()" class="btn-pago">Seleccionar Mes a Pagar</button>
+                        <button id="btn-ver-pagos" class="btn-pago" style="margin-top: 5px;">Ver Pagos</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modalHistorialCustom" class="modal-fondo" style="display: none;">
+                <div class="modal-caja">
+                    <div class="modal-cabecera">
+                        <h4 style="margin: 0;">Pagos de: <span id="nombreClienteHistorial"></span></h4>
+                        <span class="cerrar-x" onclick="cerrarHistorial()">&times;</span>
+                    </div>
+                    
+                    <div class="modal-cuerpo">
+                        <ul id="listaPagosHistorial" class="lista-pagos-ul">
+                            </ul>
+                    </div>
+                    
+                    <div class="modal-pie">
+                        <button class="btn-cerrar-modal" onclick="cerrarHistorial()">Cerrar Ventana</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -494,6 +516,11 @@
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
                 document.getElementById('res-ip').innerText = cliente.direccion_ip;
                 document.getElementById('res-costo').innerText = cliente.costo_mensual;
+                document.getElementById('res-dia').textContent = cliente.dia_pago;
+
+                document.getElementById('btn-ver-pagos').onclick = function() {
+                    abrirHistorial(cliente.id, cliente.nombre_completo);
+                };
                 
                 const msgUltimoPago = document.getElementById('res-ultimo-pago');
                 
@@ -566,7 +593,55 @@
             // Ponemos el cursor automáticamente en el cuadro de texto
             setTimeout(() => inputMonto.focus(), 200);
         }
+        // Función para CERRAR el modal
+        function cerrarHistorial() {
+            document.getElementById('modalHistorialCustom').style.display = 'none';
+        }
 
+        // Función para ABRIR el modal y cargar datos
+        async function abrirHistorial(clienteId, nombreCliente) {
+            // 1. Hacemos visible el modal (usamos 'flex' para que funcione el centrado del CSS)
+            document.getElementById('modalHistorialCustom').style.display = 'flex';
+            document.getElementById('nombreClienteHistorial').textContent = nombreCliente;
+            
+            const lista = document.getElementById('listaPagosHistorial');
+            lista.innerHTML = '<li>Buscando historial...</li>';
+
+            try {
+                const response = await fetch(`/api/clientes/${clienteId}/historial-pagos`);
+                const pagos = await response.json();
+
+                lista.innerHTML = ''; 
+
+                if (pagos.length === 0) {
+                    lista.innerHTML = '<li style="text-align: center; color: #666;">Aún no hay pagos registrados.</li>';
+                    return;
+                } 
+                
+                pagos.forEach(pago => {
+                    const fecha = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+                    const li = document.createElement('li');
+                    
+                    li.innerHTML = `
+                        <div>
+                            <strong>Mes: ${pago.mes_pagado}</strong><br>
+                            <span style="font-size: 13px; color: #666;">
+                                Fecha: ${fecha}<br>
+                                Cobró: ${pago.cobrador || 'Sistema'}
+                            </span>
+                        </div>
+                        <div>
+                            <strong style="color: #28a745; font-size: 18px;">$${pago.monto}</strong>
+                        </div>
+                    `;
+                    lista.appendChild(li);
+                });
+                
+            } catch (error) {
+                console.error("Error:", error);
+                lista.innerHTML = '<li style="color: red;">Error de conexión al cargar el historial.</li>';
+            }
+        }
         // Esta función va dentro del evento submit de tu formulario de pago
         async function procesarPagoFinal() {
             const monto = parseFloat(document.getElementById('monto-pago-input').value);

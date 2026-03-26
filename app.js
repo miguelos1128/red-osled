@@ -159,7 +159,7 @@ app.get('/api/buscar-clientes', async (req, res) => {
         
         // 2. Preparamos la consulta base
         let query = `
-            SELECT id, nombre_completo, direccion_ip, costo_mensual, fecha_instalacion 
+            SELECT id, nombre_completo, direccion_ip, costo_mensual, fecha_instalacion, dia_pago 
             FROM clientes  WHERE  (nombre_completo LIKE ? OR direccion_ip LIKE ? )
             `;
         let params = [`%${term}%`, `%${term}%`]

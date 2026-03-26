@@ -221,7 +221,7 @@ app.get('/api/clientes/:id/historial-pagos', async (req, res) => {
         FROM pagos p
         LEFT JOIN usuarios u ON p.usuario_id = u.id
         WHERE p.cliente_id = ?
-        ORDER BY p.fecha_pago DESC
+        ORDER BY p.id DESC
         LIMIT 6
     `;
 

@@ -330,14 +330,16 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
             [usuarioId]
         );
         const [detalles] = await db.query(
-            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto  
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 
-             WHERE p.usuario_id = ? AND p.estado_corte = 0 
+             WHERE p.usuario_id = ? AND p.estado_corte = 0  or p.estado_corte = 3
              ORDER BY p.fecha_pago DESC`,
             [usuarioId]
         );
+        console.log("ok funciona")
         res.json({ resumen: resumen[0], detalles: detalles });
+        
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -357,9 +359,14 @@ app.post('/api/procesar-corte', async (req, res) => {
             return res.status(401).json({ error: "Credenciales de administrador incorrectas." });
         }
 
-        // B) Si el admin es correcto, cambiamos el estado de 0 a 1
+        // B) Si el admin es correcto, cambiamos el estado de 0 a 1 y de 3 a 4
         await db.query(
             'UPDATE pagos SET estado_corte = 1 WHERE usuario_id = ? AND estado_corte = 0',
+            [usuarioId]
+        );
+
+        await db.query(
+            'UPDATE pagos SET estado_corte = 3 WHERE usuario_id = ? AND estado_corte = 4',
             [usuarioId]
         );
         

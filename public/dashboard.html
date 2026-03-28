@@ -192,30 +192,35 @@
         </div>
     </div>
 
-    <div id="modal-corte" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 20px; border-radius: 8px; width: 80%; max-height: 80vh; overflow-y: auto;">
+    <div id="modal-corte" class="hidden modal-fondo-corte">
+        <div class="modal-caja-corte">
+            
+            <div class="cabecera-modal-corte">
+                <h2 id="area-imprimible-corte-titulo">Reporte de Corte de Caja</h2>
+                <span class="cerrar-x-modal" onclick="document.getElementById('modal-corte').classList.add('hidden')">&times;</span>
+            </div>
+
             <div id="area-imprimible-corte">
-                <h2>Reporte de Corte de Caja</h2>
-                <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
-                    <thead>
-                        <tr style="background-color: #f5f5f5;">
-                            <th>Fecha</th>
-                            <th>Cliente</th>
-                            <th>IP</th>
-                            <th>Mes Pagado</th>
-                            <th>Monto</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-corte-body">
-                        </tbody>
-                </table>
-                <h3 style="text-align: right; margin-top: 15px;">Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
+                
+                <div class="reporte-grid-container">
+                    
+                    <div class="reporte-grid-header">
+                        <div>Fecha</div>
+                        <div>Cliente</div>
+                        <div>Mes Pagado</div>
+                        <div>Monto</div>
+                        <div>Estado</div>
+                    </div>
+
+                    <div id="tabla-corte-body" class="reporte-grid-body">
+                        </div>
+                </div><div class="reporte-pie-total">
+                    <h3>Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
+                </div>
+            </div><div class="modal-acciones-corte">
+                <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre">Solicitar Cierre al Administrador</button>
             </div>
-            <div style="margin-top: 20px; text-align: right;">
-                <button onclick="document.getElementById('modal-corte').classList.add('hidden')" style="padding: 10px; background: #ccc; border: none; border-radius: 5px; margin-right: 10px;">Cerrar</button>
-                <button onclick="abrirModalAdmin()" style="padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 5px;">Solicitar Cierre al Administrador</button>
-            </div>
+
         </div>
     </div>
 
@@ -840,7 +845,7 @@
             };
         }
 
-        async function cargarWidgetCorte() {
+        /* async function cargarWidgetCorte() {
             if(!idCobrador) return;
             const response = await fetch(`${urlBase}/api/corte-caja/${idCobrador}`);
             const data = await response.json();
@@ -868,8 +873,81 @@
                     </tr>
                 `;
             });
-        }
+        } */
+ 
 
+        async function cargarWidgetCorte() {
+
+            if (!idCobrador) return;
+
+            try {
+                const response = await fetch(`${urlBase}/api/corte-caja/${idCobrador}`);
+                const data = await response.json();
+
+                
+                // Actualizamos los resúmenes del widget (esto lo mantengo igual)
+                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_dinero || 0).toFixed(2);
+                document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
+
+                // --- NUEVA LÓGICA PARA LLENAR EL REPORTE CON DIVS RESPONSIVOS ---
+                
+                // Buscamos el nuevo contenedor del cuerpo del reporte
+                const reporteBody = document.getElementById('tabla-corte-body');
+                const lblTotalModal = document.getElementById('lbl-corte-total-modal');
+                
+                reporteBody.innerHTML = ''; // Limpiamos tabla
+                let totalModal = 0;
+
+                // Usamos pagosReceived si ese es tu arreglo de datos
+                // data.detalles.forEach(pago => { 
+                data.detalles.forEach(pago => { 
+                    // 1. Formateamos la fecha (respetando tu formato original)
+                    const fechaString = new Date(pago.fecha_pago).toLocaleString('es-MX', {
+                        year: 'numeric', month: 'numeric', day: 'numeric',
+                        hour: 'numeric', minute: 'numeric', second: 'numeric',
+                        hour12: false
+                    });
+                    // 2. Lógica de estados para diseño y suma
+                    let claseEstado = '';
+                    let nombreEstado = ''; // Por defecto Completado
+                    if (pago.estado_corte == 3) {
+                        claseEstado = 'estado-cancelado';
+                        nombreEstado = 'Cancelado'
+                        // Si está cancelado, NO sumamos al total
+                    } else if (pago.estado_corte == 0) {
+                        claseEstado = 'estado-pendiente';
+                        nombreEstado = 'Pendiente'
+                        totalModal += parseFloat(pago.monto) || 0;
+                    }
+                    console.log("clase: "+claseEstado +" nombre "+nombreEstado )
+                    // 3. Creamos el contenedor de la tarjeta/fila (reporte-item-pago)
+                    const itemPago = document.createElement('div');
+                    itemPago.className = 'reporte-item-pago'; // <-- Clase clave para el CSS Grid
+                    
+                    // 4. Inyectamos la estructura responsiva con las etiquetas para móvil
+                    itemPago.innerHTML = `
+                        <div class="col-fecha"><span class="label-movil">Fecha: </span>${fechaString}</div>
+                        <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
+                        <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
+                        <div class="col-monto">$${parseFloat(pago.monto).toFixed(2)}</div>
+                        <div class="col-estado ${claseEstado}">${nombreEstado}</div>
+                    `;
+                    
+                    reporteBody.appendChild(itemPago);
+                });
+
+                // 5. Actualizamos el total en el modal con la suma corregida
+                lblTotalModal.textContent = totalModal.toLocaleString('en-US', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                });
+
+            } catch (error) {
+                console.error('Error en cargarWidgetCorte:', error);
+                // Opcional: mostrar un mensaje de error en la tabla
+                document.getElementById('tabla-corte-body').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error al cargar el reporte.</div>';
+            }
+        }
         // 2. Control de ventanas
         function abrirModalCorte() {
             document.getElementById('modal-corte').classList.remove('hidden');

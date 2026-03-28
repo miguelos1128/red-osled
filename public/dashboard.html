@@ -929,8 +929,10 @@
                         <div class="col-fecha"><span class="label-movil">Fecha: </span>${fechaString}</div>
                         <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
                         <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
-                        <div class="col-monto">$${parseFloat(pago.monto).toFixed(2)}</div>
-                        <div class="col-estado ${claseEstado}">${nombreEstado}</div>
+                        <div class = "monto-estado">
+                            <div class="col-monto">$${parseFloat(pago.monto).toFixed(2)}</div>
+                            <div class="col-estado ${claseEstado}">${nombreEstado}</div>
+                        </div>
                     `;
                     
                     reporteBody.appendChild(itemPago);

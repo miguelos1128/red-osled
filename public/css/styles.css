@@ -235,7 +235,7 @@ td {
     color: #28a745; /* Verde para monto */
     margin-top: 5px;
 }
-.col-monto:before {
+.cabecera-modal-corte .col-monto:before {
     content: "Monto:";
     font-weight: normal;
     font-size: 14px;
@@ -558,7 +558,7 @@ td {
     }
 
     /* Ocultamos las etiquetas "Mes:", "Fecha:", etc., porque ya hay encabezados */
-    .label-movil { display: none; } 
+    .cabecera-modal-corte .label-movil { display: none; } 
 
     .grupo-botones-pago {
         gap: 10px; /* Espacio entre los botones */
@@ -605,10 +605,7 @@ td {
     }
 
     /* Ocultamos las etiquetas "Mes:", "Fecha:", etc., porque ya hay encabezados */
-    .label-movil {
-        display: none;
-    }
-
+    
     /* Ajustes específicos para escritorio */
     .reporte-item-pago div {
         font-size: 14px;
@@ -620,15 +617,16 @@ td {
         font-size: 14px;
     }
 
-    .col-monto {
-        display: block; /* Desactivamos el flex de móvil */
+    /* .col-monto {
+        display: block; /* Desactivamos el flex de móvil 
         font-size: 14px !important;
         font-weight: normal;
         color: #333;
         margin-top: 0;
-    }
+    } */
     /* El "Monto:" de móvil se oculta */
     .col-monto:before { display: none; }
+    .reporte-item-pago .label-movil { display: none; } 
 
     .col-estado {
         text-align: left; /* Alineado a la izquierda */

@@ -214,8 +214,13 @@ td {
 
 /* Estilos de las "columnas" dentro de la tarjeta móvil */
 .reporte-item-pago div {
-    font-size: 14px;
     color: #333;
+}
+
+.reporte-item-pago .monto-estado{
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
 }
 
 /* El nombre del cliente es el título de la tarjeta */
@@ -229,8 +234,7 @@ td {
 .col-monto {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    font-size: 18px !important;
+    align-items: center;    
     font-weight: bold;
     color: #28a745; /* Verde para monto */
     margin-top: 5px;
@@ -570,6 +574,14 @@ td {
         flex: 1; 
         margin-top: 0; /* Aseguramos que no queden márgenes raros */
     }
+
+    .reporte-item-pago .monto-estado{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        font-size: 20px;
+    }
+    .modal-cuerpo .label-movil { display: none; } 
 }
 @media (min-width: 980px) {
     .modal-caja-corte {
@@ -593,7 +605,7 @@ td {
     .reporte-item-pago {
         display: grid;
         /* Mismas 6 columnas que el encabezado */
-        grid-template-columns: 1.2fr 2.5fr 1.2fr .8fr .5fr .5fr;
+        grid-template-columns: 1.2fr 2.5fr 1.2fr 1.3fr .5fr;
         gap: 10px;
         border: none;
         border-bottom: 1px solid #eee;
@@ -627,6 +639,7 @@ td {
     /* El "Monto:" de móvil se oculta */
     .col-monto:before { display: none; }
     .reporte-item-pago .label-movil { display: none; } 
+    
 
     .col-estado {
         text-align: left; /* Alineado a la izquierda */
@@ -634,6 +647,11 @@ td {
     }
 }
 
+.reporte-item-pago .monto-estado{
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+}
 
 /* --- 5. Pie y Botones del Modal --- */
 .reporte-pie-total {

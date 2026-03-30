@@ -5,19 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control - Sistema de Pagos</title>
     <link rel="stylesheet" href="css/styles.css">
-    
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>Bienvenido, <span id="user-name">...</span></h1>
-            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+            <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
         </div>
 
         <div id="admin-section" class="admin-only">
             <h3>Gestión de Clientes (Solo Admin)</h3>
             <div class="actions">
-                <button class="btn-add" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
+                <button class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
             </div>
 
                 <div class="main-section">
@@ -43,7 +42,7 @@
                 <span style="font-size: 1.2em; font-weight: bold; color: #1976d2;">💰 Efectivo en Caja: $<span id="lbl-caja-total">0.00</span></span>
                 <br><span style="color: #555; font-size: 0.9em;">Pagos por entregar: <span id="lbl-caja-cobros">0</span></span>
             </div>
-            <button style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
+            <button class= "button" style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
         </div>
 
         <div class="main-section">
@@ -81,8 +80,8 @@
                         </div>
                     </div>
                     <div class="grupo-botones-pago">
-                        <button onclick="prepararPago()" class="btn-pago">Seleccionar Mes a Pagar</button>
-                        <button id="btn-ver-pagos" class="btn-pago">Ver Pagos</button>
+                        <button onclick="prepararPago()" class="btn-pago button">Seleccionar Mes a Pagar</button>
+                        <button id="btn-ver-pagos" class="btn-pago button">Ver Pagos</button>
                     </div>
                 </div>
             </div>
@@ -100,7 +99,7 @@
                     </div>
                     
                     <div class="modal-pie">
-                        <button class="btn-cerrar-modal" onclick="cerrarHistorial()">Cerrar Ventana</button>
+                        <button class="btn-cerrar-modal button" onclick="cerrarHistorial()">Cerrar Ventana</button>
                     </div>
                 </div>
             </div>
@@ -128,7 +127,7 @@
                 </p>
             </div>
 
-            <button onclick="procesarPagoFinal()" class="btn-success" 
+            <button onclick="procesarPagoFinal()" class="btn-success button" 
                     style="width: 100%; padding: 15px; margin-top: 20px; font-size: 1.1em; background-color: #28a745; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">
                 Confirmar y Pagar
             </button>
@@ -187,7 +186,7 @@
                 </select>
                 <input type="number" id="costo_cli" placeholder="Costo Mensual ($)" required>
 
-                <button type="submit" style="margin-top:15px;">Guardar Cliente</button>
+                <button class="button" type="submit" style="margin-top:15px;">Guardar Cliente</button>
             </form>
         </div>
     </div>
@@ -210,6 +209,7 @@
                         <div>Mes Pagado</div>
                         <div>Monto</div>
                         <div>Estado</div>
+                        <div>Acción</div>
                     </div>
 
                     <div id="tabla-corte-body" class="reporte-grid-body">
@@ -218,7 +218,7 @@
                     <h3>Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
                 </div>
             </div><div class="modal-acciones-corte">
-                <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre">Solicitar Cierre al Administrador</button>
+                <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre button">Solicitar Cierre al Administrador</button>
             </div>
 
         </div>
@@ -230,8 +230,8 @@
             <p>El administrador debe validar la entrega del efectivo para liberar el corte.</p>
             <input type="text" id="admin-user" placeholder="Usuario Admin" style="width: 100%; margin-bottom: 10px; padding: 8px;"><br>
             <input type="password" id="admin-pass" placeholder="Contraseña Admin" style="width: 100%; margin-bottom: 15px; padding: 8px;"><br>
-            <button onclick="document.getElementById('modal-admin').classList.add('hidden')" style="padding: 10px; margin-right: 10px;">Cancelar</button>
-            <button onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
+            <button class="button" onclick="document.getElementById('modal-admin').classList.add('hidden')" style="padding: 10px; margin-right: 10px;">Cancelar</button>
+            <button class="button" onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
         </div>
     </div>
    
@@ -286,10 +286,9 @@
                             <td>${c.nombre_completo}</td>
                             <td>${c.estado_servicio}</td>
                             <td>
-                                <button onclick="seleccionarClienteDirecto(${JSON.stringify(c).replace(/"/g, '&quot;')})">
+                                <button class="button" onclick="seleccionarClienteDirecto(${JSON.stringify(c).replace(/"/g, '&quot;')})">
                                     Registrar Pago
                                 </button>
-                                ${usuario.rol === 2 ? `<button style="background:red" onclick="eliminarCliente(${c.id})">Eliminar</button>` : ''}
                             </td>
                         </tr>
                     `;
@@ -910,19 +909,37 @@
                     // 2. Lógica de estados para diseño y suma
                     let claseEstado = '';
                     let nombreEstado = ''; // Por defecto Completado
-                    if (pago.estado_corte == 3) {
+                    let mostrarBoton = false;
+
+                    // Convertimos a número por seguridad
+                    const estado = parseInt(pago.estado_corte);
+                    
+                    if (estado === 3) {
                         claseEstado = 'estado-cancelado';
                         nombreEstado = 'Cancelado'
-                        // Si está cancelado, NO sumamos al total
-                    } else if (pago.estado_corte == 0) {
+                        mostrarBoton = false; // No se muestra si ya está cancelado
+                    } else if (estado === 0) {
                         claseEstado = 'estado-pendiente';
                         nombreEstado = 'Pendiente'
+                        mostrarBoton = true;  // ACTIVO solo en pendiente
                         totalModal += parseFloat(pago.monto) || 0;
                     }
                     console.log("clase: "+claseEstado +" nombre "+nombreEstado )
                     // 3. Creamos el contenedor de la tarjeta/fila (reporte-item-pago)
                     const itemPago = document.createElement('div');
                     itemPago.className = 'reporte-item-pago'; // <-- Clase clave para el CSS Grid
+
+                    // Generamos el HTML del botón de basura
+                    // Usamos FontAwesome (fa-trash-alt). Si no lo tienes, puedes usar el texto "❌"
+                    // Generamos el HTML del botón usando un SVG nativo
+                    const htmlBoton = mostrarBoton 
+                        ? `<button  class="btn-eliminar-pago" title="Cancelar Pago" onclick="cancelarPago(${pago.id_pago})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3V2h11v1h-11Z"/>
+                            </svg>
+                        </button>`
+                        : '';
                     
                     // 4. Inyectamos la estructura responsiva con las etiquetas para móvil
                     itemPago.innerHTML = `
@@ -933,6 +950,7 @@
                             <div class="col-monto">$${parseFloat(pago.monto).toFixed(2)}</div>
                             <div class="col-estado ${claseEstado}">${nombreEstado}</div>
                         </div>
+                        <div class="col-accion">${htmlBoton}</div>
                     `;
                     
                     reporteBody.appendChild(itemPago);
@@ -950,6 +968,33 @@
                 document.getElementById('tabla-corte-body').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error al cargar el reporte.</div>';
             }
         }
+
+        async function cancelarPago(idPago) {
+        // Confirmación antes de borrar
+        const confirmar = confirm("¿Estás seguro de que deseas cancelar este pago?");
+        
+        if (confirmar) {
+            try {
+                const response = await fetch(`/api/cancelar-pago/${idPago}`, {
+                    method: 'POST', // O 'PUT' según tu API
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert("Pago cancelado correctamente.");
+                    // Recargamos el widget para ver los cambios y el nuevo total
+                    cargarWidgetCorte(); 
+                } else {
+                    alert("Error al cancelar: " + result.message);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("No se pudo conectar con el servidor.");
+            }
+        }
+    }
         // 2. Control de ventanas
         function abrirModalCorte() {
             document.getElementById('modal-corte').classList.remove('hidden');

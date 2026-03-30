@@ -59,7 +59,7 @@ button {
     margin-top: 10px;
 }
 
-button:hover {
+.button:hover {
     background-color: #1557b0;
 }
 
@@ -523,6 +523,32 @@ td {
     margin-top: 15px; /* Espacio con los datos de arriba */
 }
 
+/* Estilo del botón de eliminar */
+.btn-eliminar-pago {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666; /* Color gris inicial */
+    font-size: 1.1rem;
+    transition: color 0.3s ease, transform 0.2s ease;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Al pasar el mouse se pone rojo */
+.btn-eliminar-pago:hover {
+    color: #dc3545; /* Rojo */
+    transform: scale(1.2);
+}
+
+/* Estado desactivado o invisible */
+.btn-oculto {
+    visibility: hidden;
+    pointer-events: none;
+}
+
 /* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */
 @media (min-width: 805px) {
     .modal-caja { 
@@ -644,6 +670,15 @@ td {
     .col-estado {
         text-align: left; /* Alineado a la izquierda */
         margin-top: 0;
+    }
+    /*eSTILOS PARA EL BOTON DE ELIMINAR */
+    .col-accion {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    .reporte-item-pago {
+        position: relative; /* Para que el botón se posicione respecto a la tarjeta */
     }
 }
 

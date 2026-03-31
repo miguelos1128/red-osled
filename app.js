@@ -386,3 +386,41 @@ app.get('/api/localidades', async (req, res) => {
         res.status(500).json({ error: "Error al cargar catálogo" });
     }
 });
+
+
+
+app.post('/api/cancelar-pago/:id', async (req, res) => {
+    const idPago = req.params.id;
+
+    try {
+        // 1. Preparamos la consulta SQL
+        // IMPORTANTE: Verifica que los nombres de tu tabla ('pagos') 
+        // y tus columnas ('id_estado', 'id_pago') coincidan con tu base de datos real.
+        const query = `UPDATE pagos SET estado_corte = 3 WHERE id = ?`;
+        console.log('Query '+ query+ 'id: '+ idPago )
+        
+        // 2. Ejecutamos la consulta (Ejemplo usando un 'pool' de mysql2 con promesas)
+        const [result] = await db.query(query, [idPago]);
+
+        // 3. Verificamos si realmente se modificó algún registro
+        if (result.affectedRows > 0) {
+            res.json({ 
+                success: true, 
+                message: 'Pago cancelado correctamente.' 
+            });
+        } else {
+            // Si affectedRows es 0, significa que el ID no existe
+            res.status(404).json({ 
+                success: false, 
+                message: 'No se encontró el pago especificado.' 
+            });
+        }
+
+    } catch (error) {
+        console.error('Error en el servidor al cancelar pago:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error interno del servidor al procesar la solicitud.' 
+        });
+    }
+});

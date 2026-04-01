@@ -198,7 +198,7 @@ app.get('/api/ultimo-pago/:id', async (req, res) => {
     const query = `
         SELECT mes_pagado, fecha_pago, monto,  tipo_pago
         FROM pagos 
-        WHERE cliente_id = ? 
+        WHERE cliente_id = ? and estado_corte < 3
         ORDER BY fecha_pago DESC LIMIT 1`;
     try{
         const [result] = await db.query(query, [id]);
@@ -214,13 +214,14 @@ app.get('/api/ultimo-pago/:id', async (req, res) => {
 app.get('/api/clientes/:id/historial-pagos', async (req, res) => {
     const clienteId = req.params.id;
 
-    // Asumo que tu tabla se llama 'pagos' y tiene 'cliente_id' y 'usuario_id'
+    
     // Hacemos un JOIN con 'usuarios' para obtener el nombre de quien cobró
     const query = `
         SELECT p.fecha_pago, p.mes_pagado, p.monto, u.nombre AS cobrador 
         FROM pagos p
         LEFT JOIN usuarios u ON p.usuario_id = u.id
         WHERE p.cliente_id = ?
+        and estado_corte < 3
         ORDER BY p.id DESC
         LIMIT 6
     `;
@@ -244,7 +245,7 @@ app.post('/api/registrar-pago', async (req, res) => {
 
         // 1. Traemos TODO el historial agrupado por mes de este cliente
         const [pagosAgrupados] = await db.query(
-            'SELECT mes_pagado, SUM(monto) as pagado FROM pagos WHERE cliente_id = ? GROUP BY mes_pagado',
+            'SELECT mes_pagado, SUM(monto) as pagado FROM pagos WHERE cliente_id = ? and estado_corte<3 GROUP BY mes_pagado',
             [clienteId]
         );
 
@@ -334,7 +335,7 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 
              WHERE p.usuario_id = ? AND p.estado_corte = 0  or p.estado_corte = 3
-             ORDER BY p.fecha_pago DESC`,
+             ORDER BY p.id DESC`,
             [usuarioId]
         );
         console.log("ok funciona")

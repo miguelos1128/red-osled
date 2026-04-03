@@ -213,11 +213,36 @@
                     </div>
 
                     <div id="tabla-corte-body" class="reporte-grid-body">
-                        </div>
-                </div><div class="reporte-pie-total">
+                        
+                    </div>
+                </div>
+                <div class="reporte-pie-total">
                     <h3>Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
                 </div>
-            </div><div class="modal-acciones-corte">
+            </div>
+
+            <div id="zona-impresion-oculta" class="oculto-en-pantalla">
+                <h2 class="titulo-print">Reporte de Corte de Caja Autorizado</h2>
+                
+                <table class="tabla-impresion">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Mes Pagado</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-autorizado-body-print">
+                        </tbody>
+                </table>
+                
+                <div class="pie-impresion">
+                    <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
+                </div>
+            </div>
+
+            <div class="modal-acciones-corte">
                 <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre button">Solicitar Cierre al Administrador</button>
             </div>
 
@@ -893,6 +918,10 @@
                 // Buscamos el nuevo contenedor del cuerpo del reporte
                 const reporteBody = document.getElementById('tabla-corte-body');
                 const lblTotalModal = document.getElementById('lbl-corte-total-modal');
+                const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
+                const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
+                reporteAuthBodyPrint.innerHTML = '';
+                let totalImpresion = 0;
                 
                 reporteBody.innerHTML = ''; // Limpiamos tabla
                 let totalModal = 0;
@@ -954,6 +983,18 @@
                     `;
                     
                     reporteBody.appendChild(itemPago);
+
+                    const tr = document.createElement('tr');
+                    
+                    // Inyectamos <td> clásicos en lugar de los divs responsivos
+                    tr.innerHTML = `
+                        <td>${fechaString}</td>
+                        <td>${pago.cliente}</td>
+                        <td>${pago.mes_pagado}</td>
+                        <td>$${parseFloat(pago.monto).toFixed(2)}</td>
+                    `;
+                    
+                    reporteAuthBodyPrint.appendChild(tr);
                 });
 
                 // 5. Actualizamos el total en el modal con la suma corregida
@@ -961,6 +1002,7 @@
                     minimumFractionDigits: 2, 
                     maximumFractionDigits: 2 
                 });
+                lblTotalPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
             } catch (error) {
                 console.error('Error en cargarWidgetCorte:', error);
@@ -1027,8 +1069,8 @@
                     // ¡El admin autorizó! Primero imprimimos el PDF
                     alert("✅ Corte autorizado. Generando reporte PDF...");
                     
-                    // Truco rápido para imprimir solo la tabla como PDF
-                    const contenido = document.getElementById('area-imprimible-corte').innerHTML;
+                    /* // Truco rápido para imprimir solo la tabla como PDF
+                    const contenido = document.getElementById('zona-impresion-oculta').innerHTML;
                     const ventanaImpresion = window.open('', '', 'width=800,height=600');
                     ventanaImpresion.document.write('<html><head><title>Reporte de Corte</title></head><body>');
                     ventanaImpresion.document.write(contenido);
@@ -1037,7 +1079,8 @@
                     ventanaImpresion.print();
 
                     // Refrescamos la página para limpiar todo visualmente
-                    location.reload(); 
+                    location.reload();  */
+                    imprimirReporte();
                 } else {
                     alert("❌ Error: " + data.error);
                 }
@@ -1045,7 +1088,76 @@
                 console.error("Error al procesar corte:", error);
             }
         }
-  
+        
+        function imprimirReporte() {
+            // 1. Obtenemos el contenido de la tabla
+            const contenido = document.getElementById('zona-impresion-oculta').innerHTML;
+            
+            // 2. Abrimos la nueva ventana
+            const ventana = window.open('', '_blank');
+
+            // 3. Escribimos un documento HTML completo con los estilos incrustados
+            ventana.document.write(`
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Reporte de Corte</title>
+                    <style>
+                        /* Estilos base para la hoja de papel */
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            padding: 20px; 
+                            color: #000;
+                        }
+                        
+                        /* Estilos de la tabla que hicimos antes */
+                        .titulo-print { 
+                            text-align: center; 
+                            font-size: 22px; 
+                            margin-bottom: 20px; 
+                        }
+                        .tabla-impresion { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            font-size: 14px; 
+                        }
+                        .tabla-impresion th, .tabla-impresion td { 
+                            border: 1px solid #000; 
+                            padding: 10px; 
+                            text-align: left; 
+                        }
+                        .tabla-impresion th { 
+                            background-color: #e6e6e6 !important; 
+                            -webkit-print-color-adjust: exact; /* Fuerza el fondo gris al imprimir */
+                            print-color-adjust: exact;
+                        }
+                        .pie-impresion { 
+                            text-align: right; 
+                            margin-top: 20px; 
+                        }
+                        .pie-impresion h3 {
+                            font-size: 18px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${contenido}
+                </body>
+                </html>
+            `);
+
+            // 4. Cerramos el flujo de escritura del documento para que el navegador lo renderice
+            ventana.document.close();
+            ventana.focus();
+
+            // 5. Le damos un pequeñísimo respiro al navegador para aplicar el CSS antes de lanzar la impresión
+            setTimeout(() => {
+                ventana.print();
+                ventana.close();
+                location.reload();  // Cierra la pestaña automáticamente al terminar (opcional, pero muy útil)
+            }, 250);
+        }
     </script>
 </body>
 </html>

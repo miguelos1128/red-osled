@@ -367,7 +367,7 @@ app.post('/api/procesar-corte', async (req, res) => {
         );
 
         await db.query(
-            'UPDATE pagos SET estado_corte = 3 WHERE usuario_id = ? AND estado_corte = 4',
+            'UPDATE pagos SET estado_corte = 4 WHERE usuario_id = ? AND estado_corte = 3',
             [usuarioId]
         );
         

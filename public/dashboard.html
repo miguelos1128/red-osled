@@ -2,21 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control - Sistema de Pagos</title>
     <link rel="stylesheet" href="css/styles.css">
-    
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>Bienvenido, <span id="user-name">...</span></h1>
-            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+            <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
         </div>
 
         <div id="admin-section" class="admin-only">
             <h3>Gestión de Clientes (Solo Admin)</h3>
             <div class="actions">
-                <button class="btn-add" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
+                <button class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
             </div>
 
                 <div class="main-section">
@@ -42,7 +42,7 @@
                 <span style="font-size: 1.2em; font-weight: bold; color: #1976d2;">💰 Efectivo en Caja: $<span id="lbl-caja-total">0.00</span></span>
                 <br><span style="color: #555; font-size: 0.9em;">Pagos por entregar: <span id="lbl-caja-cobros">0</span></span>
             </div>
-            <button style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
+            <button class= "button" style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
         </div>
 
         <div class="main-section">
@@ -72,13 +72,35 @@
                         <span id="res-ip" class="badge-ip"></span>
                     </div>
                     <div class="card-body">
+                        <p><strong>Fecha de pago:</strong> <span id="res-dia"></span></p>
                         <p><strong>Costo del Paquete:</strong> $<span id="res-costo"></span></p>
                         <div class="info-box">
                             <strong>Estado de Cuenta:</strong>
                             <p id="res-ultimo-pago" class="msg-adeudo"></p>
                         </div>
                     </div>
-                    <button onclick="prepararPago()" class="btn-pago">Seleccionar Mes a Pagar</button>
+                    <div class="grupo-botones-pago">
+                        <button onclick="prepararPago()" class="btn-pago button">Seleccionar Mes a Pagar</button>
+                        <button id="btn-ver-pagos" class="btn-pago button">Ver Pagos</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modalHistorialCustom" class="modal-fondo" style="display: none;">
+                <div class="modal-caja">
+                    <div class="modal-cabecera">
+                        <h4 style="margin: 0;">Pagos de: <span id="nombreClienteHistorial"></span></h4>
+                        <span class="cerrar-x" onclick="cerrarHistorial()">&times;</span>
+                    </div>
+                    
+                    <div class="modal-cuerpo">
+                        <ul id="listaPagosHistorial" class="lista-pagos-ul">
+                            </ul>
+                    </div>
+                    
+                    <div class="modal-pie">
+                        <button class="btn-cerrar-modal button" onclick="cerrarHistorial()">Cerrar Ventana</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -105,7 +127,7 @@
                 </p>
             </div>
 
-            <button onclick="procesarPagoFinal()" class="btn-success" 
+            <button onclick="procesarPagoFinal()" class="btn-success button" 
                     style="width: 100%; padding: 15px; margin-top: 20px; font-size: 1.1em; background-color: #28a745; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">
                 Confirmar y Pagar
             </button>
@@ -164,35 +186,77 @@
                 </select>
                 <input type="number" id="costo_cli" placeholder="Costo Mensual ($)" required>
 
-                <button type="submit" style="margin-top:15px;">Guardar Cliente</button>
+                <button class="button" type="submit" style="margin-top:15px;">Guardar Cliente</button>
             </form>
         </div>
     </div>
 
-    <div id="modal-corte" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 20px; border-radius: 8px; width: 80%; max-height: 80vh; overflow-y: auto;">
+    <div id="modal-corte" class="hidden modal-fondo-corte">
+        <div class="modal-caja-corte">
+            
+            <div class="cabecera-modal-corte">
+                <h2 id="area-imprimible-corte-titulo">Reporte de Corte de Caja</h2>
+                <span class="cerrar-x-modal" onclick="document.getElementById('modal-corte').classList.add('hidden')">&times;</span>
+            </div>
+
             <div id="area-imprimible-corte">
-                <h2>Reporte de Corte de Caja</h2>
-                <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+                
+                <div class="reporte-grid-container">
+                    
+                    <div class="reporte-grid-header">
+                        <div>Fecha</div>
+                        <div>Cliente</div>
+                        <div>Mes Pagado</div>
+                        <div>Monto</div>
+                        <div>Estado</div>
+                        <div>Acción</div>
+                    </div>
+
+                    <div id="tabla-corte-body" class="reporte-grid-body">
+                        
+                    </div>
+                </div>
+                <div class="reporte-pie-total">
+                    <h3>Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
+                </div>
+            </div>
+
+            <div id="zona-impresion-oculta" class="oculto-en-pantalla">
+                
+                <h2 class="titulo-print">Reporte de Corte de Caja Autorizado</h2>
+                    
+                    <div class="encabezado-info-print">
+                        <div class="info-usuarios">
+                            <div class="info-fecha">
+                                <p id="print-fecha-larga">Jueves, 2 de abril del 2026 - 6:24 p.m.</p>
+                            </div>
+                            <p><strong>Corte de:</strong> <span id="print-cobrador">Nombre del Usuario</span></p>
+                            <p><strong>Autorizado por:</strong> <span id="print-admin">Nombre del Administrador</span></p>
+                        </div>
+                        
+                    </div>
+                <table class="tabla-impresion">
                     <thead>
-                        <tr style="background-color: #f5f5f5;">
+                        <tr>
                             <th>Fecha</th>
                             <th>Cliente</th>
-                            <th>IP</th>
                             <th>Mes Pagado</th>
                             <th>Monto</th>
-                            <th>Estado</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-corte-body">
+                    <tbody id="tabla-autorizado-body-print">
                         </tbody>
                 </table>
-                <h3 style="text-align: right; margin-top: 15px;">Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
+                
+                <div class="pie-impresion">
+                    <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
+                </div>
             </div>
-            <div style="margin-top: 20px; text-align: right;">
-                <button onclick="document.getElementById('modal-corte').classList.add('hidden')" style="padding: 10px; background: #ccc; border: none; border-radius: 5px; margin-right: 10px;">Cerrar</button>
-                <button onclick="abrirModalAdmin()" style="padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 5px;">Solicitar Cierre al Administrador</button>
+
+            <div class="modal-acciones-corte">
+                <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre button">Solicitar Cierre al Administrador</button>
             </div>
+
         </div>
     </div>
 
@@ -202,8 +266,8 @@
             <p>El administrador debe validar la entrega del efectivo para liberar el corte.</p>
             <input type="text" id="admin-user" placeholder="Usuario Admin" style="width: 100%; margin-bottom: 10px; padding: 8px;"><br>
             <input type="password" id="admin-pass" placeholder="Contraseña Admin" style="width: 100%; margin-bottom: 15px; padding: 8px;"><br>
-            <button onclick="document.getElementById('modal-admin').classList.add('hidden')" style="padding: 10px; margin-right: 10px;">Cancelar</button>
-            <button onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
+            <button class="button" onclick="document.getElementById('modal-admin').classList.add('hidden')" style="padding: 10px; margin-right: 10px;">Cancelar</button>
+            <button class="button" onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
         </div>
     </div>
    
@@ -258,10 +322,9 @@
                             <td>${c.nombre_completo}</td>
                             <td>${c.estado_servicio}</td>
                             <td>
-                                <button onclick="seleccionarClienteDirecto(${JSON.stringify(c).replace(/"/g, '&quot;')})">
+                                <button class="button" onclick="seleccionarClienteDirecto(${JSON.stringify(c).replace(/"/g, '&quot;')})">
                                     Registrar Pago
                                 </button>
-                                ${usuario.rol === 2 ? `<button style="background:red" onclick="eliminarCliente(${c.id})">Eliminar</button>` : ''}
                             </td>
                         </tr>
                     `;
@@ -494,6 +557,11 @@
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
                 document.getElementById('res-ip').innerText = cliente.direccion_ip;
                 document.getElementById('res-costo').innerText = cliente.costo_mensual;
+                document.getElementById('res-dia').textContent = cliente.dia_pago;
+
+                document.getElementById('btn-ver-pagos').onclick = function() {
+                    abrirHistorial(cliente.id, cliente.nombre_completo);
+                };
                 
                 const msgUltimoPago = document.getElementById('res-ultimo-pago');
                 
@@ -565,6 +633,57 @@
 
             // Ponemos el cursor automáticamente en el cuadro de texto
             setTimeout(() => inputMonto.focus(), 200);
+        }
+        // Función para CERRAR el modal
+        function cerrarHistorial() {
+            document.getElementById('modalHistorialCustom').style.display = 'none';
+        }
+
+        async function abrirHistorial(clienteId, nombreCliente) {
+            document.getElementById('modalHistorialCustom').style.display = 'flex';
+            document.getElementById('nombreClienteHistorial').textContent = nombreCliente;
+            
+            const lista = document.getElementById('listaPagosHistorial');
+            lista.innerHTML = '<li style="text-align: center; padding: 20px;">Buscando historial...</li>';
+
+            try {
+                const response = await fetch(`/api/clientes/${clienteId}/historial-pagos`);
+                const pagos = await response.json();
+
+                if (pagos.length === 0) {
+                    lista.innerHTML = '<li style="text-align: center; color: #666; padding: 20px;">Aún no hay pagos registrados.</li>';
+                    return;
+                } 
+                
+                // 1. Insertamos el Encabezado (Oculto en móvil, visible en Escritorio)
+                lista.innerHTML = `
+                    <li class="encabezado-tabla">
+                        <div>Mes</div>
+                        <div>Fecha</div>
+                        <div>Cobró</div>
+                        <div>Cantidad</div>
+                    </li>
+                `;
+                
+                // 2. Dibujamos cada pago estructurado en columnas
+                pagos.forEach(pago => {
+                    const fecha = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+                    const li = document.createElement('li');
+                    li.className = 'item-pago'; // <-- Clase clave para el CSS Grid
+                    
+                    li.innerHTML = `
+                        <div class="col-mes"><span class="label-movil">Mes: </span>${pago.mes_pagado}</div>
+                        <div class="col-fecha"><span class="label-movil">Fecha: </span>${fecha}</div>
+                        <div class="col-cobro"><span class="label-movil">Cobró: </span>${pago.cobrador || 'Sistema'}</div>
+                        <div class="col-monto">$${pago.monto}</div>
+                    `;
+                    lista.appendChild(li);
+                });
+                
+            } catch (error) {
+                console.error("Error:", error);
+                lista.innerHTML = '<li style="color: red; text-align: center; padding: 20px;">Error de conexión al cargar el historial.</li>';
+            }
         }
 
         // Esta función va dentro del evento submit de tu formulario de pago
@@ -676,7 +795,7 @@
                     <div class="text-center">
                         <h2 style="margin:0;">RED OSLED</h2>
                         <p style="margin:5px 0;">Internet de Alta Velocidad</p>
-                        <p style="font-size:12px;">Fecha: ${new Date().toLocaleString()}</p>
+                        <p style="font-size:12px;">Fecha: ${ObtenerFecha()}</p>
                     </div>
                     
                     <div class="divider"></div>
@@ -760,43 +879,159 @@
                 montoTotal
             };
         }
+ 
 
         async function cargarWidgetCorte() {
-            if(!idCobrador) return;
-            const response = await fetch(`${urlBase}/api/corte-caja/${idCobrador}`);
-            const data = await response.json();
-            
-            const total = data.resumen.total_dinero || 0;
-            const cobros = data.resumen.total_cobros || 0;
-            
-            document.getElementById('lbl-caja-total').innerText = parseFloat(total).toFixed(2);
-            document.getElementById('lbl-caja-cobros').innerText = cobros;
-            document.getElementById('lbl-corte-total-modal').innerText = parseFloat(total).toFixed(2);
-            
-            // Llenamos la tabla oculta
-            const tbody = document.getElementById('tabla-corte-body');
-            tbody.innerHTML = '';
-            data.detalles.forEach(pago => {
-                const fecha = new Date(pago.fecha_pago).toLocaleString();
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${fecha}</td>
+
+            if (!idCobrador) return;
+
+            try {
+                const response = await fetch(`${urlBase}/api/corte-caja/${idCobrador}`);
+                const data = await response.json();
+
+                
+                // Actualizamos los resúmenes del widget (esto lo mantengo igual)
+                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_dinero || 0).toFixed(2);
+                document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
+
+                // --- NUEVA LÓGICA PARA LLENAR EL REPORTE CON DIVS RESPONSIVOS ---
+                
+                // Buscamos el nuevo contenedor del cuerpo del reporte
+                const reporteBody = document.getElementById('tabla-corte-body');
+                const lblTotalModal = document.getElementById('lbl-corte-total-modal');
+                const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
+                const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
+                reporteAuthBodyPrint.innerHTML = '';
+                let totalImpresion = 0;
+                document.getElementById('print-cobrador').innerText = usuario.nombre;
+                document.getElementById('print-fecha-larga').innerText = ObtenerFecha();
+                
+                reporteBody.innerHTML = ''; // Limpiamos tabla
+                let totalModal = 0;
+
+                // Usamos pagosReceived si ese es tu arreglo de datos
+                // data.detalles.forEach(pago => { 
+                data.detalles.forEach(pago => { 
+                    // 1. Formateamos la fecha (respetando tu formato original)
+                    const fechaString = new Date(pago.fecha_pago).toLocaleString('es-MX', {
+                        year: 'numeric', month: 'numeric', day: 'numeric',
+                        hour: 'numeric', minute: 'numeric', second: 'numeric',
+                        hour12: false
+                    });
+                    // 2. Lógica de estados para diseño y suma
+                    let claseEstado = '';
+                    let nombreEstado = ''; // Por defecto Completado
+                    let mostrarBoton = false;
+
+                    // Convertimos a número por seguridad
+                    const estado = parseInt(pago.estado_corte);
+                    
+                    if (estado === 3) {
+                        claseEstado = 'estado-cancelado';
+                        nombreEstado = 'Cancelado'
+                        mostrarBoton = false; // No se muestra si ya está cancelado
+                    } else if (estado === 0) {
+                        claseEstado = 'estado-pendiente';
+                        nombreEstado = 'Pendiente'
+                        mostrarBoton = true;  // ACTIVO solo en pendiente
+                        totalModal += parseFloat(pago.monto) || 0;
+                    }
+                    console.log("clase: "+claseEstado +" nombre "+nombreEstado )
+                    // 3. Creamos el contenedor de la tarjeta/fila (reporte-item-pago)
+                    const itemPago = document.createElement('div');
+                    itemPago.className = 'reporte-item-pago'; // <-- Clase clave para el CSS Grid
+
+                    // Generamos el HTML del botón de basura
+                    // Usamos FontAwesome (fa-trash-alt). Si no lo tienes, puedes usar el texto "❌"
+                    // Generamos el HTML del botón usando un SVG nativo
+                    const htmlBoton = mostrarBoton 
+                        ? `<button  class="btn-eliminar-pago" title="Cancelar Pago" onclick="cancelarPago(${pago.id})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3V2h11v1h-11Z"/>
+                            </svg>
+                        </button>`
+                        : '';
+                    
+                    // 4. Inyectamos la estructura responsiva con las etiquetas para móvil
+                    itemPago.innerHTML = `
+                        <div class="col-fecha"><span class="label-movil">Fecha: </span>${fechaString}</div>
+                        <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
+                        <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
+                        <div class = "monto-estado">
+                            <div class="col-monto">$${parseFloat(pago.monto).toFixed(2)}</div>
+                            <div class="col-estado ${claseEstado}">${nombreEstado}</div>
+                        </div>
+                        <div class="col-accion">${htmlBoton}</div>
+                    `;
+                    
+                    reporteBody.appendChild(itemPago);
+
+                    const tr = document.createElement('tr');
+                    
+                    // Inyectamos <td> clásicos en lugar de los divs responsivos
+                    tr.innerHTML = `
+                        <td>${fechaString}</td>
                         <td>${pago.cliente}</td>
-                        <td>${pago.ip}</td>
                         <td>${pago.mes_pagado}</td>
                         <td>$${parseFloat(pago.monto).toFixed(2)}</td>
-                        <td style="color: #d32f2f; font-weight: bold;">Pendiente</td>
-                    </tr>
-                `;
-            });
+                    `;
+                    
+                    reporteAuthBodyPrint.appendChild(tr);
+                });
+
+                // 5. Actualizamos el total en el modal con la suma corregida
+                lblTotalModal.textContent = totalModal.toLocaleString('en-US', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                });
+                lblTotalPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+            } catch (error) {
+                console.error('Error en cargarWidgetCorte:', error);
+                // Opcional: mostrar un mensaje de error en la tabla
+                document.getElementById('tabla-corte-body').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error al cargar el reporte.</div>';
+            }
         }
 
+        async function cancelarPago(idPago) {
+        // Confirmación antes de borrar
+        const confirmar = confirm("¿Estás seguro de que deseas cancelar este pago?");
+        console.log("is pago:"+ idPago)
+        if (confirmar) {
+            try {
+                const response = await fetch(`/api/cancelar-pago/${idPago}`, {
+                    method: 'POST', // O 'PUT' según tu API
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert("Pago cancelado correctamente.");
+                    // Recargamos el widget para ver los cambios y el nuevo total
+                    cargarWidgetCorte(); 
+                } else {
+                    alert("Error al cancelar: " + result.message);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("No se pudo conectar con el servidor.");
+            }
+        }
+    }
         // 2. Control de ventanas
         function abrirModalCorte() {
             document.getElementById('modal-corte').classList.remove('hidden');
         }
 
         function abrirModalAdmin() {
+            const lblTotalModal = document.getElementById('lbl-corte-total-modal');
+    
+            if (lblTotalModal.textContent <= 0) {
+                alert("⚠️ No se puede realizar el corte: No hay pagos pendientes para autorizar.");
+                return; // Detiene la ejecución aquí mismo
+            }
             document.getElementById('modal-admin').classList.remove('hidden');
         }
 
@@ -804,11 +1039,13 @@
         async function ejecutarCorteFinal() {
             const user = document.getElementById('admin-user').value;
             const pass = document.getElementById('admin-pass').value;
+            
 
             if(!user || !pass) {
                 alert("El administrador debe ingresar sus datos.");
                 return;
             }
+            
 
             try {
                 const response = await fetch(`${urlBase}/api/procesar-corte`, {
@@ -822,18 +1059,9 @@
                 if (response.ok) {
                     // ¡El admin autorizó! Primero imprimimos el PDF
                     alert("✅ Corte autorizado. Generando reporte PDF...");
-                    
-                    // Truco rápido para imprimir solo la tabla como PDF
-                    const contenido = document.getElementById('area-imprimible-corte').innerHTML;
-                    const ventanaImpresion = window.open('', '', 'width=800,height=600');
-                    ventanaImpresion.document.write('<html><head><title>Reporte de Corte</title></head><body>');
-                    ventanaImpresion.document.write(contenido);
-                    ventanaImpresion.document.write('</body></html>');
-                    ventanaImpresion.document.close();
-                    ventanaImpresion.print();
-
-                    // Refrescamos la página para limpiar todo visualmente
-                    location.reload(); 
+                    document.getElementById('print-admin').innerText = user.toUpperCase();
+                   
+                    imprimirReporte();
                 } else {
                     alert("❌ Error: " + data.error);
                 }
@@ -841,7 +1069,113 @@
                 console.error("Error al procesar corte:", error);
             }
         }
-  
+
+        function ObtenerFecha(){
+                 // 1. GENERAR LA FECHA LARGA AUTOMÁTICA
+            const f = new Date();
+            const diaSemana = f.toLocaleDateString('es-MX', { weekday: 'long' });
+            const dia = f.getDate();
+            const mes = f.toLocaleDateString('es-MX', { month: 'long' });
+            const anio = f.getFullYear();
+            // Obtener hora y limpiar espacios (ej. "6:24 p. m." a "6:24 p.m.")
+            const hora = f.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase().replace(/\s/g, '');
+
+            // Capitalizar la primera letra (ej. "jueves" -> "Jueves")
+            const diaSemanaCap = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+            const fechaLarga = `${diaSemanaCap}, ${dia} de ${mes} del ${anio} - ${hora}`;
+
+            // Asignar la fecha al HTML oculto antes de copiarlo
+            return fechaLarga
+        }
+
+        function imprimirReporte() {
+           
+            // 2. Obtenemos el contenido de la tabla
+            const contenido = document.getElementById('zona-impresion-oculta').innerHTML;
+            
+            // 3. ABRIR VENTANA Y ESCRIBIR ESTILOS
+            const ventana = window.open('', '_blank');
+
+            ventana.document.write(`
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Reporte de Corte</title>
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            padding: 20px; 
+                            color: #000;
+                        }
+                        .titulo-print { 
+                            text-align: center; 
+                            font-size: 24px; 
+                            margin-bottom: 15px; 
+                        }
+                        
+                        /* --- NUEVOS ESTILOS DEL ENCABEZADO FLEXBOX --- */
+                        .encabezado-info-print {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-end;
+                            flex-direction:column;
+                            margin-bottom: 20px;
+                            font-size: 14px;
+                        }
+                        .info-usuarios {
+                            width: 100%;
+                        }
+                        .info-usuarios p {
+                            margin: 5px 0;
+                        }
+                        .info-fecha {
+                            font-size: 18px;
+                            margin: 0;
+                            font-weight: bold;
+                            color: #333;
+                            text-align: end;
+                        }
+                        /* ------------------------------------------- */
+
+                        .tabla-impresion { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            font-size: 14px; 
+                        }
+                        .tabla-impresion th, .tabla-impresion td { 
+                            border: 1px solid #000; 
+                            padding: 8px; 
+                            text-align: left; 
+                        }
+                        .tabla-impresion th { 
+                            background-color: #e6e6e6 !important; 
+                            -webkit-print-color-adjust: exact; 
+                            print-color-adjust: exact;
+                        }
+                        .pie-impresion { 
+                            text-align: right; 
+                            margin-top: 20px; 
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${contenido}
+                </body>
+                </html>
+            `);
+
+            // 4. Cerramos el flujo de escritura del documento para que el navegador lo renderice
+            ventana.document.close();
+            ventana.focus();
+
+            // 5. Le damos un pequeñísimo respiro al navegador para aplicar el CSS antes de lanzar la impresión
+            setTimeout(() => {
+                ventana.print();
+                ventana.close();
+                location.reload();  // Cierra la pestaña automáticamente al terminar (opcional, pero muy útil)
+            }, 250);
+        }
     </script>
 </body>
 </html>

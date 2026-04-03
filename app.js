@@ -159,7 +159,7 @@ app.get('/api/buscar-clientes', async (req, res) => {
         
         // 2. Preparamos la consulta base
         let query = `
-            SELECT id, nombre_completo, direccion_ip, costo_mensual, fecha_instalacion 
+            SELECT id, nombre_completo, direccion_ip, costo_mensual, fecha_instalacion, dia_pago 
             FROM clientes  WHERE  (nombre_completo LIKE ? OR direccion_ip LIKE ? )
             `;
         let params = [`%${term}%`, `%${term}%`]
@@ -198,7 +198,7 @@ app.get('/api/ultimo-pago/:id', async (req, res) => {
     const query = `
         SELECT mes_pagado, fecha_pago, monto,  tipo_pago
         FROM pagos 
-        WHERE cliente_id = ? 
+        WHERE cliente_id = ? and estado_corte < 3
         ORDER BY fecha_pago DESC LIMIT 1`;
     try{
         const [result] = await db.query(query, [id]);
@@ -207,6 +207,31 @@ app.get('/api/ultimo-pago/:id', async (req, res) => {
     }catch(err){
         console.error("Error en DB:", err);
             return res.status(500).json({ error: "Error al consultar historial" });
+    }
+});
+
+// Ruta para obtener el historial de los últimos 6 pagos de un cliente
+app.get('/api/clientes/:id/historial-pagos', async (req, res) => {
+    const clienteId = req.params.id;
+
+    
+    // Hacemos un JOIN con 'usuarios' para obtener el nombre de quien cobró
+    const query = `
+        SELECT p.fecha_pago, p.mes_pagado, p.monto, u.nombre AS cobrador 
+        FROM pagos p
+        LEFT JOIN usuarios u ON p.usuario_id = u.id
+        WHERE p.cliente_id = ?
+        and estado_corte < 3
+        ORDER BY p.id DESC
+        LIMIT 6
+    `;
+
+    try {
+        const [pagos] = await db.query(query, [clienteId]);
+        res.json(pagos);
+    } catch (error) {
+        console.error("Error al obtener historial de pagos:", error);
+        res.status(500).json({ error: "Error al cargar el historial" });
     }
 });
 
@@ -220,7 +245,7 @@ app.post('/api/registrar-pago', async (req, res) => {
 
         // 1. Traemos TODO el historial agrupado por mes de este cliente
         const [pagosAgrupados] = await db.query(
-            'SELECT mes_pagado, SUM(monto) as pagado FROM pagos WHERE cliente_id = ? GROUP BY mes_pagado',
+            'SELECT mes_pagado, SUM(monto) as pagado FROM pagos WHERE cliente_id = ? and estado_corte<3 GROUP BY mes_pagado',
             [clienteId]
         );
 
@@ -306,14 +331,16 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
             [usuarioId]
         );
         const [detalles] = await db.query(
-            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto  
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 
-             WHERE p.usuario_id = ? AND p.estado_corte = 0 
-             ORDER BY p.fecha_pago DESC`,
+             WHERE p.usuario_id = ? AND p.estado_corte = 0  or p.estado_corte = 3
+             ORDER BY p.id DESC`,
             [usuarioId]
         );
+        console.log("ok funciona")
         res.json({ resumen: resumen[0], detalles: detalles });
+        
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -333,9 +360,14 @@ app.post('/api/procesar-corte', async (req, res) => {
             return res.status(401).json({ error: "Credenciales de administrador incorrectas." });
         }
 
-        // B) Si el admin es correcto, cambiamos el estado de 0 a 1
+        // B) Si el admin es correcto, cambiamos el estado de 0 a 1 y de 3 a 4
         await db.query(
             'UPDATE pagos SET estado_corte = 1 WHERE usuario_id = ? AND estado_corte = 0',
+            [usuarioId]
+        );
+
+        await db.query(
+            'UPDATE pagos SET estado_corte = 4 WHERE usuario_id = ? AND estado_corte = 3',
             [usuarioId]
         );
         
@@ -353,5 +385,43 @@ app.get('/api/localidades', async (req, res) => {
     } catch (error) {
         console.error("Error al obtener localidades:", error);
         res.status(500).json({ error: "Error al cargar catálogo" });
+    }
+});
+
+
+
+app.post('/api/cancelar-pago/:id', async (req, res) => {
+    const idPago = req.params.id;
+
+    try {
+        // 1. Preparamos la consulta SQL
+        // IMPORTANTE: Verifica que los nombres de tu tabla ('pagos') 
+        // y tus columnas ('id_estado', 'id_pago') coincidan con tu base de datos real.
+        const query = `UPDATE pagos SET estado_corte = 3 WHERE id = ?`;
+        console.log('Query '+ query+ 'id: '+ idPago )
+        
+        // 2. Ejecutamos la consulta (Ejemplo usando un 'pool' de mysql2 con promesas)
+        const [result] = await db.query(query, [idPago]);
+
+        // 3. Verificamos si realmente se modificó algún registro
+        if (result.affectedRows > 0) {
+            res.json({ 
+                success: true, 
+                message: 'Pago cancelado correctamente.' 
+            });
+        } else {
+            // Si affectedRows es 0, significa que el ID no existe
+            res.status(404).json({ 
+                success: false, 
+                message: 'No se encontró el pago especificado.' 
+            });
+        }
+
+    } catch (error) {
+        console.error('Error en el servidor al cancelar pago:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error interno del servidor al procesar la solicitud.' 
+        });
     }
 });

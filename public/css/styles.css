@@ -59,7 +59,7 @@ button {
     margin-top: 10px;
 }
 
-button:hover {
+.button:hover {
     background-color: #1557b0;
 }
 
@@ -134,6 +134,134 @@ td {
     width: auto;
     padding: 5px 15px;
 }
+/* =======================================================
+   ESTILOS COMPLETOS PARA EL REPORTE DE CORTE (RESPONSIVO)
+   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+======================================================= */
+
+/* --- 1. Contenedor y Caja del Modal (Fondo y Centrado) --- */
+.modal-fondo-corte {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-caja-corte {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px; /* Tamaño móvil inicial */
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    transition: max-width 0.3s ease; /* Animación al cambiar de tamaño */
+}
+
+/* --- 2. Cabecera (Título y X) --- */
+.cabecera-modal-corte {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.cabecera-modal-corte h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #333;
+}
+
+.cerrar-x-modal {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #888;
+}
+.cerrar-x-modal:hover { color: #dc3545; }
+
+
+/* --- 3. DISEÑO DE TARJETAS PARA MÓVIL (Por defecto) --- */
+
+/* Ocultamos el encabezado de tabla en móvil */
+.reporte-grid-header {
+    display: none;
+}
+
+/* Estilo de cada pago (tarjeta apilada) */
+.reporte-item-pago {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Estilos de las "columnas" dentro de la tarjeta móvil */
+.reporte-item-pago div {
+    color: #333;
+}
+
+.reporte-item-pago .monto-estado{
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+}
+
+/* El nombre del cliente es el título de la tarjeta */
+.col-cliente {
+    font-weight: bold;
+    font-size: 15px;
+    color: #000;
+}
+
+/* El monto grande a la derecha (similar a tu imagen de pagos) */
+.col-monto {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;    
+    font-weight: bold;
+    color: #28a745; /* Verde para monto */
+    margin-top: 5px;
+}
+.cabecera-modal-corte .col-monto:before {
+    content: "Monto:";
+    font-weight: normal;
+    font-size: 14px;
+    color: #666;
+}
+
+/* Labels para móvil (Fecha:, Mes:, etc.) */
+.label-movil {
+    font-weight: bold;
+    color: #555;
+    margin-right: 5px;
+}
+
+/* Estilos de Estado */
+.col-estado {
+    text-align: right;
+    margin-top: 5px;
+    font-weight: bold;
+}
+.estado-pendiente { color: #28a745 !important; }
+.estado-cancelado { text-decoration: line-through; color: #dc3545!important; }
+
 
 /* Estilos para el Modal */
 .modal {
@@ -287,4 +415,309 @@ td {
     top: 10px;
     font-size: 28px;
     cursor: pointer;
+}
+
+/* Fondo oscuro que cubre toda la pantalla */
+.modal-fondo {
+    position: fixed;
+    z-index: 1000; /* Asegura que esté por encima de todo */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); 
+    display: flex; 
+    align-items: center; /* Centra verticalmente */
+    justify-content: center; /* Centra horizontalmente */
+}
+
+/* La caja blanca del modal */
+/* --- BASE: DISEÑO PARA MÓVIL (Mobile First) --- */
+.modal-caja {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 450px; /* Tamaño pequeño por defecto */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: max-width 0.3s ease; /* Animación suave al cambiar de tamaño */
+}
+.modal-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+/* El botón de la X */
+.cerrar-x {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #888;
+}
+.cerrar-x:hover { color: #dc3545; }
+
+/* Lista de pagos */
+.lista-pagos-ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 350px;
+    overflow-y: auto; /* Agrega scroll si hay muchos pagos */
+}
+
+/* .lista-pagos-ul li {
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+} */
+
+/* Ocultamos los encabezados de tabla en móvil */
+.encabezado-tabla { 
+    display: none; 
+}
+
+/* Diseño del item del pago en móvil (Texto a la izq, Monto a la der) */
+.item-pago {
+    display: grid;
+    grid-template-columns: 1fr auto; /* Dos columnas: Detalles | Monto */
+    gap: 4px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.col-mes { grid-column: 1; grid-row: 1; font-weight: bold; }
+.col-fecha { grid-column: 1; grid-row: 2; font-size: 13px; color: #666; }
+.col-cobro { grid-column: 1; grid-row: 3; font-size: 13px; color: #666; }
+.col-monto { 
+    grid-column: 2; 
+    grid-row: 1 / span 3; /* El monto ocupa el alto de las 3 filas */
+    display: flex; 
+    align-items: center; 
+    font-size: 18px; 
+    font-weight: bold; 
+}
+
+/* Botón de cerrar abajo */
+.btn-cerrar-modal {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    font-weight: bold;
+}
+.btn-cerrar-modal:hover { background-color: #c82333; }
+
+.grupo-botones-pago {
+    display: flex;
+    flex-direction: column; /* Apila uno sobre otro */
+    margin-top: 15px; /* Espacio con los datos de arriba */
+}
+
+/* Estilo del botón de eliminar */
+.btn-eliminar-pago {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666; /* Color gris inicial */
+    font-size: 1.1rem;
+    transition: color 0.3s ease, transform 0.2s ease;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Al pasar el mouse se pone rojo */
+.btn-eliminar-pago:hover {
+    color: #dc3545; /* Rojo */
+    transform: scale(1.2);
+}
+
+/* Estado desactivado o invisible */
+.btn-oculto {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */
+@media (min-width: 805px) {
+    .modal-caja { 
+        max-width: 705px; /* Hacemos la ventana más ancha */
+    }
+    
+    /* Mostramos los encabezados en rojo como en tu boceto */
+    .encabezado-tabla {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 1.5fr 1fr; /* 4 Columnas proporcionales */
+        font-weight: bold;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #ccc;
+        margin-bottom: 5px;
+        text-align: left;
+    }
+
+    /* Transformamos el item en una fila de tabla de 4 columnas */
+    .item-pago {
+        grid-template-columns: 1.2fr 1fr 1.5fr 1fr; /* Mismas columnas que el encabezado */
+        grid-template-rows: auto;
+        align-items: center; /* Centrado vertical */
+    }
+
+    /* Ajustamos los estilos para que se vea plano y no apilado */
+    .col-mes, .col-fecha, .col-cobro { 
+        grid-column: auto; 
+        grid-row: auto; 
+        font-size: 14px; 
+        color: #333;
+    }
+    .col-monto { 
+        grid-column: auto; 
+        grid-row: auto; 
+        display: block; 
+        font-size: 16px; 
+    }
+
+    /* Ocultamos las etiquetas "Mes:", "Fecha:", etc., porque ya hay encabezados */
+    .cabecera-modal-corte .label-movil { display: none; } 
+
+    .grupo-botones-pago {
+        gap: 10px; /* Espacio entre los botones */
+        flex-direction: row; /* Los pone en fila horizontal */
+    }
+    
+    /* Hacemos que ambos botones midan exactamente lo mismo (50% y 50%) */
+    .grupo-botones-pago .btn-pago {
+        flex: 1; 
+        margin-top: 0; /* Aseguramos que no queden márgenes raros */
+    }
+
+    .reporte-item-pago .monto-estado{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        font-size: 20px;
+    }
+    .modal-cuerpo .label-movil { display: none; } 
+}
+@media (min-width: 980px) {
+    .modal-caja-corte {
+        max-width: 900px; /* Hacemos la ventana más ancha */
+    }
+
+    /* Mostramos el Encabezado de la Tabla */
+    .reporte-grid-header {
+        display: grid;
+        /* Definimos 6 columnas proporcionales */
+        grid-template-columns: 1.2fr 2.5fr 1.2fr .8fr .5fr .5fr;
+        gap: 10px;
+        font-weight: bold;
+        background-color: #f5f5f5;
+        padding: 12px;
+        border-bottom: 2px solid #ccc;
+        color: #333;
+    }
+
+    /* Transformamos el item de tarjeta a fila de tabla */
+    .reporte-item-pago {
+        display: grid;
+        /* Mismas 6 columnas que el encabezado */
+        grid-template-columns: 1.2fr 2.5fr 1.2fr 1.3fr .5fr;
+        gap: 10px;
+        border: none;
+        border-bottom: 1px solid #eee;
+        border-radius: 0;
+        margin-bottom: 0;
+        padding: 12px;
+        box-shadow: none;
+        align-items: center; /* Centrado vertical */
+    }
+
+    /* Ocultamos las etiquetas "Mes:", "Fecha:", etc., porque ya hay encabezados */
+    
+    /* Ajustes específicos para escritorio */
+    .reporte-item-pago div {
+        font-size: 14px;
+        color: #333;
+    }
+
+    .col-cliente {
+        font-weight: normal;
+        font-size: 14px;
+    }
+
+    /* .col-monto {
+        display: block; /* Desactivamos el flex de móvil 
+        font-size: 14px !important;
+        font-weight: normal;
+        color: #333;
+        margin-top: 0;
+    } */
+    /* El "Monto:" de móvil se oculta */
+    .col-monto:before { display: none; }
+    .reporte-item-pago .label-movil { display: none; } 
+    
+
+    .col-estado {
+        text-align: left; /* Alineado a la izquierda */
+        margin-top: 0;
+    }
+    /*eSTILOS PARA EL BOTON DE ELIMINAR */
+    .col-accion {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    .reporte-item-pago {
+        position: relative; /* Para que el botón se posicione respecto a la tarjeta */
+    }
+}
+
+.reporte-item-pago .monto-estado{
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+}
+
+/* --- 5. Pie y Botones del Modal --- */
+.reporte-pie-total {
+    text-align: right;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 2px solid #eee;
+}
+.reporte-pie-total h3 { margin: 0; font-size: 1.3rem; }
+
+.modal-acciones-corte {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.btn-solicitar-cierre {
+    padding: 10px 15px;
+    background-color: #2e7d32; /* Verde */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-solicitar-cierre:hover { background-color: #1b5e20; }
+
+/* =======================================================
+   ESTILOS EXCLUSIVOS PARA LA TABLA DE IMPRESIÓN
+======================================================= */
+
+/* 1. Ocultamos esta sección en el navegador normal */
+.oculto-en-pantalla {
+    display: none;
 }

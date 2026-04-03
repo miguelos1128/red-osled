@@ -33,7 +33,7 @@
                     <tbody id="lista-clientes-body">
                         </tbody>
                 </table> -->
-                <div class="admin-clientes-container">
+                <div id ="admin-clientes-container" class="admin-clientes-container">
                     <div class="cliente-card" data-localidad="Centro">
                         <div class="cliente-header">
                             <div class="cliente-info-principal">
@@ -356,6 +356,122 @@
             }).join('');
         }
 
+        async function cargarVistaAdminClientes() {
+            //const contenedor = document.querySelector('.admin-clientes-container');
+            const contenedor = document.getElementById('admin-clientes-container');
+            
+            if (!contenedor) {
+                console.error("Error: No se encontró el contenedor 'admin-clientes-container' en el HTML.");
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${urlBase}/api/admin/clientes-historial`);
+                const clientes = await response.json();
+                console.log("Datos recibidos en el Frontend:", clientes); // Confirmación
+                
+                contenedor.innerHTML = ''; // Limpiamos
+
+                clientes.forEach(cliente => {
+                    /* const card = document.createElement('div');
+                    card.className = 'cliente-card'; */
+                    // Guardamos localidad y nombre en data-attributes para los filtros futuros
+                    /* card.setAttribute('data-localidad', cliente.localidad);
+                    card.setAttribute('data-nombre', cliente.nombre.toLowerCase()); */
+
+                    /* // Procesar el historial de pagos (convertir string de BD a objeto)
+                    const historialMap = {};
+                    // Solo intentamos procesar si 'historial_pagos' existe y no es una cadena vacía
+                    if (cliente.historial_pagos && cliente.historial_pagos !== "") {
+                        const entradas = cliente.historial_pagos.split(',');
+                        entradas.forEach(entrada => {
+                            const partes = entrada.split(':');
+                            if (partes.length === 2) {
+                                const mes = partes[0];
+                                const estado = parseInt(partes[1]);
+                                historialMap[mes] = estado;
+                            }
+                        });
+                    }
+
+                    const mesesArr = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                
+ */
+                    let htmlBurbujasPagos = '';
+
+                    // Solo procesamos si 'historial_pagos' existe y tiene contenido
+                    if (cliente.historial_pagos && cliente.historial_pagos.trim() !== "") {
+                        // 1. Separamos los pagos individuales por coma
+                        const pagosIndividuales = cliente.historial_pagos.split(',');
+
+                        // 2. Iteramos sobre cada pago para limpiarlo y crear su burbuja
+                        htmlBurbujasPagos = pagosIndividuales.map(pagoRaw => {
+                            // pagoRaw viene como "Mayo 2024:1" o "Abril 2026:1"
+
+                            // 3. Separamos por ":" para quitar el estado (el ":1")
+                            const partes = pagoRaw.split(':');
+                            
+                            // Obtenemos solo la primera parte y quitamos espacios extras
+                            const textoBurbuja = partes[0].trim(); // Resultado: "Mayo 2024" o "Abril 2026"
+
+                            // 4. Creamos el HTML de la burbuja. 
+                            // Usamos la clase 'pago-realizado' para darle el estilo verde.
+                            return `<div class="pago-burbuja pago-realizado">${textoBurbuja}</div>`;
+                        }).join(''); // Unimos todas las burbujas en una sola cadena de texto
+                    } else {
+                        // Si no hay pagos, mostramos un mensaje opcional o lo dejamos vacío
+                        htmlBurbujasPagos = '<div class="sin-pagos">No hay historial de pagos registrados para este año.</div>';
+                    }
+
+                    // --- RENDERIZADO DE LA TARJETA ---
+                    const card = document.createElement('div');
+                    card.className = 'cliente-card';
+                    // card.setAttribute('data-localidad', cliente.localidad_id); // Descomenta si usas filtros
+                    
+                    card.innerHTML = `
+                        <div class="cliente-header">
+                            <div class="cliente-info-principal">
+                                <span class="cliente-id">ID: ${cliente.id}</span>
+                                <span class="badge-localidad">Loc: ${cliente.localidad_id}</span>
+                                <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
+                                <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
+                            </div>
+                            <div class="cliente-pago-dia">
+                                <span class="label">Corte</span>
+                                <span class="dia">${cliente.dia_pago}</span>
+                            </div>
+                        </div>
+
+                        <div class="cliente-historial-pagos dynamic-history">
+                            ${htmlBurbujasPagos}
+                        </div>
+
+                        <div class="cliente-acciones">
+                            <button class="btn-detalles" onclick="verDetalles(${cliente.id})">
+                                Ver Detalles
+                            </button>
+                        </div>
+                    `;
+                    contenedor.appendChild(card);
+                });
+            } catch (error) {
+                console.error("Error cargando clientes:", error);
+            }
+        }
+
+        function filtrarPorLocalidad(valorSeleccionado) {
+            const tarjetas = document.querySelectorAll('.cliente-card');
+            
+            tarjetas.forEach(card => {
+                const loc = card.getAttribute('data-localidad');
+                if (valorSeleccionado === "todas" || loc === valorSeleccionado) {
+                    card.style.display = "block";
+                } else {
+                    card.style.display = "none";
+                }
+            });
+        }
+/* 
         // 4. Cargar clientes desde el servidor
         async function cargarClientes() {////-------------------------------------------
             try {
@@ -381,9 +497,12 @@
             } catch (error) {
                 console.error("Error al cargar clientes", error);
             }
-        }
+        } */
 
-        cargarClientes();
+        /* cargarClientes(); */
+        //cargarVistaAdminClientes();
+
+        
 
         // Funciones para el Modal------------
         function mostrarFormularioCliente() {
@@ -400,7 +519,8 @@
         window.onload = function() {
             const hoy = new Date().toISOString().split('T')[0];
             document.getElementById('fecha_ins').setAttribute('max', hoy);
-            cargarClientes(); // Tu función existente
+            cargarVistaAdminClientes();
+            //cargarClientes(); // Tu función existente
         };
 
         async function cargarLocalidades() {
@@ -500,7 +620,8 @@
                 if (data.success) {
                     alert("¡Cliente guardado correctamente!");
                     cerrarModal();
-                    cargarClientes();
+                    //cargarClientes();
+                    cargarVistaAdminClientes();
                 } else {
                     alert("Error del servidor: " + data.error);
                 }
@@ -1118,6 +1239,7 @@
                 console.error("Error al procesar corte:", error);
             }
         }
+        
 
         function ObtenerFecha(){
                  // 1. GENERAR LA FECHA LARGA AUTOMÁTICA

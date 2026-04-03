@@ -201,38 +201,54 @@ td {
 }
 
 /* Historial de Pagos (Burbujas tipo imagen 2) */
-.cliente-historial-pagos {
+.cliente-historial-pagos.dynamic-history {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 10px 0;
-    border-top: 1px solid #eee;
+    flex-wrap: wrap; /* Permite que las burbujas bajen a la siguiente línea si no caben */
+    gap: 8px; /* Espacio entre burbujas */
+    padding: 12px 0;
+    border-top: 1px dashed #ddd;
 }
 
 .pago-burbuja {
-    width: 35px;
-    height: 35px;
+    /* Ajustamos el tamaño para que quepa "Mes Año" */
+    width: 65px; 
+    height: 65px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    font-size: 0.7rem;
-    background: #eee;
-    color: #999;
-    border: 1px solid #ddd;
+    border-radius: 50%; /* Lo hace un círculo perfecto */
+    font-size: 0.75rem; /* Texto pequeño */
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.1; /* Ajusta el espacio entre líneas si el texto se corta */
+    border: 2px solid #ddd; /* Borde sutil por defecto */
+    transition: all 0.2s;
+    background-color: #f8f9fa; /* Fondo gris claro por defecto */
+    color: #888; /* Texto gris por defecto */
+    text-transform: capitalize; /* "mayo 2024" -> "Mayo 2024" */
+    padding: 5px; /* Pequeño padding interno */
 }
 
-/* Estados de las burbujas */
-.pago-burbuja.pagado {
-    background: #27ae60;
-    color: white;
-    border-color: #219150;
+/* Clase para pagos realizados (Verde) */
+.pago-burbuja.pago-realizado {
+    background-color: #2ecc71 !important; /* Verde esmeralda */
+    color: white !important; /* Texto blanco para buen contraste */
+    border-color: #27ae60 !important; /* Borde verde más oscuro */
 }
 
-.pago-burbuja.pendiente {
+/* .pago-burbuja.pendiente {
     background: #f1c40f;
     color: #333;
     border-color: #f39c12;
+} */
+/* Opcional: Estilo para cuando no hay pagos */
+.sin-pagos {
+    font-size: 0.85rem;
+    color: #999;
+    font-style: italic;
+    padding: 10px 0;
+    width: 100%;
+    text-align: center;
 }
 
 /* Botón de Detalles */

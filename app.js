@@ -61,7 +61,34 @@ app.get('/api/clientes', async (req, res) => {
     
 });
 
+app.get('/api/admin/clientes-historial', async (req, res) => {
+    try {
+        // Esta consulta trae los datos del cliente y concatena sus pagos del año actual
+        // Resultado esperado: id, nombre, ip, dia_pago, localidad, y un string con meses pagados
+        const query = `
+            SELECT 
+                 c.id, c.nombre_completo, c.direccion_ip, c.dia_pago, c.localidad_id,
+                IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
+            FROM clientes c
+            LEFT JOIN pagos p ON c.id = p.cliente_id 
+                AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
+            GROUP BY c.id, c.nombre_completo, c.direccion_ip, c.dia_pago, c.localidad_id;
+        `; 
+        //const query = `SELECT * FROM clientes`;
+        
 
+        const [clientes] = await db.query(query);
+        console.log("Datos de la tabla puros:", clientes); // Veamos qué sale aquí
+        res.json(clientes);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+function verDetalles(idCliente) {
+    console.log("Consultando detalles del cliente ID:", idCliente);
+    alert("Próximamente: Detalles del cliente " + idCliente);
+}
 // Ruta para iniciar sesión (Login)
 // Agregamos "async" aquí
 

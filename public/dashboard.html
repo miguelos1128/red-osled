@@ -33,6 +33,13 @@
                     <tbody id="lista-clientes-body">
                         </tbody>
                 </table> -->
+                <div class="admin-controles-busqueda">
+                    <div class="input-busqueda-wrapper">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="buscador-nombre" placeholder="Buscar cliente por nombre...">
+                    </div>
+                </div>
+
                 <div id ="admin-clientes-container" class="admin-clientes-container">
                     <div class="cliente-card" data-localidad="Centro">
                         <div class="cliente-header">
@@ -463,6 +470,35 @@
                 console.error("Error cargando clientes:", error);
             }
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // Primero, cargamos los clientes al iniciar la página
+            cargarVistaAdminClientes();
+
+            // LÓGICA DEL BUSCADOR EN TIEMPO REAL
+            const inputBuscador = document.getElementById('buscador-nombre');
+
+            inputBuscador.addEventListener('input', function(e) {
+                // Obtenemos el texto que escribió el usuario en minúsculas
+                const terminoBusqueda = e.target.value.toLowerCase();
+                
+                // Seleccionamos todas las tarjetas que están en pantalla
+                const tarjetas = document.querySelectorAll('.cliente-card');
+
+                tarjetas.forEach(tarjeta => {
+                    // Buscamos el nombre específico dentro de esa tarjeta
+                    const nombreCliente = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+
+                    // Si el nombre incluye lo que escribimos, mostramos la tarjeta, si no, la ocultamos
+                    if (nombreCliente.includes(terminoBusqueda)) {
+                        tarjeta.style.display = 'block'; 
+                    } else {
+                        tarjeta.style.display = 'none';
+                    }
+                });
+            });
+        });
 
         function filtrarPorLocalidad(valorSeleccionado) {
             const tarjetas = document.querySelectorAll('.cliente-card');

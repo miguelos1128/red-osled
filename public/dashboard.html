@@ -38,6 +38,11 @@
                         <i class="fas fa-search"></i>
                         <input type="text" id="buscador-nombre" placeholder="Buscar cliente por nombre...">
                     </div>
+                    <div class="filtro-localidad-wrapper">
+                        <select id="filtro-localidad">
+                            <option value="todas">Todas las Localidades</option>
+                            </select>
+                    </div>
                 </div>
 
                 <div id ="admin-clientes-container" class="admin-clientes-container">
@@ -318,7 +323,17 @@
         const urlBase = `http://${host}:${puerto}`;
         // 1. Verificar si hay una sesión activa
         const usuarioJson = sessionStorage.getItem('usuario');
-        const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        //const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+        const configLocalidades = {
+            1: { nombre: "Jurica", color: "#3498db" },    // Azul
+            2: { nombre: "Jurica Centro", color: "#e74c3c" }, // Rojo
+            3: { nombre: "Santa Ana", color: "#2ecc71" },    // Verde
+            4: { nombre: "Bañe", color: "#f1c40f" }, // Amarillo
+            5: { nombre: "Santa Rosa", color: "#9b59b6" },// Morado
+            6: { nombre: "Las Lajas", color: "#9359b6" }    
+            // Agrega más si tienes otras
+        };
 
         if (!usuarioJson) {
             window.location.href = 'index.html';
@@ -367,6 +382,7 @@
             //const contenedor = document.querySelector('.admin-clientes-container');
             const contenedor = document.getElementById('admin-clientes-container');
             
+            
             if (!contenedor) {
                 console.error("Error: No se encontró el contenedor 'admin-clientes-container' en el HTML.");
                 return;
@@ -404,7 +420,17 @@
                     const mesesArr = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
                 
  */
+                    const card = document.createElement('div');
+                    card.className = 'cliente-card';
+                    card.setAttribute('data-localidad', cliente.localidad_id);
                     let htmlBurbujasPagos = '';
+
+                    // BUSCAMOS EL COLOR EN EL DICCIONARIO (Si no existe, ponemos gris oscuro)
+                    const colorBorde = configLocalidades[cliente.localidad_id] 
+                                    ? configLocalidades[cliente.localidad_id].color 
+                                    : '#34495e';
+
+                    card.style.borderLeftColor = colorBorde; // ¡Magia! Pintamos el borde
 
                     // Solo procesamos si 'historial_pagos' existe y tiene contenido
                     if (cliente.historial_pagos && cliente.historial_pagos.trim() !== "") {
@@ -431,8 +457,8 @@
                     }
 
                     // --- RENDERIZADO DE LA TARJETA ---
-                    const card = document.createElement('div');
-                    card.className = 'cliente-card';
+                    /* const card = document.createElement('div');
+                    card.className = 'cliente-card'; */
                     // card.setAttribute('data-localidad', cliente.localidad_id); // Descomenta si usas filtros
                     
                     card.innerHTML = `
@@ -473,6 +499,31 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             
+            // 3. LÓGICA DE FILTRADO COMBINADO (Nombre + Localidad)
+            function aplicarFiltros() {
+                const textoBusqueda = document.getElementById('buscador-nombre').value.toLowerCase();
+                const localidadSeleccionada = selectLocalidad.value;
+                const tarjetas = document.querySelectorAll('.cliente-card');
+
+                tarjetas.forEach(tarjeta => {
+                    const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+                    const idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
+
+                    const coincideTexto = nombre.includes(textoBusqueda);
+                    const coincideLocalidad = (localidadSeleccionada === "todas" || idLocalidadTarjeta === localidadSeleccionada);
+
+                    // Solo se muestra si cumple AMBAS condiciones
+                    if (coincideTexto && coincideLocalidad) {
+                        tarjeta.style.display = 'block';
+                    } else {
+                        tarjeta.style.display = 'none';
+                    }
+                });
+            }
+
+            document.getElementById('buscador-nombre').addEventListener('input', aplicarFiltros);
+            document.getElementById('filtro-localidad').addEventListener('change', aplicarFiltros);
+
             // Primero, cargamos los clientes al iniciar la página
             cargarVistaAdminClientes();
 
@@ -500,7 +551,7 @@
             });
         });
 
-        function filtrarPorLocalidad(valorSeleccionado) {
+               /*  function filtrarPorLocalidad(valorSeleccionado) {
             const tarjetas = document.querySelectorAll('.cliente-card');
             
             tarjetas.forEach(card => {
@@ -511,7 +562,7 @@
                     card.style.display = "none";
                 }
             });
-        }
+        } */
 /* 
         // 4. Cargar clientes desde el servidor
         async function cargarClientes() {////-------------------------------------------
@@ -568,12 +619,18 @@
             const response = await fetch('/api/localidades');
             const localidades = await response.json();
             const select = document.getElementById('selectLocalidad');
+            const selectFiltro = document.getElementById('filtro-localidad');
             
             localidades.forEach(loc => {
                 const option = document.createElement('option');
                 option.value = loc.id;
                 option.textContent = loc.nombre;
                 select.appendChild(option);
+
+                const optionFiltro = document.createElement('option');
+                optionFiltro.value = loc.id;
+                optionFiltro.textContent = loc.nombre;
+                selectFiltro.appendChild(optionFiltro);
             });
         }
 

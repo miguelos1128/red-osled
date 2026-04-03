@@ -141,14 +141,19 @@ td {
 ======================================================= */
 /* Contenedor de la barra de búsqueda */
 .admin-controles-busqueda {
-    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 0;
+    margin-bottom: 15px;padding: 10px;
     background-color: #f4f7f6;
     margin-bottom: 10px;
 }
 
 .input-busqueda-wrapper {
+    flex: 2; /* Toma más espacio */
+    min-width: 200px;
     position: relative;
-    width: 100%;
 }
 
 .input-busqueda-wrapper i {
@@ -173,6 +178,21 @@ td {
     border-color: #007bff;
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
 }
+.filtro-localidad-wrapper {
+    flex: 1; /* Toma menos espacio */
+    min-width: 150px;
+}
+
+#filtro-localidad {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 25px; /* Para que haga juego con el buscador */
+    font-size: 0.95rem;
+    outline: none;
+    background-color: white;
+    cursor: pointer;
+}
 /* =======================================================
    ESTILOS COMPLETOS PARA LA VISUALIZACIÓN DE PAGOS ADMIN
    Diseño: Mobile First (Tarjetas) -> PC (Tabla)
@@ -190,7 +210,7 @@ td {
     padding: 15px;
     margin-bottom: 15px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    border-left: 5px solid #2c3e50; /* Color distintivo */
+    border-left: 6px solid #ccc; /* Color por defecto por si falla */
 }
 
 /* Cabecera de la tarjeta */

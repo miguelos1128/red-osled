@@ -1026,6 +1026,12 @@
         }
 
         function abrirModalAdmin() {
+            const lblTotalModal = document.getElementById('lbl-corte-total-modal');
+    
+            if (lblTotalModal.textContent <= 0) {
+                alert("⚠️ No se puede realizar el corte: No hay pagos pendientes para autorizar.");
+                return; // Detiene la ejecución aquí mismo
+            }
             document.getElementById('modal-admin').classList.remove('hidden');
         }
 
@@ -1033,11 +1039,13 @@
         async function ejecutarCorteFinal() {
             const user = document.getElementById('admin-user').value;
             const pass = document.getElementById('admin-pass').value;
+            
 
             if(!user || !pass) {
                 alert("El administrador debe ingresar sus datos.");
                 return;
             }
+            
 
             try {
                 const response = await fetch(`${urlBase}/api/procesar-corte`, {

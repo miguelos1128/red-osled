@@ -222,8 +222,19 @@
             </div>
 
             <div id="zona-impresion-oculta" class="oculto-en-pantalla">
-                <h2 class="titulo-print">Reporte de Corte de Caja Autorizado</h2>
                 
+                <h2 class="titulo-print">Reporte de Corte de Caja Autorizado</h2>
+                    
+                    <div class="encabezado-info-print">
+                        <div class="info-usuarios">
+                            <div class="info-fecha">
+                                <p id="print-fecha-larga">Jueves, 2 de abril del 2026 - 6:24 p.m.</p>
+                            </div>
+                            <p><strong>Corte de:</strong> <span id="print-cobrador">Nombre del Usuario</span></p>
+                            <p><strong>Autorizado por:</strong> <span id="print-admin">Nombre del Administrador</span></p>
+                        </div>
+                        
+                    </div>
                 <table class="tabla-impresion">
                     <thead>
                         <tr>
@@ -784,7 +795,7 @@
                     <div class="text-center">
                         <h2 style="margin:0;">RED OSLED</h2>
                         <p style="margin:5px 0;">Internet de Alta Velocidad</p>
-                        <p style="font-size:12px;">Fecha: ${new Date().toLocaleString()}</p>
+                        <p style="font-size:12px;">Fecha: ${ObtenerFecha()}</p>
                     </div>
                     
                     <div class="divider"></div>
@@ -868,36 +879,6 @@
                 montoTotal
             };
         }
-
-        /* async function cargarWidgetCorte() {
-            if(!idCobrador) return;
-            const response = await fetch(`${urlBase}/api/corte-caja/${idCobrador}`);
-            const data = await response.json();
-            
-            const total = data.resumen.total_dinero || 0;
-            const cobros = data.resumen.total_cobros || 0;
-            
-            document.getElementById('lbl-caja-total').innerText = parseFloat(total).toFixed(2);
-            document.getElementById('lbl-caja-cobros').innerText = cobros;
-            document.getElementById('lbl-corte-total-modal').innerText = parseFloat(total).toFixed(2);
-            
-            // Llenamos la tabla oculta
-            const tbody = document.getElementById('tabla-corte-body');
-            tbody.innerHTML = '';
-            data.detalles.forEach(pago => {
-                const fecha = new Date(pago.fecha_pago).toLocaleString();
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${fecha}</td>
-                        <td>${pago.cliente}</td>
-                        <td>${pago.ip}</td>
-                        <td>${pago.mes_pagado}</td>
-                        <td>$${parseFloat(pago.monto).toFixed(2)}</td>
-                        <td style="color: #d32f2f; font-weight: bold;">Pendiente</td>
-                    </tr>
-                `;
-            });
-        } */
  
 
         async function cargarWidgetCorte() {
@@ -922,6 +903,8 @@
                 const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
                 reporteAuthBodyPrint.innerHTML = '';
                 let totalImpresion = 0;
+                document.getElementById('print-cobrador').innerText = usuario.nombre;
+                document.getElementById('print-fecha-larga').innerText = ObtenerFecha();
                 
                 reporteBody.innerHTML = ''; // Limpiamos tabla
                 let totalModal = 0;
@@ -1068,18 +1051,8 @@
                 if (response.ok) {
                     // ¡El admin autorizó! Primero imprimimos el PDF
                     alert("✅ Corte autorizado. Generando reporte PDF...");
-                    
-                    /* // Truco rápido para imprimir solo la tabla como PDF
-                    const contenido = document.getElementById('zona-impresion-oculta').innerHTML;
-                    const ventanaImpresion = window.open('', '', 'width=800,height=600');
-                    ventanaImpresion.document.write('<html><head><title>Reporte de Corte</title></head><body>');
-                    ventanaImpresion.document.write(contenido);
-                    ventanaImpresion.document.write('</body></html>');
-                    ventanaImpresion.document.close();
-                    ventanaImpresion.print();
-
-                    // Refrescamos la página para limpiar todo visualmente
-                    location.reload();  */
+                    document.getElementById('print-admin').innerText = user.toUpperCase();
+                   
                     imprimirReporte();
                 } else {
                     alert("❌ Error: " + data.error);
@@ -1088,15 +1061,33 @@
                 console.error("Error al procesar corte:", error);
             }
         }
-        
+
+        function ObtenerFecha(){
+                 // 1. GENERAR LA FECHA LARGA AUTOMÁTICA
+            const f = new Date();
+            const diaSemana = f.toLocaleDateString('es-MX', { weekday: 'long' });
+            const dia = f.getDate();
+            const mes = f.toLocaleDateString('es-MX', { month: 'long' });
+            const anio = f.getFullYear();
+            // Obtener hora y limpiar espacios (ej. "6:24 p. m." a "6:24 p.m.")
+            const hora = f.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase().replace(/\s/g, '');
+
+            // Capitalizar la primera letra (ej. "jueves" -> "Jueves")
+            const diaSemanaCap = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+            const fechaLarga = `${diaSemanaCap}, ${dia} de ${mes} del ${anio} - ${hora}`;
+
+            // Asignar la fecha al HTML oculto antes de copiarlo
+            return fechaLarga
+        }
+
         function imprimirReporte() {
-            // 1. Obtenemos el contenido de la tabla
+           
+            // 2. Obtenemos el contenido de la tabla
             const contenido = document.getElementById('zona-impresion-oculta').innerHTML;
             
-            // 2. Abrimos la nueva ventana
+            // 3. ABRIR VENTANA Y ESCRIBIR ESTILOS
             const ventana = window.open('', '_blank');
 
-            // 3. Escribimos un documento HTML completo con los estilos incrustados
             ventana.document.write(`
                 <!DOCTYPE html>
                 <html lang="es">
@@ -1104,19 +1095,41 @@
                     <meta charset="UTF-8">
                     <title>Reporte de Corte</title>
                     <style>
-                        /* Estilos base para la hoja de papel */
                         body { 
                             font-family: Arial, sans-serif; 
                             padding: 20px; 
                             color: #000;
                         }
-                        
-                        /* Estilos de la tabla que hicimos antes */
                         .titulo-print { 
                             text-align: center; 
-                            font-size: 22px; 
-                            margin-bottom: 20px; 
+                            font-size: 24px; 
+                            margin-bottom: 15px; 
                         }
+                        
+                        /* --- NUEVOS ESTILOS DEL ENCABEZADO FLEXBOX --- */
+                        .encabezado-info-print {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-end;
+                            flex-direction:column;
+                            margin-bottom: 20px;
+                            font-size: 14px;
+                        }
+                        .info-usuarios {
+                            width: 100%;
+                        }
+                        .info-usuarios p {
+                            margin: 5px 0;
+                        }
+                        .info-fecha {
+                            font-size: 18px;
+                            margin: 0;
+                            font-weight: bold;
+                            color: #333;
+                            text-align: end;
+                        }
+                        /* ------------------------------------------- */
+
                         .tabla-impresion { 
                             width: 100%; 
                             border-collapse: collapse; 
@@ -1124,20 +1137,17 @@
                         }
                         .tabla-impresion th, .tabla-impresion td { 
                             border: 1px solid #000; 
-                            padding: 10px; 
+                            padding: 8px; 
                             text-align: left; 
                         }
                         .tabla-impresion th { 
                             background-color: #e6e6e6 !important; 
-                            -webkit-print-color-adjust: exact; /* Fuerza el fondo gris al imprimir */
+                            -webkit-print-color-adjust: exact; 
                             print-color-adjust: exact;
                         }
                         .pie-impresion { 
                             text-align: right; 
                             margin-top: 20px; 
-                        }
-                        .pie-impresion h3 {
-                            font-size: 18px;
                         }
                     </style>
                 </head>

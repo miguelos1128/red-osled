@@ -712,3 +712,54 @@ td {
     font-weight: bold;
 }
 .btn-solicitar-cierre:hover { background-color: #1b5e20; }
+
+
+.titulo-print { 
+                            text-align: center; 
+                            font-size: 24px; 
+                            margin-bottom: 15px; 
+                        }
+                        
+                        /* --- NUEVOS ESTILOS DEL ENCABEZADO FLEXBOX --- */
+                        .encabezado-info-print {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-end;
+                            flex-direction:column;
+                            margin-bottom: 20px;
+                            font-size: 14px;
+                        }
+                        .info-usuarios {
+                            width: 100%;
+                        }
+                        .info-usuarios p {
+                            margin: 5px 0;
+                        }
+                        .info-fecha p {
+                            margin: 0;
+                            font-weight: bold;
+                            color: #333;
+                            font-size: 18px;
+                            text-align: end;
+                        }
+                        /* ------------------------------------------- */
+
+                        .tabla-impresion { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            font-size: 14px; 
+                        }
+                        .tabla-impresion th, .tabla-impresion td { 
+                            border: 1px solid #000; 
+                            padding: 8px; 
+                            text-align: left; 
+                        }
+                        .tabla-impresion th { 
+                            background-color: #e6e6e6 !important; 
+                            -webkit-print-color-adjust: exact; 
+                            print-color-adjust: exact;
+                        }
+                        .pie-impresion { 
+                            text-align: right; 
+                            margin-top: 20px; 
+                        }

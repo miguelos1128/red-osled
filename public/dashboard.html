@@ -19,9 +19,9 @@
                 <button class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
             </div>
 
-                <div class="main-section">
+            <div class="main-section">
                 <h3>Clientes Registrados</h3>
-                <table id="tabla-clientes">
+                <!-- <table id="tabla-clientes">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -32,7 +32,33 @@
                     </thead>
                     <tbody id="lista-clientes-body">
                         </tbody>
-                </table>
+                </table> -->
+                <div class="admin-clientes-container">
+                    <div class="cliente-card">
+                        <div class="cliente-header">
+                            <div class="cliente-info-principal">
+                                <span class="cliente-id">ID: 1024</span>
+                                <h3 class="cliente-nombre">Juan Pérez</h3>
+                                <p class="cliente-ip">IP: 192.168.1.50</p>
+                            </div>
+                            <div class="cliente-pago-dia">
+                                <span class="label">Corte:</span>
+                                <span class="dia">15</span>
+                            </div>
+                        </div>
+
+                        <div class="cliente-historial-pagos">
+                            <div class="pago-burbuja pagado" title="Enero">Ene</div>
+                            <div class="pago-burbuja pagado" title="Febrero">Feb</div>
+                            <div class="pago-burbuja pendiente" title="Marzo">Mar</div>
+                            <div class="pago-burbuja" title="Abril">Abr</div>
+                            </div>
+
+                        <div class="cliente-acciones">
+                            <button class="btn-detalles">Ver Detalles</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             
         </div>
@@ -277,6 +303,8 @@
         const urlBase = `http://${host}:${puerto}`;
         // 1. Verificar si hay una sesión activa
         const usuarioJson = sessionStorage.getItem('usuario');
+        const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
         if (!usuarioJson) {
             window.location.href = 'index.html';
         }
@@ -307,8 +335,21 @@
         }
         let idCobrador = usuario.id
         cargarWidgetCorte();
+
+        function renderizarHistorial(pagosCliente) {
+            return meses.map((mes, index) => {
+                // Buscamos si el cliente tiene un pago en ese mes (index + 1)
+                const pagoRealizado = pagosCliente.find(p => p.mes_numero === index + 1);
+                let clase = '';
+                if(pagoRealizado) {
+                    clase = pagoRealizado.id_estado === 1 ? 'pagado' : 'pendiente';
+                }
+                return `<div class="pago-burbuja ${clase}">${mes}</div>`;
+            }).join('');
+        }
+
         // 4. Cargar clientes desde el servidor
-        async function cargarClientes() {
+        async function cargarClientes() {////-------------------------------------------
             try {
                 const response = await fetch(`${urlBase}/api/clientes`);
                 const clientes = await response.json();

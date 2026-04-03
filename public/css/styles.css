@@ -135,6 +135,123 @@ td {
     padding: 5px 15px;
 }
 /* =======================================================
+   ESTILOS COMPLETOS PARA LA VISUALIZACIÓN DE PAGOS ADMIN
+   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+======================================================= */
+/* Contenedor Principal */
+.admin-clientes-container {
+    padding: 10px;
+    background-color: #f4f7f6;
+}
+
+/* Tarjeta del Cliente */
+.cliente-card {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border-left: 5px solid #2c3e50; /* Color distintivo */
+}
+
+/* Cabecera de la tarjeta */
+.cliente-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.cliente-id {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: bold;
+}
+
+.cliente-nombre {
+    margin: 2px 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.cliente-ip {
+    font-size: 0.85rem;
+    color: #555;
+    font-family: monospace;
+}
+
+/* Círculo del día de pago */
+.cliente-pago-dia {
+    text-align: center;
+    background: #eef2f3;
+    padding: 5px 10px;
+    border-radius: 8px;
+}
+
+.cliente-pago-dia .label {
+    display: block;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+}
+
+.cliente-pago-dia .dia {
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #d35400; /* Color naranja para resaltar el día */
+}
+
+/* Historial de Pagos (Burbujas tipo imagen 2) */
+.cliente-historial-pagos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+}
+
+.pago-burbuja {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    background: #eee;
+    color: #999;
+    border: 1px solid #ddd;
+}
+
+/* Estados de las burbujas */
+.pago-burbuja.pagado {
+    background: #27ae60;
+    color: white;
+    border-color: #219150;
+}
+
+.pago-burbuja.pendiente {
+    background: #f1c40f;
+    color: #333;
+    border-color: #f39c12;
+}
+
+/* Botón de Detalles */
+.cliente-acciones {
+    margin-top: 10px;
+}
+
+.btn-detalles {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    background: #34495e;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* =======================================================
    ESTILOS COMPLETOS PARA EL REPORTE DE CORTE (RESPONSIVO)
    Diseño: Mobile First (Tarjetas) -> PC (Tabla)
 ======================================================= */

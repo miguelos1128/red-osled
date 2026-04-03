@@ -22,6 +22,25 @@ enviar comprobante por whatsap al cliente
 
 al ealizar un corte quede un historico de ese corte. 
 
+Seguridad al intentar cargar un pago en 0 o negativo, bloquear boton al intentar hacer corte en 0, 
+
+            // Dentro de cargarWidgetCorte, después del bucle forEach:
+            const btnAutorizar = document.getElementById('btn-autorizar-accion'); // Asegúrate que tu botón tenga este ID
+
+            if (totalModal <= 0) {
+                btnAutorizar.disabled = true;
+                btnAutorizar.style.opacity = "0.5";
+                btnAutorizar.style.cursor = "not-allowed";
+                btnAutorizar.title = "No hay pagos para autorizar";
+            } else {
+                btnAutorizar.disabled = false;
+                btnAutorizar.style.opacity = "1";
+                btnAutorizar.style.cursor = "pointer";
+                btnAutorizar.title = "Click para autorizar el corte";
+            }
+
+
+
 
 INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Hector Ricardo Panaderia4272786167miguelos1128@gmail.com
 INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES (', 'Hector Ricardo Panaderia, '4272786167, 'miguelos1128@gmail.com

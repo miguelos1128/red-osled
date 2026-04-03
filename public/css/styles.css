@@ -252,10 +252,49 @@ td {
 }
 
 /* Botón de Detalles */
-.cliente-acciones {
-    margin-top: 10px;
+.cliente-acciones-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+.btn-registrar-pago {
+    flex: 2; /* Más ancho que el de detalles */
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s;
 }
 
+.btn-registrar-pago:hover {
+    background-color: #0056b3;
+}
+/* Botón Detalles (Secundario) */
+.btn-detalles-slim {
+    flex: 1;
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+}
+
+.btn-detalles-slim:hover {
+    background-color: #e2e6ea;
+}
+
+/* Ajuste para iconos dentro de botones */
+.cliente-acciones-group i {
+    margin-right: 5px;
+}
+/* 
 .btn-detalles {
     width: 100%;
     padding: 10px;
@@ -266,7 +305,7 @@ td {
     font-weight: bold;
     cursor: pointer;
 }
-
+ */
 /* =======================================================
    ESTILOS COMPLETOS PARA EL REPORTE DE CORTE (RESPONSIVO)
    Diseño: Mobile First (Tarjetas) -> PC (Tabla)

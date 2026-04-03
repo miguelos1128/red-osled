@@ -446,9 +446,14 @@
                             ${htmlBurbujasPagos}
                         </div>
 
-                        <div class="cliente-acciones">
-                            <button class="btn-detalles" onclick="verDetalles(${cliente.id})">
-                                Ver Detalles
+                        <div class="cliente-acciones-group">
+                            <button class="btn-registrar-pago" 
+                                onclick='seleccionarClienteDirecto(${JSON.stringify(cliente).replace(/'/g, "&apos;")})'>
+                                <i class="fas fa-dollar-sign"></i> Registrar Pago
+                            </button>
+                            
+                            <button class="btn-detalles-slim" onclick="verDetalles(${cliente.id})">
+                                <i class="fas fa-eye"></i> Detalles
                             </button>
                         </div>
                     `;

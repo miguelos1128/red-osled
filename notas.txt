@@ -8,11 +8,19 @@ configurar una vista para que el usuario sepa cuantos pagos a recibido y están 
 
 realizar corte con el administrador. --- OK
 
-MOSTRAR FECHA DE PAGO DEL CLIENTE 
+MOSTRAR FECHA DE PAGO DEL CLIENTE -- OK
 
-que el usuario pueda desglozar el histórico de pagos de un cliente
+que el usuario pueda desglozar el histórico de pagos de un cliente -- OK
 
-que el usuario de bañe solo pueda ver los pagos de de bañe el de santa ana de santa ana 
+que el usuario de bañe solo pueda ver los pagos de de bañe el de santa ana de santa ana --- OK
+
+vista de los pagos de todos los cliente para karen.
+
+mostrar vista previa del tickt y despues la opción de imrpimir cuando se realiza un pago.
+
+enviar comprobante por whatsap al cliente 
+
+al ealizar un corte quede un historico de ese corte. 
 
 
 INSERT INTO `sistema_pagos_prod`.`clientes` (`nombre_completo`, `telefono`, `correo`, `direccion`, `estado_servicio`, `fecha_instalacion`, `dia_pago`, `direccion_ip`, `señal`, `paquete`, `costo_mensual`) VALUES ('Hector Ricardo Panaderia4272786167miguelos1128@gmail.com

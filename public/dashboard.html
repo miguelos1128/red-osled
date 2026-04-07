@@ -323,7 +323,9 @@
         const urlBase = `http://${host}:${puerto}`;
         // 1. Verificar si hay una sesión activa
         const usuarioJson = sessionStorage.getItem('usuario');
-        //const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const buscadorInput = document.getElementById('buscador-nombre');
+        const selectLocalidad = document.getElementById('filtro-localidad');
+        const inputBuscador = document.getElementById('buscador-nombre');
 
         const configLocalidades = {
             1: { nombre: "Jurica", color: "#3498db" },    // Azul
@@ -396,30 +398,7 @@
                 contenedor.innerHTML = ''; // Limpiamos
 
                 clientes.forEach(cliente => {
-                    /* const card = document.createElement('div');
-                    card.className = 'cliente-card'; */
-                    // Guardamos localidad y nombre en data-attributes para los filtros futuros
-                    /* card.setAttribute('data-localidad', cliente.localidad);
-                    card.setAttribute('data-nombre', cliente.nombre.toLowerCase()); */
-
-                    /* // Procesar el historial de pagos (convertir string de BD a objeto)
-                    const historialMap = {};
-                    // Solo intentamos procesar si 'historial_pagos' existe y no es una cadena vacía
-                    if (cliente.historial_pagos && cliente.historial_pagos !== "") {
-                        const entradas = cliente.historial_pagos.split(',');
-                        entradas.forEach(entrada => {
-                            const partes = entrada.split(':');
-                            if (partes.length === 2) {
-                                const mes = partes[0];
-                                const estado = parseInt(partes[1]);
-                                historialMap[mes] = estado;
-                            }
-                        });
-                    }
-
-                    const mesesArr = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                
- */
+   
                     const card = document.createElement('div');
                     card.className = 'cliente-card';
                     card.setAttribute('data-localidad', cliente.localidad_id);
@@ -455,11 +434,6 @@
                         // Si no hay pagos, mostramos un mensaje opcional o lo dejamos vacío
                         htmlBurbujasPagos = '<div class="sin-pagos">No hay historial de pagos registrados para este año.</div>';
                     }
-
-                    // --- RENDERIZADO DE LA TARJETA ---
-                    /* const card = document.createElement('div');
-                    card.className = 'cliente-card'; */
-                    // card.setAttribute('data-localidad', cliente.localidad_id); // Descomenta si usas filtros
                     
                     card.innerHTML = `
                         <div class="cliente-header">
@@ -498,37 +472,13 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            
-            // 3. LÓGICA DE FILTRADO COMBINADO (Nombre + Localidad)
-            function aplicarFiltros() {
-                const textoBusqueda = document.getElementById('buscador-nombre').value.toLowerCase();
-                const localidadSeleccionada = selectLocalidad.value;
-                const tarjetas = document.querySelectorAll('.cliente-card');
 
-                tarjetas.forEach(tarjeta => {
-                    const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
-                    const idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
-
-                    const coincideTexto = nombre.includes(textoBusqueda);
-                    const coincideLocalidad = (localidadSeleccionada === "todas" || idLocalidadTarjeta === localidadSeleccionada);
-
-                    // Solo se muestra si cumple AMBAS condiciones
-                    if (coincideTexto && coincideLocalidad) {
-                        tarjeta.style.display = 'block';
-                    } else {
-                        tarjeta.style.display = 'none';
-                    }
-                });
-            }
-
-            document.getElementById('buscador-nombre').addEventListener('input', aplicarFiltros);
-            document.getElementById('filtro-localidad').addEventListener('change', aplicarFiltros);
-
+            aplicarFiltros();
             // Primero, cargamos los clientes al iniciar la página
             cargarVistaAdminClientes();
 
             // LÓGICA DEL BUSCADOR EN TIEMPO REAL
-            const inputBuscador = document.getElementById('buscador-nombre');
+            
 
             inputBuscador.addEventListener('input', function(e) {
                 // Obtenemos el texto que escribió el usuario en minúsculas
@@ -551,6 +501,48 @@
             });
         });
 
+        function aplicarFiltros(){
+            // 1. EVENTO: CUANDO ESCRIBES UN NOMBRE
+            buscadorInput.addEventListener('input', function(e) {
+                // Resetear el filtro de localidad a "todas"
+                selectLocalidad.value = 'todas';
+                
+                const textoBusqueda = e.target.value.toLowerCase().trim();
+                const tarjetas = document.querySelectorAll('.cliente-card');
+
+                tarjetas.forEach(tarjeta => {
+                    const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+                    
+                    // Filtramos SOLO por el nombre
+                    if (nombre.includes(textoBusqueda)) {
+                        tarjeta.style.display = 'block';
+                    } else {
+                        tarjeta.style.display = 'none';
+                    }
+                });
+            });
+
+            // 2. EVENTO: CUANDO SELECCIONAS UNA LOCALIDAD
+            selectLocalidad.addEventListener('change', function(e) {
+                // Limpiar el texto del buscador de nombre
+                buscadorInput.value = '';
+                
+                const localidadSeleccionada = String(e.target.value).trim();
+                const tarjetas = document.querySelectorAll('.cliente-card');
+
+                tarjetas.forEach(tarjeta => {
+                    let idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
+                    idLocalidadTarjeta = idLocalidadTarjeta ? String(idLocalidadTarjeta).trim() : 'null';
+
+                    // Filtramos SOLO por la localidad
+                    if (localidadSeleccionada === "todas" || idLocalidadTarjeta === localidadSeleccionada) {
+                        tarjeta.style.display = 'block';
+                    } else {
+                        tarjeta.style.display = 'none';
+                    }
+                });
+            });
+        }
                /*  function filtrarPorLocalidad(valorSeleccionado) {
             const tarjetas = document.querySelectorAll('.cliente-card');
             

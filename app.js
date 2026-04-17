@@ -78,7 +78,7 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         
 
         const [clientes] = await db.query(query);
-        console.log("Datos de la tabla puros:", clientes); // Veamos qué sale aquí
+        //console.log("Datos de la tabla puros:", clientes); // Veamos qué sale aquí
         res.json(clientes);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -407,7 +407,7 @@ app.post('/api/procesar-corte', async (req, res) => {
 // Ruta para obtener todas las localidades (para el selector del formulario)
 app.get('/api/localidades', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT id, nombre FROM localidades ORDER BY nombre ASC');
+        const [rows] = await db.query('SELECT id, nombre, color FROM localidades ORDER BY nombre ASC');
         res.json(rows);
     } catch (error) {
         console.error("Error al obtener localidades:", error);

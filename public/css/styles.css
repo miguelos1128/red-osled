@@ -142,14 +142,33 @@ td {
 /* Contenedor de la barra de búsqueda */
 .admin-controles-busqueda {
     display: flex;
+    justify-content: center;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px 0;
-    margin-bottom: 15px;padding: 10px;
+    gap: 15px;
+    padding: 10px;
     background-color: #f4f7f6;
-    margin-bottom: 10px;
 }
 
+/* Burbujas para los meses que NO se han pagado */
+.pago-pendiente {
+    background-color: #f1f2f6; /* Un gris muy suave */
+    color: #a4b0be; /* Texto grisáceo */
+    border: 2px dashed #ced6e0; /* Borde punteado que da la sensación de "vacío" o "pendiente" */
+}
+
+/* Opcional pero muy recomendado: Resaltar visualmente cuál es el mes actual */
+.mes-actual {
+    background-color: #c82333;
+    border: 2px solid #2980b9; /* Borde azul fuerte */
+    box-shadow: 0 0 8px rgba(41, 128, 185, 0.4); /* Un ligero brillo azul */
+    font-weight: bold; /* Hace la letra un poco más gruesa */
+}
+
+/* Esto hará que los meses que no son el actual ni han sido pagados se vean más tenues */
+.pago-pendiente:not(.mes-actual) {
+    opacity: 0.6;
+}
 .input-busqueda-wrapper {
     flex: 2; /* Toma más espacio */
     min-width: 200px;
@@ -166,6 +185,7 @@ td {
 
 #buscador-nombre {
     width: 100%;
+    max-width: 400px;
     padding: 12px 12px 12px 40px; /* Espacio extra a la izquierda para la lupa */
     border: 1px solid #ddd;
     border-radius: 25px; /* Bordes redondeados modernos */
@@ -208,9 +228,13 @@ td {
     background: white;
     border-radius: 12px;
     padding: 15px;
-    margin-bottom: 15px;
+    margin-bottom: 3px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border-left: 6px solid #ccc; /* Color por defecto por si falla */
+}
+/* Esta clase ocultará la tarjeta sin importar el tamaño de pantalla */
+.cliente-card.hidden {
+    display: none !important;
 }
 
 /* Cabecera de la tarjeta */
@@ -218,7 +242,7 @@ td {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
 }
 
 .cliente-id {
@@ -235,8 +259,9 @@ td {
 
 .cliente-ip {
     font-size: 0.85rem;
-    color: #555;
     font-family: monospace;
+    color: #95a5a6; /* Un gris suave */
+    font-weight: normal;
 }
 
 /* Círculo del día de pago */
@@ -349,10 +374,7 @@ td {
     background-color: #e2e6ea;
 }
 
-/* Ajuste para iconos dentro de botones */
-.cliente-acciones-group i {
-    margin-right: 5px;
-}
+
 /* 
 .btn-detalles {
     width: 100%;
@@ -911,6 +933,112 @@ td {
     .reporte-item-pago {
         position: relative; /* Para que el botón se posicione respecto a la tarjeta */
     }
+
+    /* =========================================================
+   VISTA DE ESCRITORIO (Pantallas de 980px o más)
+   Transforma las tarjetas en filas estilo tabla
+   ========================================================= */
+   
+    /* 1. La tarjeta se vuelve una fila horizontal */
+    .cliente-card {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 5px 10px;
+        gap: 10px;
+    }
+
+    /* 2. La primera columna: Información y Día de pago */
+    .cliente-header {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        flex: 0 0 320px; /* Ancho fijo para mantener la alineación de la "tabla" */
+        gap: 15px;
+        justify-content: space-between;
+        margin-bottom: 0px;
+    }
+    /* 3. Ocultar el Scrollbar (la línea gris) de los meses */
+    .cliente-historial-pagos { /* Cambia esto por la clase que envuelve tus círculos verdes */
+        overflow-x: auto;
+        display: flex;
+        scrollbar-width: none; /* Para Firefox */
+    }
+    .cliente-historial-pagos::-webkit-scrollbar { /* Cambia esto por la clase que envuelve tus círculos verdes */
+        display: none;
+    }
+    .cliente-info-principal {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .cliente-nombre {
+        margin: 3px 0; /* Juntamos un poco el nombre y la IP */
+        font-size: 1.15rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+
+    /* 3. La columna central: Los meses */
+    .cliente-historial-pagos.dynamic-history {
+        flex: 1; /* Ocupa todo el espacio disponible en el medio */
+        border-top: none; /* Quitamos la línea divisoria del celular */
+        padding: 0;
+        flex-wrap: nowrap; /* Obligamos a que estén en una sola línea */
+        overflow-x: auto; /* Si hay muchísimos pagos, permite deslizar hacia los lados */
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Opcional: Hacemos la barra de desplazamiento horizontal más elegante en PC */
+    .cliente-historial-pagos.dynamic-history::-webkit-scrollbar {
+        height: 6px;
+    }
+    .cliente-historial-pagos.dynamic-history::-webkit-scrollbar-thumb {
+        background-color: #d1d5db;
+        border-radius: 4px;
+    }
+
+    /* Hacemos los círculos un poquitito más pequeños para que quepan más en la fila */
+    .pago-burbuja {
+        width: 55px;
+        height: 55px;
+        font-size: 0.7rem;
+        flex-shrink: 0; /* Evita que los círculos se aplasten si el espacio es reducido */
+    }
+
+    /* 4. La columna final: Botones */
+    .cliente-acciones-group {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        align-items: center;
+        margin: 0 !important;
+    }
+
+    .btn-registrar-pago, .btn-detalles-slim {
+        font-size: 0 !important; /* Oculta el texto "Registrar Pago" y "Detalles" */
+       margin: 0 !important;
+        width: 45px;
+        height: 45px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+    }
+    /* 3. Manipulamos el icono (etiqueta i) */
+    .btn-registrar-pago i, 
+    .btn-detalles-slim i {
+        font-size: 1.2rem !important; /* Le devolvemos el tamaño al icono */
+        margin: 0 !important;        /* Quitamos márgenes que separaban el texto */
+        display: inline-block;
+    }
+    
+    
 }
 
 .reporte-item-pago .monto-estado{

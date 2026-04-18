@@ -219,10 +219,21 @@ td {
 }
 .filtro-localidad-wrapper {
     flex: 1; /* Toma menos espacio */
-    min-width: 150px;
+    min-width: 200px;
 }
 
 #filtro-localidad {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 25px; /* Para que haga juego con el buscador */
+    font-size: 0.95rem;
+    outline: none;
+    background-color: white;
+    cursor: pointer;
+}
+
+#select-ordenar {
     width: 100%;
     padding: 12px;
     border: 1px solid #ddd;

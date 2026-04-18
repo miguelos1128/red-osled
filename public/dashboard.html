@@ -30,9 +30,21 @@
                         <input type="text" id="buscador-nombre" placeholder="Buscar cliente por nombre...">
                     </div>
                     <div class="filtro-localidad-wrapper">
+                        <select id="select-ordenar" >
+                            <option value="defecto">Ordenar por...</option>
+                            <option value="id_asc">ID (Menor a Mayor)</option>
+                            <option value="nombre_asc">Nombre (A - Z)</option>
+                            <option value="corte_asc">Día de Corte (1 al 31)</option>
+                            <option value="corte_desc">Día de Corte (31 al 1)</option>
+                            <option value="ip_asc">Dirección IP</option>
+                            <option value="fecha_desc">Más recientes (Fecha Inst.)</option>
+                            <option value="fecha_asc">Más antiguos (Fecha Inst.)</option>
+                        </select>
+                    </div>
+                    <div class="filtro-localidad-wrapper">
                         <select id="filtro-localidad">
                             <option value="todas">Todas las Localidades</option>
-                            </select>
+                        </select>
                     </div>
                 </div>
 
@@ -497,6 +509,13 @@
                         return `<div class="pago-burbuja ${claseEstado} ${claseActual}">${mesTimeline}</div>`;
                     }).join('');
                     
+                    // AGREGAMOS LOS DATOS OCULTOS PARA EL FILTRO DE ORDEN
+                    card.setAttribute('data-id', cliente.id);
+                    card.setAttribute('data-nombre', cliente.nombre_completo);
+                    card.setAttribute('data-corte', cliente.dia_pago);
+                    card.setAttribute('data-ip', cliente.direccion_ip);
+                    card.setAttribute('data-fecha', cliente.fecha_instalacion || "2000-01-01");
+
                     card.innerHTML = `
                         <div class="cliente-header">
                             <div class="cliente-info-principal">                              
@@ -567,6 +586,8 @@
                 });
             });
         });
+
+        
 
         function aplicarFiltros(){
             // 1. Creamos la variable que llevará la cuenta
@@ -664,7 +685,56 @@
         /* cargarClientes(); */
         //cargarVistaAdminClientes();
 
-        
+        // EVENTO: ORDENAR TARJETAS
+        document.getElementById('select-ordenar').addEventListener('change', function(e) {
+            const criterio = e.target.value;
+            const contenedor = document.getElementById('admin-clientes-container');
+            
+            // Obtenemos todas las tarjetas y las convertimos en un Array para poder ordenarlas
+            const tarjetas = Array.from(contenedor.querySelectorAll('.cliente-card'));
+
+            // Si vuelve a la opción por defecto, no hacemos nada (o podrías recargar)
+            if (criterio === "defecto") return;
+
+            tarjetas.sort((a, b) => {
+                let valA, valB;
+
+                switch(criterio) {
+                    case "id_asc":
+                        return parseInt(a.getAttribute('data-id')) - parseInt(b.getAttribute('data-id'));
+                    
+                    case "corte_asc":
+                        return parseInt(a.getAttribute('data-corte')) - parseInt(b.getAttribute('data-corte'));
+
+                    case "corte_desc": // NUEVO CASO: Orden descendente del 31 al 1
+                        return parseInt(b.getAttribute('data-corte')) - parseInt(a.getAttribute('data-corte'));
+                    
+                    case "nombre_asc":
+                        valA = a.getAttribute('data-nombre').toLowerCase();
+                        valB = b.getAttribute('data-nombre').toLowerCase();
+                        return valA.localeCompare(valB); // Orden alfabético A-Z
+                    
+                    case "ip_asc":
+                        valA = a.getAttribute('data-ip');
+                        valB = b.getAttribute('data-ip');
+                        // localeCompare con numeric: true ordena excelente tanto números (172) como IPs completas
+                        return valA.localeCompare(valB, undefined, {numeric: true}); 
+                    
+                    case "fecha_asc":
+                        return new Date(a.getAttribute('data-fecha')) - new Date(b.getAttribute('data-fecha'));
+                    
+                    case "fecha_desc":
+                        return new Date(b.getAttribute('data-fecha')) - new Date(a.getAttribute('data-fecha'));
+                        
+                    default:
+                        return 0;
+                }
+            });
+
+            // Re-inyectamos las tarjetas en el contenedor en el nuevo orden. 
+            // (JavaScript automáticamente las mueve de posición, no las duplica)
+            tarjetas.forEach(tarjeta => contenedor.appendChild(tarjeta));
+        });
 
         // Funciones para el Modal------------
         function mostrarFormularioCliente() {

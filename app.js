@@ -67,7 +67,7 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         // Resultado esperado: id, nombre, ip, dia_pago, localidad, y un string con meses pagados
         const query = `
             SELECT 
-                 c.id, c.nombre_completo, c.direccion_ip, c.dia_pago, c.localidad_id,
+                 c.id, c.nombre_completo, fecha_instalacion, c.direccion_ip, c.dia_pago, c.localidad_id,
                 IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
             FROM clientes c
             LEFT JOIN pagos p ON c.id = p.cliente_id 

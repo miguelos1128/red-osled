@@ -20,7 +20,9 @@
             </div>
 
             <div class="main-section">
-                <h3>Clientes Registrados</h3>
+                <h3 class="admin-titulo">Clientes Registrados
+                    <span id="contador-clientes" class="contador-badge">0</span>
+                </h3>
 
                 <div class="admin-controles-busqueda">
                     <div class="input-busqueda-wrapper">
@@ -377,12 +379,13 @@
             try {
                 const response = await fetch(`${urlBase}/api/admin/clientes-historial`);
                 const clientes = await response.json();
+                let clientesVisibles = 0;
                 console.log("Datos recibidos en el Frontend:", clientes); // Confirmación
                 
                 contenedor.innerHTML = ''; // Limpiamos
 
                 clientes.forEach(cliente => {
-   
+                    clientesVisibles++;
                     const card = document.createElement('div');
                     card.className = 'cliente-card';
                     card.setAttribute('data-localidad', cliente.localidad_id);
@@ -528,6 +531,8 @@
                         contenedor.scrollLeft = contenedor.scrollWidth; // Mueve el scroll al puro final
                     });
                 });
+                // 3. Imprimimos el total final en nuestro nuevo elemento HTML
+                document.getElementById('contador-clientes').textContent = clientesVisibles;
             } catch (error) {
                 console.error("Error cargando clientes:", error);
             }
@@ -564,6 +569,8 @@
         });
 
         function aplicarFiltros(){
+            // 1. Creamos la variable que llevará la cuenta
+            
             // 1. EVENTO: CUANDO ESCRIBES UN NOMBRE
              buscadorInput.addEventListener('input', function(e) {
                     // Resetear el filtro de localidad a "todas"
@@ -571,6 +578,7 @@
                     
                     const textoBusqueda = e.target.value.toLowerCase().trim();
                     const tarjetas = document.querySelectorAll('.cliente-card');
+                    let clientesVisibles = 0;
 
                     tarjetas.forEach(tarjeta => {
                         const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
@@ -578,10 +586,13 @@
                         // Filtramos SOLO por el nombre
                         if (nombre.includes(textoBusqueda)) {
                             tarjeta.classList.remove('hidden');
+                            clientesVisibles++;
                         } else {
                             tarjeta.classList.add('hidden');
                         }
                     });
+                     // 3. Imprimimos el total final en nuestro nuevo elemento HTML
+                    document.getElementById('contador-clientes').textContent = clientesVisibles;
                 });
 
             // 2. EVENTO: CUANDO SELECCIONAS UNA LOCALIDAD
@@ -591,6 +602,7 @@
                 
                 const localidadSeleccionada = String(e.target.value).trim();
                 const tarjetas = document.querySelectorAll('.cliente-card');
+                let clientesVisibles = 0;
 
                 tarjetas.forEach(tarjeta => {
                     let idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
@@ -599,10 +611,14 @@
                     // Filtramos SOLO por la localidad
                     if (localidadSeleccionada === "todas" || idLocalidadTarjeta === localidadSeleccionada) {
                         tarjeta.classList.remove('hidden');
+                        clientesVisibles++;
                     } else {
                         tarjeta.classList.add('hidden');
+                        
                     }
                 });
+                // 3. Imprimimos el total final en nuestro nuevo elemento HTML
+                document.getElementById('contador-clientes').textContent = clientesVisibles;
             });
         }
                /*  function filtrarPorLocalidad(valorSeleccionado) {

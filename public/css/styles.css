@@ -135,6 +135,25 @@ td {
     padding: 5px 15px;
 }
 
+/* Alineamos el título y el contador en la misma línea */
+.admin-titulo {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Espacio entre el texto y el número */
+    margin-bottom: 20px;
+}
+
+/* Estilo del contador */
+.contador-badge {
+    background-color: #2980b9; /* Color azul (puedes cambiarlo al verde de tu logo) */
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 20px; /* Lo hace ver como una píldora */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ligera sombra para resaltar */
+}
+
 /* =======================================================
    ESTILOS del buscador
    Diseño: Mobile First (Tarjetas) -> PC (Tabla)

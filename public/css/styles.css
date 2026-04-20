@@ -832,6 +832,80 @@ td {
     pointer-events: none;
 }
 
+/* =======================================================
+   ESTILOS COMPLETOS PARA EL Detalle de cliente (RESPONSIVO)
+   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+======================================================= */
+/* --- ESTILOS DEL MODAL --- */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
+}
+.modal-overlay.hidden { display: none !important; }
+
+.modal-content {
+    background: #fff;
+    width: 90%; max-width: 900px;
+    max-height: 90vh;
+    border-radius: 12px;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    position: sticky; top: 0;
+}
+
+.btn-cerrar-modal {
+    background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #555;
+}
+
+/* --- ESTILOS DE LA FICHA TÉCNICA --- */
+.seccion-detalle {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.grid-info-cliente {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.info-grupo label {
+    font-size: 0.85rem; color: #7f8c8d; font-weight: bold; text-transform: uppercase;
+}
+.info-grupo p {
+    margin: 5px 0 0 0; font-size: 1rem; color: #2c3e50;
+}
+
+/* Detalles resaltados */
+.resaltado-azul { font-weight: bold; color: #2980b9 !important; }
+.resaltado-tecnico { font-family: monospace; background: #f1f2f6; padding: 2px 6px; border-radius: 4px; }
+
+/* Badge de Estados */
+.badge-estado {
+    padding: 6px 16px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.9rem;
+}
+.estado-activo { background-color: #27ae60; }
+.estado-suspendido { background-color: #f39c12; }
+.estado-retirado { background-color: #e74c3c; }
+
+/* Botón WhatsApp */
+.acciones-contacto { margin-top: 20px; }
+.btn-contacto.whatsapp {
+    display: inline-block; background-color: #25D366; color: white;
+    padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;
+}
+
 /* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */
 @media (min-width: 805px) {
     .modal-caja { 

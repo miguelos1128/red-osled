@@ -322,6 +322,64 @@
             <button class="button" onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
         </div>
     </div>
+
+    <div id="modal-detalles-cliente" class="modal-overlay hidden">
+        <div class="modal-content">
+            
+            <div class="modal-header">
+                <h2 id="detalle-nombre-cliente">Cargando...</h2>
+                <span id="detalle-badge-estado" class="badge-estado">Activo</span>
+                <button class="btn-cerrar-modal" onclick="cerrarModalDetalles()">✖</button>
+            </div>
+
+            <div class="modal-body">
+                
+                <div class="seccion-detalle">
+                    <h3>📌 Ficha Técnica</h3>
+                    <div class="grid-info-cliente">
+                        
+                        <div class="info-grupo">
+                            <label>Dirección Física</label>
+                            <p id="detalle-direccion">-</p>
+                        </div>
+                        
+                        <div class="info-grupo">
+                            <label>Localidad / Paquete</label>
+                            <p id="detalle-localidad-paquete">-</p> 
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Fecha de Instalación</label>
+                            <p id="detalle-fecha-inst">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Día de Pago</label>
+                            <p id="detalle-dia-pago" class="resaltado-azul">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Dirección IP</label>
+                            <p id="detalle-ip" class="resaltado-tecnico">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Correo Electrónico</label>
+                            <p id="detalle-correo">-</p>
+                        </div>
+
+                    </div>
+
+                    <div class="acciones-contacto">
+                        <a id="btn-whatsapp" href="#" target="_blank" class="btn-contacto whatsapp">
+                            💬 Enviar WhatsApp al <span id="detalle-telefono"></span>
+                        </a>
+                    </div>
+                </div>
+
+                </div>
+        </div>
+    </div>
    
     <script>
         const host = window.location.hostname; 
@@ -501,7 +559,7 @@
                                 <i class="fas fa-dollar-sign">💵</i> Registrar Pago
                             </button>
                             
-                            <button class="btn-detalles-slim" onclick="verDetalles(${cliente.id})">
+                            <button class="btn-detalles-slim" onclick="abrirDetallesCliente(${cliente.id})">
                                 <i class="fas fa-eye">👁️</i> Detalles
                             </button>
                         </div>
@@ -1246,7 +1304,49 @@
             };
         }
  
+        // Función para abrir el modal e inyectar los datos de la Fase 1
+        function abrirDetallesCliente(cliente) {
+            // 1. Mostrar el Modal
+            document.getElementById('modal-detalles-cliente').classList.remove('hidden');
 
+            // 2. Inyectar datos generales
+            document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo;
+            document.getElementById('detalle-direccion').textContent = cliente.direccion || 'Sin dirección';
+            document.getElementById('detalle-fecha-inst').textContent = cliente.fecha_instalacion || 'N/A';
+            document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago;
+            document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
+            document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
+            
+            // Para localidad y paquete, si tienes el texto exacto úsalo, si no, mostramos el ID temporalmente
+            document.getElementById('detalle-localidad-paquete').textContent = `Loc: ${cliente.id_localidad} | Paq: ${cliente.paquete_id}`;
+
+            // 3. Configurar WhatsApp
+            const tel = cliente.telefono || '';
+            document.getElementById('detalle-telefono').textContent = tel;
+            // Quitamos espacios o guiones del teléfono para el enlace de WhatsApp
+            const telLimpio = tel.replace(/\D/g,''); 
+            document.getElementById('btn-whatsapp').href = `https://wa.me/${telLimpio}`;
+
+            // 4. Configurar Badge de Estado (Asumiendo 1=Activo, 2=Suspendido, 3=Retirado)
+            const badge = document.getElementById('detalle-badge-estado');
+            badge.className = 'badge-estado'; // Resetea las clases
+            
+            if(cliente.estado == 1) {
+                badge.textContent = 'Activo';
+                badge.classList.add('estado-activo');
+            } else if (cliente.estado == 2) {
+                badge.textContent = 'Suspendido';
+                badge.classList.add('estado-suspendido');
+            } else {
+                badge.textContent = 'Retirado';
+                badge.classList.add('estado-retirado');
+            }
+        }
+
+        // Función para cerrar el modal
+        function cerrarModalDetalles() {
+            document.getElementById('modal-detalles-cliente').classList.add('hidden');
+        }
         async function cargarWidgetCorte() {
 
             if (!idCobrador) return;

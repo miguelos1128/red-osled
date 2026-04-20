@@ -513,6 +513,7 @@
                         contenedor.scrollLeft = contenedor.scrollWidth; // Mueve el scroll al puro final
                     });
                 });
+                activarScrollSincronizado();
                 // 3. Imprimimos el total final en nuestro nuevo elemento HTML
                 document.getElementById('contador-clientes').textContent = clientesVisibles;
             } catch (error) {
@@ -604,6 +605,7 @@
                 // 3. Imprimimos el total final en nuestro nuevo elemento HTML
                 document.getElementById('contador-clientes').textContent = clientesVisibles;
             });
+            activarScrollSincronizado();
         }
               
         // EVENTO: ORDENAR TARJETAS
@@ -655,6 +657,7 @@
             // Re-inyectamos las tarjetas en el contenedor en el nuevo orden. 
             // (JavaScript automáticamente las mueve de posición, no las duplica)
             tarjetas.forEach(tarjeta => contenedor.appendChild(tarjeta));
+            activarScrollSincronizado();
         });
 
         // Funciones para el Modal------------
@@ -705,6 +708,32 @@
 
         // Ejecuta esta función al cargar el panel
         cargarLocalidades();
+
+        function activarScrollSincronizado() {
+            const contenedoresMeses = document.querySelectorAll('.cliente-historial-pagos');
+            let contenedorLider = null;
+
+            contenedoresMeses.forEach(contenedor => {
+                // 1. Detectar quién es el líder (dónde está el mouse o el dedo del usuario)
+                contenedor.addEventListener('mouseenter', () => contenedorLider = contenedor);
+                contenedor.addEventListener('touchstart', () => contenedorLider = contenedor, {passive: true});
+
+                // 2. Escuchar el movimiento
+                contenedor.addEventListener('scroll', function() {
+                    // Si el contenedor que se está moviendo NO es el líder, detenemos la acción para evitar el eco
+                    if (contenedorLider !== this) return;
+
+                    const posicionActual = this.scrollLeft;
+
+                    // 3. Mover a todos los "seguidores" a la misma posición que el líder
+                    contenedoresMeses.forEach(seguidor => {
+                        if (seguidor !== contenedorLider) {
+                            seguidor.scrollLeft = posicionActual;
+                        }
+                    });
+                });
+            });
+        }
 
         // 2. Lógica de validación y envío
         document.getElementById('formCliente').addEventListener('submit', async (e) => {

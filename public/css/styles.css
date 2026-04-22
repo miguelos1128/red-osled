@@ -466,6 +466,8 @@ td {
     color: #333;
 }
 
+/* El botón de la X */
+
 .cerrar-x-modal {
     font-size: 28px;
     font-weight: bold;
@@ -473,7 +475,6 @@ td {
     color: #888;
 }
 .cerrar-x-modal:hover { color: #dc3545; }
-
 
 /* --- 3. DISEÑO DE TARJETAS PARA MÓVIL (Por defecto) --- */
 
@@ -692,13 +693,6 @@ td {
 
 .hidden { display: none !important; }
 
-.close {
-    position: absolute;
-    right: 15px;
-    top: 10px;
-    font-size: 28px;
-    cursor: pointer;
-}
 
 /* Fondo oscuro que cubre toda la pantalla */
 .modal-fondo {
@@ -734,14 +728,7 @@ td {
     margin-bottom: 15px;
 }
 
-/* El botón de la X */
-.cerrar-x {
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    color: #888;
-}
-.cerrar-x:hover { color: #dc3545; }
+
 
 /* Lista de pagos */
 .lista-pagos-ul {
@@ -855,17 +842,7 @@ td {
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
-.modal-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #ddd;
-    position: sticky; top: 0;
-}
 
-.btn-cerrar-modal {
-    background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #555;
-}
 
 /* --- ESTILOS DE LA FICHA TÉCNICA --- */
 .seccion-detalle {

@@ -142,7 +142,7 @@
                 <div class="modal-caja">
                     <div class="modal-cabecera">
                         <h4 style="margin: 0;">Pagos de: <span id="nombreClienteHistorial"></span></h4>
-                        <span class="cerrar-x" onclick="cerrarHistorial()">&times;</span>
+                        <span class="cerrar-x-modal" onclick="cerrarHistorial()">&times;</span>
                     </div>
                     
                     <div class="modal-cuerpo">
@@ -160,8 +160,10 @@
 
     <div id="modalPago" class="modal hidden">
         <div class="modal-content">
-            <span class="close" onclick="cerrarModalPago()">&times;</span>
-            <h2 style="margin-bottom: 10px;">Registrar Cobro</h2>
+            <div class="modal-cabecera">
+                <h2 style="margin-bottom: 10px;">Registrar Cobro</h2>
+                <span class="cerrar-x-modal" onclick="cerrarModalPago()">&times;</span>
+            </div>
             <p style="margin-bottom: 20px; color: #555;">
                 Cliente: <strong id="modal-nombre-cliente"></strong>
             </p>
@@ -188,7 +190,7 @@
 
     <div id="modalCliente" class="modal hidden">
         <div class="modal-content">
-            <span class="close" onclick="cerrarModal()">&times;</span>
+            <span class="cerrar-x-modal" onclick="cerrarModal()">&times;</span>
             <h2>Nuevo Cliente</h2>
             <form id="formCliente">
                 <label>Nombre Completo:</label>
@@ -244,6 +246,7 @@
     </div>
 
     <div id="modal-corte" class="hidden modal-fondo-corte">
+        
         <div class="modal-caja-corte">
             
             <div class="cabecera-modal-corte">
@@ -304,7 +307,7 @@
                     <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
                 </div>
             </div>
-
+            
             <div class="modal-acciones-corte">
                 <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre button">Solicitar Cierre al Administrador</button>
             </div>
@@ -326,10 +329,10 @@
     <div id="modal-detalles-cliente" class="modal-overlay hidden">
         <div class="modal-content">
             
-            <div class="modal-header">
+            <div class="modal-cabecera">
                 <h2 id="detalle-nombre-cliente">Cargando...</h2>
                 <span id="detalle-badge-estado" class="badge-estado">Activo</span>
-                <button class="btn-cerrar-modal" onclick="cerrarModalDetalles()">✖</button>
+                <span class="cerrar-x-modal" onclick="cerrarModalDetalles()">✖</span>
             </div>
 
             <div class="modal-body">
@@ -1304,45 +1307,79 @@
             };
         }
  
-        // Función para abrir el modal e inyectar los datos de la Fase 1
-        function abrirDetallesCliente(cliente) {
-            // 1. Mostrar el Modal
+        // Función para abrir el modal y cargar desde Node.js
+        async function abrirDetallesCliente(idCliente) {
+            // 1. Mostrar el Modal primero y poner un mensaje de carga
             document.getElementById('modal-detalles-cliente').classList.remove('hidden');
+            document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
 
-            // 2. Inyectar datos generales
-            document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo;
-            document.getElementById('detalle-direccion').textContent = cliente.direccion || 'Sin dirección';
-            document.getElementById('detalle-fecha-inst').textContent = cliente.fecha_instalacion || 'N/A';
-            document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago;
-            document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
-            document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
-            
-            // Para localidad y paquete, si tienes el texto exacto úsalo, si no, mostramos el ID temporalmente
-            document.getElementById('detalle-localidad-paquete').textContent = `Loc: ${cliente.id_localidad} | Paq: ${cliente.paquete_id}`;
+            try {
+                // 2. Hacer la petición a nuestra nueva ruta de Node.js
+                // IMPORTANTE: Ajusta '/cliente-completo/' si tu servidor usa un prefijo como '/api/cliente-completo/'
+                const respuesta = await fetch(`/cliente-completo/${idCliente}`);
+                const data = await respuesta.json();
 
-            // 3. Configurar WhatsApp
-            const tel = cliente.telefono || '';
-            document.getElementById('detalle-telefono').textContent = tel;
-            // Quitamos espacios o guiones del teléfono para el enlace de WhatsApp
-            const telLimpio = tel.replace(/\D/g,''); 
-            document.getElementById('btn-whatsapp').href = `https://wa.me/${telLimpio}`;
+                if (!respuesta.ok) throw new Error(data.error);
 
-            // 4. Configurar Badge de Estado (Asumiendo 1=Activo, 2=Suspendido, 3=Retirado)
-            const badge = document.getElementById('detalle-badge-estado');
-            badge.className = 'badge-estado'; // Resetea las clases
-            
-            if(cliente.estado == 1) {
-                badge.textContent = 'Activo';
-                badge.classList.add('estado-activo');
-            } else if (cliente.estado == 2) {
-                badge.textContent = 'Suspendido';
-                badge.classList.add('estado-suspendido');
-            } else {
-                badge.textContent = 'Retirado';
-                badge.classList.add('estado-retirado');
+                // Separamos los datos que nos mandó el servidor
+                const cliente = data.cliente;
+                console.log("¡Éxito! Info lista para la fase 1: ", cliente);
+                const pagos = data.pagos; // <--- ¡Esto ya está listo para la Fase 2!
+
+                // 3. Inyectar datos en la FICHA TÉCNICA
+                document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
+                document.getElementById('detalle-direccion').textContent = cliente.direccion || 'Sin dirección';
+                
+                // Formatear la fecha para que se vea bonita (opcional)
+                let fechaInst = cliente.fecha_instalacion ? new Date(cliente.fecha_instalacion).toLocaleDateString() : 'N/A';
+                document.getElementById('detalle-fecha-inst').textContent = fechaInst;
+                
+                document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
+                document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
+                document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
+                
+                // Ahora usamos los nombres reales que trajimos del servidor
+                const loc = cliente.localidad_nombre || 'Sin localidad';
+                const paq = cliente.paquete || 'Sin paquete';
+                document.getElementById('detalle-localidad-paquete').textContent = `${loc} | Paquete: ${paq}`;
+
+                // 4. Configurar WhatsApp
+                const tel = cliente.telefono || '';
+                document.getElementById('detalle-telefono').textContent = tel || 'Sin teléfono';
+                const btnWhatsapp = document.getElementById('btn-whatsapp');
+
+                if (tel) {
+                    const telLimpio = tel.replace(/\D/g,''); 
+                    btnWhatsapp.href = `https://wa.me/${telLimpio}`;
+                    btnWhatsapp.style.display = 'inline-block';
+                } else {
+                    btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
+                }
+
+                // 5. Configurar Badge de Estado
+                const badge = document.getElementById('detalle-badge-estado');
+                badge.className = 'badge-estado'; 
+                
+                if(cliente.estado_servicio == 'activo') {
+                    badge.textContent = 'Activo';
+                    badge.classList.add('estado-activo');
+                } else if (cliente.estado == 'suspendido') {
+                    badge.textContent = 'Suspendido';
+                    badge.classList.add('estado-suspendido');
+                } else {
+                    badge.textContent = 'Retirado';
+                    badge.classList.add('estado-retirado');
+                }
+
+                // Dejamos un mensaje oculto en la consola para saber que los pagos llegaron bien
+                console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);
+
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('detalle-nombre-cliente').textContent = "Error al cargar los datos";
             }
         }
-
+        
         // Función para cerrar el modal
         function cerrarModalDetalles() {
             document.getElementById('modal-detalles-cliente').classList.add('hidden');

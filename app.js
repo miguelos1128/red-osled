@@ -452,3 +452,49 @@ app.post('/api/cancelar-pago/:id', async (req, res) => {
         });
     }
 });
+
+// RUTA PARA OBTENER EL PERFIL COMPLETO DEL CLIENTE (VERSIÓN CON PROMESAS)
+app.get('/cliente-completo/:id', async (req, res) => {
+    const idCliente = req.params.id;
+
+    try {
+        // Consulta 1: Datos del cliente + Nombre de la localidad
+        const queryCliente = `
+            SELECT c.*, l.nombre AS localidad_nombre 
+            FROM clientes c 
+            LEFT JOIN localidades l ON c.localidad_id = l.id 
+            WHERE c.id = ?
+        `;
+        
+        // Ejecutamos usando tu formato de promesas
+        const [clienteRows] = await db.execute(queryCliente, [idCliente]);
+
+        // Si no hay cliente, retornamos error 404
+        if (clienteRows.length === 0) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+
+        // Consulta 2: Historial de pagos + Nombre del usuario que cobró
+        const queryPagos = `
+            SELECT p.*, u.nombre AS cobrador_nombre 
+            FROM pagos p 
+            LEFT JOIN usuarios u ON p.usuario_id = u.id 
+            WHERE p.cliente_id = ? AND p.estado_corte IN (0, 1) 
+            ORDER BY p.fecha_pago DESC
+        `;
+        
+        // Ejecutamos la consulta de pagos
+        const [pagosRows] = await db.execute(queryPagos, [idCliente]);
+
+        // Enviamos el paquete completo de regreso al navegador
+        res.json({
+            cliente: clienteRows[0], // Mandamos el objeto único del cliente
+            pagos: pagosRows         // Mandamos el arreglo completo de pagos
+        });
+
+    } catch (error) {
+        // Manejo de errores siguiendo tu estructura
+        console.error("Error al obtener perfil completo:", error);
+        res.status(500).json({ error: 'Error interno del servidor al consultar la base de datos' });
+    }
+});

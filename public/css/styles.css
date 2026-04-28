@@ -883,6 +883,29 @@ td {
     padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;
 }
 
+/* --- ESTILOS FASE 2: FINANZAS --- */
+.finanzas-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.btn-descarga-pdf { background-color: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.3s;}
+.btn-descarga-pdf:hover { background-color: #c0392b; }
+
+.finanzas-resumen { display: flex; gap: 15px; margin-bottom: 20px; }
+.tarjeta-resumen { background: #f8f9fa; padding: 15px; border-radius: 8px; flex: 1; border-left: 5px solid #ccc; }
+.tarjeta-resumen.verde { border-left-color: #27ae60; }
+.tarjeta-resumen.alerta { border-left-color: #f1c40f; }
+.tarjeta-resumen span { color: #7f8c8d; font-size: 0.85rem; text-transform: uppercase; font-weight: bold;}
+.tarjeta-resumen h4 { margin: 5px 0 0 0; font-size: 1.6rem; color: #2c3e50; }
+
+.tabla-contenedor { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; }
+.tabla-pagos { width: 100%; border-collapse: collapse; min-width: 500px; }
+.tabla-pagos th, .tabla-pagos td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
+.tabla-pagos th { background: #f8f9fa; color: #34495e; font-size: 0.9rem; text-transform: uppercase;}
+.tabla-pagos tbody tr:hover { background-color: #f1f2f6; }
+
+/* Badges de la tabla */
+.badge-pago { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: white; }
+.pago-cobrado { background-color: #27ae60; }
+.pago-pendiente { background-color: #f1c40f; color: #333; }
+
 /* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */
 @media (min-width: 805px) {
     .modal-caja { 

@@ -380,7 +380,43 @@
                     </div>
                 </div>
 
+                <div id="seccion-finanzas" class="seccion-detalle">
+                    <div class="finanzas-header">
+                        <h3>💰 Historial Financiero</h3>
+                        <button class="btn-descarga-pdf" onclick="alert('Generación de PDF en construcción...')">
+                            <i class="fas fa-file-pdf"></i> Descargar PDF
+                        </button>
+                    </div>
+
+                    <div class="finanzas-resumen">
+                        <div class="tarjeta-resumen verde">
+                            <span>Total Pagado Histórico</span>
+                            <h4 id="detalle-total-pagado">$0.00</h4>
+                        </div>
+                        <div class="tarjeta-resumen alerta" id="tarjeta-pendientes">
+                            <span>Adeudo Pendiente</span>
+                            <h4 id="detalle-total-pendiente">$0.00</h4>
+                        </div>
+                    </div>
+
+                    <div class="tabla-contenedor">
+                        <table class="tabla-pagos">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Mes pagado</th>
+                                    <th>Monto</th>
+                                    <th>Atendido por</th>
+                                    <th>Tipo de Pago</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detalle-tabla-pagos">
+                                </tbody>
+                        </table>
+                    </div>
                 </div>
+                
+            </div>
         </div>
     </div>
    
@@ -1314,7 +1350,7 @@
             document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
 
             try {
-                // 2. Hacer la petición a nuestra nueva ruta de Node.js
+                /* // 2. Hacer la petición a nuestra nueva ruta de Node.js
                 // IMPORTANTE: Ajusta '/cliente-completo/' si tu servidor usa un prefijo como '/api/cliente-completo/'
                 const respuesta = await fetch(`/cliente-completo/${idCliente}`);
                 const data = await respuesta.json();
@@ -1324,7 +1360,27 @@
                 // Separamos los datos que nos mandó el servidor
                 const cliente = data.cliente;
                 console.log("¡Éxito! Info lista para la fase 1: ", cliente);
-                const pagos = data.pagos; // <--- ¡Esto ya está listo para la Fase 2!
+                const pagos = data.pagos; // <--- ¡Esto ya está listo para la Fase 2! */
+
+                // --- LA MAGIA DE ARQUITECTURA: Peticiones en paralelo con Promise.all ---
+                // Esto dispara ambas consultas al mismo tiempo para máxima velocidad.
+                const [respuestaCompleto, respuestaPagado] = await Promise.all([
+                    fetch(`/cliente-completo/${idCliente}`), // Endpoint Fase 1
+                    fetch(`/api/estado-cuenta/${idCliente}`)             // TU ENDPOINT EXISTENTE DE LA IMAGEN 27
+                ]);
+
+                // Verificamos que ambas respuestas sean exitosas
+                if (!respuestaCompleto.ok) throw new Error("Error cargando detalles del cliente");
+                if (!respuestaPagado.ok) throw new Error("Error cargando total pagado del cliente");
+
+                // Convertimos ambas respuestas a JSON
+                const dataCompleto = await respuestaCompleto.json();
+                const dataPagado = await respuestaPagado.json();
+
+                // Separamos los datos para procesarlos
+                const cliente = dataCompleto.cliente;
+                const pagos = dataCompleto.pagos; // El arreglo de pagos con estado 0 y 1
+                const totalPagadoHistorico = dataPagado.total_pagado; // El valor único que devuelve tu endpoint de la Imagen 27
 
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
@@ -1373,6 +1429,83 @@
 
                 // Dejamos un mensaje oculto en la consola para saber que los pagos llegaron bien
                 console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);
+                // --- INICIO FASE 2: FINANZAS ---
+                const tbodyPagos = document.getElementById('detalle-tabla-pagos');
+                tbodyPagos.innerHTML = ''; // Limpiamos la tabla de clientes anteriores
+                
+                let totalPagado = 0;
+                let totalPendiente = 0;
+
+                if (pagos.length === 0) {
+                    tbodyPagos.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:#7f8c8d;">No hay historial de pagos registrados para este cliente.</td></tr>';
+                } else {
+                    pagos.forEach(pago => {
+                        const monto = parseFloat(pago.monto) || 0;
+                        let badgeHTML = '';
+
+                        /* // Clasificamos si es un pago (0) o deuda (1)
+                        if (pago.estado == 0) {
+                            totalPagado += monto;
+                            badgeHTML = '<span class="badge-pago pago-cobrado">Cobrado</span>';
+                        } else if (pago.estado == 1) {
+                            totalPendiente += monto;
+                            badgeHTML = '<span class="badge-pago pago-pendiente">Pendiente</span>';
+                        } */
+
+                        // Formateamos la fecha (YYYY-MM-DD a un formato legible)
+                        // Ajusta la zona horaria si notas un desfase de un día
+                        /* const fechaObj = new Date(pago.fecha); 
+                        const fechaFormat = fechaObj.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
+                         */
+                        const fechaObj = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+                        // Dibujamos la fila (Usamos el ID de pago como "Folio")
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${fechaObj}</td>
+                            <td><b>${pago.mes_pagado}</b></td>
+                            <td>$${monto.toFixed(2)}</td>
+                            <td>${pago.cobrador_nombre || 'Desconocido'}</td>
+                            <td>${pago.tipo_pago}</td>
+                        `;
+                        tbodyPagos.appendChild(tr);
+                    });
+                }
+
+                // Asumiendo que 'calcularAdeudoEvolucionado' está definida globalmente en tu JS como en la Imagen 28
+                const deudaTeorica = calcularAdeudoEvolucionado(cliente.fecha_instalacion, cliente.costo_mensual);
+                const totalQueDeberiaHaberPagado = deudaTeorica.total;
+
+                console.log("deuda teorrica " + deudaTeorica.total)
+                
+                // Calculamos el adeudo real restando: Lo que debe teóricamente - Lo que ha pagado realmente
+                let adeudoPendiente = totalQueDeberiaHaberPagado - totalPagadoHistorico;
+                let totalPagadoHistoricoNume = parseInt(totalPagadoHistorico);
+
+                console.log("DeberiaHaberPagado" + totalQueDeberiaHaberPagado +" - "+"totalPagadoHistorico"+ totalPagadoHistorico +"=" + adeudoPendiente)
+
+                // Aseguramos que el adeudo no sea negativo por abonos adelantados (por seguridad)
+                //adeudoPendiente = Math.max(adeudoPendiente, 0);
+
+                // Inyectamos el valor en la segunda tarjeta gigante
+                document.getElementById('detalle-total-pendiente').textContent = `$${adeudoPendiente.toFixed(2)}`;
+                // Este valor viene directamente de tu endpoint financiero.
+                document.getElementById('detalle-total-pagado').textContent = `$${totalPagadoHistoricoNume.toFixed(2)}`;
+
+                /* // Actualizamos las tarjetas gigantes de resumen
+                document.getElementById('detalle-total-pagado').textContent = `$${totalPagado.toFixed(2)}`;
+                document.getElementById('detalle-total-pendiente').textContent = `$${totalPendiente.toFixed(2)}`;
+                 */
+                // Si no debe nada, la tarjeta amarilla se vuelve gris
+                // Actualizamos la lógica amarilla/gris de la tarjeta pendiente
+                const tarjetaPendiente = document.getElementById('tarjeta-pendientes');
+                if (adeudoPendiente > 0) {
+                    tarjetaPendiente.classList.add('alerta');
+                    tarjetaPendiente.style.borderLeftColor = '#f1c40f'; // Amarillo
+                } else {
+                    tarjetaPendiente.classList.remove('alerta');
+                    tarjetaPendiente.style.borderLeftColor = '#bdc3c7'; // Gris de "paz mental, cliente al corriente"
+                }
+                // --- FIN FASE 2 ---
 
             } catch (error) {
                 console.error("Error:", error);

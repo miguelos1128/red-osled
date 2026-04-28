@@ -339,8 +339,7 @@ app.post('/api/registrar-pago', async (req, res) => {
 app.get('/api/estado-cuenta/:id', async (req, res) => {
     try {
         const clienteId = req.params.id;
-        const [resultado] = await db.query(
-            'SELECT SUM(monto) as total_pagado FROM pagos WHERE cliente_id = ?',
+        const [resultado] = await db.query('SELECT SUM(monto) AS total_pagado FROM pagos WHERE cliente_id = ? AND estado_corte NOT IN (3)',
             [clienteId]
         );
         res.json({ total_pagado: resultado[0].total_pagado || 0 });
@@ -480,7 +479,7 @@ app.get('/cliente-completo/:id', async (req, res) => {
             FROM pagos p 
             LEFT JOIN usuarios u ON p.usuario_id = u.id 
             WHERE p.cliente_id = ? AND p.estado_corte IN (0, 1) 
-            ORDER BY p.fecha_pago DESC
+            ORDER BY p.id DESC
         `;
         
         // Ejecutamos la consulta de pagos

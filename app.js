@@ -61,7 +61,34 @@ app.get('/api/clientes', async (req, res) => {
     
 });
 
+app.get('/api/admin/clientes-historial', async (req, res) => {
+    try {
+        // Esta consulta trae los datos del cliente y concatena sus pagos del año actual
+        // Resultado esperado: id, nombre, ip, dia_pago, localidad, y un string con meses pagados
+        const query = `
+            SELECT 
+                 c.id, c.nombre_completo, fecha_instalacion, c.direccion_ip, c.dia_pago, c.localidad_id,
+                IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
+            FROM clientes c
+            LEFT JOIN pagos p ON c.id = p.cliente_id 
+                AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
+            GROUP BY c.id, c.nombre_completo, c.direccion_ip, c.dia_pago, c.localidad_id;
+        `; 
+        //const query = `SELECT * FROM clientes`;
+        
 
+        const [clientes] = await db.query(query);
+        //console.log("Datos de la tabla puros:", clientes); // Veamos qué sale aquí
+        res.json(clientes);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+function verDetalles(idCliente) {
+    console.log("Consultando detalles del cliente ID:", idCliente);
+    alert("Próximamente: Detalles del cliente " + idCliente);
+}
 // Ruta para iniciar sesión (Login)
 // Agregamos "async" aquí
 
@@ -312,8 +339,7 @@ app.post('/api/registrar-pago', async (req, res) => {
 app.get('/api/estado-cuenta/:id', async (req, res) => {
     try {
         const clienteId = req.params.id;
-        const [resultado] = await db.query(
-            'SELECT SUM(monto) as total_pagado FROM pagos WHERE cliente_id = ?',
+        const [resultado] = await db.query('SELECT SUM(monto) AS total_pagado FROM pagos WHERE cliente_id = ? AND estado_corte NOT IN (3)',
             [clienteId]
         );
         res.json({ total_pagado: resultado[0].total_pagado || 0 });
@@ -380,7 +406,7 @@ app.post('/api/procesar-corte', async (req, res) => {
 // Ruta para obtener todas las localidades (para el selector del formulario)
 app.get('/api/localidades', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT id, nombre FROM localidades ORDER BY nombre ASC');
+        const [rows] = await db.query('SELECT id, nombre, color FROM localidades ORDER BY nombre ASC');
         res.json(rows);
     } catch (error) {
         console.error("Error al obtener localidades:", error);
@@ -423,5 +449,51 @@ app.post('/api/cancelar-pago/:id', async (req, res) => {
             success: false, 
             message: 'Error interno del servidor al procesar la solicitud.' 
         });
+    }
+});
+
+// RUTA PARA OBTENER EL PERFIL COMPLETO DEL CLIENTE (VERSIÓN CON PROMESAS)
+app.get('/cliente-completo/:id', async (req, res) => {
+    const idCliente = req.params.id;
+
+    try {
+        // Consulta 1: Datos del cliente + Nombre de la localidad
+        const queryCliente = `
+            SELECT c.*, l.nombre AS localidad_nombre 
+            FROM clientes c 
+            LEFT JOIN localidades l ON c.localidad_id = l.id 
+            WHERE c.id = ?
+        `;
+        
+        // Ejecutamos usando tu formato de promesas
+        const [clienteRows] = await db.execute(queryCliente, [idCliente]);
+
+        // Si no hay cliente, retornamos error 404
+        if (clienteRows.length === 0) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+
+        // Consulta 2: Historial de pagos + Nombre del usuario que cobró
+        const queryPagos = `
+            SELECT p.*, u.nombre AS cobrador_nombre 
+            FROM pagos p 
+            LEFT JOIN usuarios u ON p.usuario_id = u.id 
+            WHERE p.cliente_id = ? AND p.estado_corte IN (0, 1) 
+            ORDER BY p.id DESC
+        `;
+        
+        // Ejecutamos la consulta de pagos
+        const [pagosRows] = await db.execute(queryPagos, [idCliente]);
+
+        // Enviamos el paquete completo de regreso al navegador
+        res.json({
+            cliente: clienteRows[0], // Mandamos el objeto único del cliente
+            pagos: pagosRows         // Mandamos el arreglo completo de pagos
+        });
+
+    } catch (error) {
+        // Manejo de errores siguiendo tu estructura
+        console.error("Error al obtener perfil completo:", error);
+        res.status(500).json({ error: 'Error interno del servidor al consultar la base de datos' });
     }
 });

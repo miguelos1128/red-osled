@@ -134,6 +134,289 @@ td {
     width: auto;
     padding: 5px 15px;
 }
+
+/* Alineamos el título y el contador en la misma línea */
+.admin-titulo {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Espacio entre el texto y el número */
+    margin-bottom: 20px;
+}
+
+/* Estilo del contador */
+.contador-badge {
+    background-color: #2980b9; /* Color azul (puedes cambiarlo al verde de tu logo) */
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 20px; /* Lo hace ver como una píldora */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ligera sombra para resaltar */
+}
+
+/* =======================================================
+   ESTILOS del buscador
+   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+======================================================= */
+/* Contenedor de la barra de búsqueda */
+.admin-controles-busqueda {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 10px;
+    background-color: #f4f7f6;
+}
+
+/* Burbujas para los meses que NO se han pagado */
+.pago-pendiente {
+    background-color: #f1f2f6; /* Un gris muy suave */
+    color: #a4b0be; /* Texto grisáceo */
+    border: 2px dashed #ced6e0; /* Borde punteado que da la sensación de "vacío" o "pendiente" */
+}
+
+/* Opcional pero muy recomendado: Resaltar visualmente cuál es el mes actual */
+.mes-actual {
+    background-color: #c82333;
+    border: 2px solid #2980b9; /* Borde azul fuerte */
+    box-shadow: 0 0 8px rgba(41, 128, 185, 0.4); /* Un ligero brillo azul */
+    font-weight: bold; /* Hace la letra un poco más gruesa */
+}
+
+/* Esto hará que los meses que no son el actual ni han sido pagados se vean más tenues */
+.pago-pendiente:not(.mes-actual) {
+    opacity: 0.6;
+}
+.input-busqueda-wrapper {
+    flex: 2; /* Toma más espacio */
+    min-width: 200px;
+    position: relative;
+}
+
+.input-busqueda-wrapper i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+}
+
+#buscador-nombre {
+    width: 100%;
+    max-width: 400px;
+    padding: 12px 12px 12px 40px; /* Espacio extra a la izquierda para la lupa */
+    border: 1px solid #ddd;
+    border-radius: 25px; /* Bordes redondeados modernos */
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#buscador-nombre:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
+.filtro-localidad-wrapper {
+    flex: 1; /* Toma menos espacio */
+    min-width: 200px;
+}
+
+#filtro-localidad {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 25px; /* Para que haga juego con el buscador */
+    font-size: 0.95rem;
+    outline: none;
+    background-color: white;
+    cursor: pointer;
+}
+
+#select-ordenar {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 25px; /* Para que haga juego con el buscador */
+    font-size: 0.95rem;
+    outline: none;
+    background-color: white;
+    cursor: pointer;
+}
+/* =======================================================
+   ESTILOS COMPLETOS PARA LA VISUALIZACIÓN DE PAGOS ADMIN
+   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+======================================================= */
+/* Contenedor Principal */
+.admin-clientes-container {
+    padding: 10px;
+    background-color: #f4f7f6;
+}
+
+/* Tarjeta del Cliente */
+.cliente-card {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 3px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border-left: 6px solid #ccc; /* Color por defecto por si falla */
+}
+/* Esta clase ocultará la tarjeta sin importar el tamaño de pantalla */
+.cliente-card.hidden {
+    display: none !important;
+}
+
+/* Cabecera de la tarjeta */
+.cliente-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 5px;
+}
+
+.cliente-id {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: bold;
+}
+
+.cliente-nombre {
+    margin: 2px 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.cliente-ip {
+    font-size: 0.85rem;
+    font-family: monospace;
+    color: #95a5a6; /* Un gris suave */
+    font-weight: normal;
+}
+
+/* Círculo del día de pago */
+.cliente-pago-dia {
+    text-align: center;
+    background: #eef2f3;
+    padding: 5px 10px;
+    border-radius: 8px;
+}
+
+.cliente-pago-dia .label {
+    display: block;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+}
+
+.cliente-pago-dia .dia {
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #d35400; /* Color naranja para resaltar el día */
+}
+
+/* Historial de Pagos (Burbujas tipo imagen 2) */
+.cliente-historial-pagos.dynamic-history {
+    display: flex;
+    flex-wrap: wrap; /* Permite que las burbujas bajen a la siguiente línea si no caben */
+    gap: 8px; /* Espacio entre burbujas */
+    padding: 12px 0;
+    border-top: 1px dashed #ddd;
+}
+
+.pago-burbuja {
+    /* Ajustamos el tamaño para que quepa "Mes Año" */
+    width: 65px; 
+    height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; /* Lo hace un círculo perfecto */
+    font-size: 0.75rem; /* Texto pequeño */
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.1; /* Ajusta el espacio entre líneas si el texto se corta */
+    border: 2px solid #ddd; /* Borde sutil por defecto */
+    transition: all 0.2s;
+    background-color: #f8f9fa; /* Fondo gris claro por defecto */
+    color: #888; /* Texto gris por defecto */
+    text-transform: capitalize; /* "mayo 2024" -> "Mayo 2024" */
+    padding: 5px; /* Pequeño padding interno */
+}
+
+/* Clase para pagos realizados (Verde) */
+.pago-burbuja.pago-realizado {
+    background-color: #2ecc71 !important; /* Verde esmeralda */
+    color: white !important; /* Texto blanco para buen contraste */
+    border-color: #27ae60 !important; /* Borde verde más oscuro */
+}
+
+/* .pago-burbuja.pendiente {
+    background: #f1c40f;
+    color: #333;
+    border-color: #f39c12;
+} */
+/* Opcional: Estilo para cuando no hay pagos */
+.sin-pagos {
+    font-size: 0.85rem;
+    color: #999;
+    font-style: italic;
+    padding: 10px 0;
+    width: 100%;
+    text-align: center;
+}
+
+/* Botón de Detalles */
+.cliente-acciones-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+.btn-registrar-pago {
+    flex: 2; /* Más ancho que el de detalles */
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s;
+}
+
+.btn-registrar-pago:hover {
+    background-color: #0056b3;
+}
+/* Botón Detalles (Secundario) */
+.btn-detalles-slim {
+    flex: 1;
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+}
+
+.btn-detalles-slim:hover {
+    background-color: #e2e6ea;
+}
+
+
+/* 
+.btn-detalles {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    background: #34495e;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+ */
 /* =======================================================
    ESTILOS COMPLETOS PARA EL REPORTE DE CORTE (RESPONSIVO)
    Diseño: Mobile First (Tarjetas) -> PC (Tabla)
@@ -183,6 +466,8 @@ td {
     color: #333;
 }
 
+/* El botón de la X */
+
 .cerrar-x-modal {
     font-size: 28px;
     font-weight: bold;
@@ -190,7 +475,6 @@ td {
     color: #888;
 }
 .cerrar-x-modal:hover { color: #dc3545; }
-
 
 /* --- 3. DISEÑO DE TARJETAS PARA MÓVIL (Por defecto) --- */
 
@@ -409,13 +693,6 @@ td {
 
 .hidden { display: none !important; }
 
-.close {
-    position: absolute;
-    right: 15px;
-    top: 10px;
-    font-size: 28px;
-    cursor: pointer;
-}
 
 /* Fondo oscuro que cubre toda la pantalla */
 .modal-fondo {
@@ -451,14 +728,7 @@ td {
     margin-bottom: 15px;
 }
 
-/* El botón de la X */
-.cerrar-x {
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    color: #888;
-}
-.cerrar-x:hover { color: #dc3545; }
+
 
 /* Lista de pagos */
 .lista-pagos-ul {
@@ -548,6 +818,93 @@ td {
     visibility: hidden;
     pointer-events: none;
 }
+
+/* =======================================================
+   ESTILOS COMPLETOS PARA EL Detalle de cliente (RESPONSIVO)
+   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+======================================================= */
+/* --- ESTILOS DEL MODAL --- */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
+}
+.modal-overlay.hidden { display: none !important; }
+
+.modal-content {
+    background: #fff;
+    width: 90%; max-width: 900px;
+    max-height: 90vh;
+    border-radius: 12px;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+
+
+/* --- ESTILOS DE LA FICHA TÉCNICA --- */
+.seccion-detalle {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.grid-info-cliente {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.info-grupo label {
+    font-size: 0.85rem; color: #7f8c8d; font-weight: bold; text-transform: uppercase;
+}
+.info-grupo p {
+    margin: 5px 0 0 0; font-size: 1rem; color: #2c3e50;
+}
+
+/* Detalles resaltados */
+.resaltado-azul { font-weight: bold; color: #2980b9 !important; }
+.resaltado-tecnico { font-family: monospace; background: #f1f2f6; padding: 2px 6px; border-radius: 4px; }
+
+/* Badge de Estados */
+.badge-estado {
+    padding: 6px 16px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.9rem;
+}
+.estado-activo { background-color: #27ae60; }
+.estado-suspendido { background-color: #f39c12; }
+.estado-retirado { background-color: #e74c3c; }
+
+/* Botón WhatsApp */
+.acciones-contacto { margin-top: 20px; }
+.btn-contacto.whatsapp {
+    display: inline-block; background-color: #25D366; color: white;
+    padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;
+}
+
+/* --- ESTILOS FASE 2: FINANZAS --- */
+.finanzas-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.btn-descarga-pdf { background-color: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.3s;}
+.btn-descarga-pdf:hover { background-color: #c0392b; }
+
+.finanzas-resumen { display: flex; gap: 15px; margin-bottom: 20px; }
+.tarjeta-resumen { background: #f8f9fa; padding: 15px; border-radius: 8px; flex: 1; border-left: 5px solid #ccc; }
+.tarjeta-resumen.verde { border-left-color: #27ae60; }
+.tarjeta-resumen.alerta { border-left-color: #f1c40f; }
+.tarjeta-resumen span { color: #7f8c8d; font-size: 0.85rem; text-transform: uppercase; font-weight: bold;}
+.tarjeta-resumen h4 { margin: 5px 0 0 0; font-size: 1.6rem; color: #2c3e50; }
+
+.tabla-contenedor { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; }
+.tabla-pagos { width: 100%; border-collapse: collapse; min-width: 500px; }
+.tabla-pagos th, .tabla-pagos td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
+.tabla-pagos th { background: #f8f9fa; color: #34495e; font-size: 0.9rem; text-transform: uppercase;}
+.tabla-pagos tbody tr:hover { background-color: #f1f2f6; }
+
+/* Badges de la tabla */
+.badge-pago { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: white; }
+.pago-cobrado { background-color: #27ae60; }
+.pago-pendiente { background-color: #f1c40f; color: #333; }
 
 /* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */
 @media (min-width: 805px) {
@@ -680,6 +1037,112 @@ td {
     .reporte-item-pago {
         position: relative; /* Para que el botón se posicione respecto a la tarjeta */
     }
+
+    /* =========================================================
+   VISTA DE ESCRITORIO (Pantallas de 980px o más)
+   Transforma las tarjetas en filas estilo tabla
+   ========================================================= */
+   
+    /* 1. La tarjeta se vuelve una fila horizontal */
+    .cliente-card {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 5px 10px;
+        gap: 10px;
+    }
+
+    /* 2. La primera columna: Información y Día de pago */
+    .cliente-header {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        flex: 0 0 320px; /* Ancho fijo para mantener la alineación de la "tabla" */
+        gap: 15px;
+        justify-content: space-between;
+        margin-bottom: 0px;
+    }
+    /* 3. Ocultar el Scrollbar (la línea gris) de los meses */
+    .cliente-historial-pagos { /* Cambia esto por la clase que envuelve tus círculos verdes */
+        overflow-x: auto;
+        display: flex;
+        scrollbar-width: none; /* Para Firefox */
+    }
+    .cliente-historial-pagos::-webkit-scrollbar { /* Cambia esto por la clase que envuelve tus círculos verdes */
+        display: none;
+    }
+    .cliente-info-principal {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .cliente-nombre {
+        margin: 3px 0; /* Juntamos un poco el nombre y la IP */
+        font-size: 1.15rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+
+    /* 3. La columna central: Los meses */
+    .cliente-historial-pagos.dynamic-history {
+        flex: 1; /* Ocupa todo el espacio disponible en el medio */
+        border-top: none; /* Quitamos la línea divisoria del celular */
+        padding: 0;
+        flex-wrap: nowrap; /* Obligamos a que estén en una sola línea */
+        overflow-x: auto; /* Si hay muchísimos pagos, permite deslizar hacia los lados */
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Opcional: Hacemos la barra de desplazamiento horizontal más elegante en PC */
+    .cliente-historial-pagos.dynamic-history::-webkit-scrollbar {
+        height: 6px;
+    }
+    .cliente-historial-pagos.dynamic-history::-webkit-scrollbar-thumb {
+        background-color: #d1d5db;
+        border-radius: 4px;
+    }
+
+    /* Hacemos los círculos un poquitito más pequeños para que quepan más en la fila */
+    .pago-burbuja {
+        width: 55px;
+        height: 55px;
+        font-size: 0.7rem;
+        flex-shrink: 0; /* Evita que los círculos se aplasten si el espacio es reducido */
+    }
+
+    /* 4. La columna final: Botones */
+    .cliente-acciones-group {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        align-items: center;
+        margin: 0 !important;
+    }
+
+    .btn-registrar-pago, .btn-detalles-slim {
+        font-size: 0 !important; /* Oculta el texto "Registrar Pago" y "Detalles" */
+       margin: 0 !important;
+        width: 45px;
+        height: 45px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+    }
+    /* 3. Manipulamos el icono (etiqueta i) */
+    .btn-registrar-pago i, 
+    .btn-detalles-slim i {
+        font-size: 1.2rem !important; /* Le devolvemos el tamaño al icono */
+        margin: 0 !important;        /* Quitamos márgenes que separaban el texto */
+        display: inline-block;
+    }
+    
+    
 }
 
 .reporte-item-pago .monto-estado{

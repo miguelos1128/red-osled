@@ -19,20 +19,72 @@
                 <button class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
             </div>
 
-                <div class="main-section">
-                <h3>Clientes Registrados</h3>
-                <table id="tabla-clientes">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="lista-clientes-body">
-                        </tbody>
-                </table>
+            <div class="main-section">
+                <h3 class="admin-titulo">Clientes Registrados
+                    <span id="contador-clientes" class="contador-badge">0</span>
+                </h3>
+
+                <div class="admin-controles-busqueda">
+                    <div class="input-busqueda-wrapper">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="buscador-nombre" placeholder="Buscar cliente por nombre...">
+                    </div>
+                    <div class="filtro-localidad-wrapper">
+                        <select id="select-ordenar" >
+                            <option value="defecto">Ordenar por...</option>
+                            <option value="id_asc">ID (Menor a Mayor)</option>
+                            <option value="nombre_asc">Nombre (A - Z)</option>
+                            <option value="corte_asc">Día de Corte (1 al 31)</option>
+                            <option value="corte_desc">Día de Corte (31 al 1)</option>
+                            <option value="ip_asc">Dirección IP</option>
+                            <option value="fecha_desc">Más recientes (Fecha Inst.)</option>
+                            <option value="fecha_asc">Más antiguos (Fecha Inst.)</option>
+                        </select>
+                    </div>
+                    <div class="filtro-localidad-wrapper">
+                        <select id="filtro-localidad">
+                            <option value="todas">Todas las Localidades</option>
+                        </select>
+                    </div>
+                </div>
+
+                
+                
+
+                <div id ="admin-clientes-container" class="admin-clientes-container">
+                    <div class="cliente-card" data-localidad="Centro">
+                        <div class="cliente-header">
+                            <div class="cliente-info-principal">
+                                <div class="fila-superior">
+                                    
+                                    <span class="badge-localidad">Centro</span>
+                                </div>
+                                <h3 class="cliente-nombre">Juan Pérez</h3>
+                                <div class="cliente-detalles-tecnicos">
+                                    <span class="cliente-ip"><i class="fas fa-network-wired"></i> 192.168.1.50</span>
+                                    
+                                </div>
+                            </div>
+                            <div class="cliente-pago-dia">
+                                <span class="label">Corte</span>
+                                <span class="dia">15</span>
+                            </div>
+                        </div>
+
+                        <div class="cliente-historial-pagos">
+                            <div class="pago-burbuja pagado">Ene</div>
+                            <div class="pago-burbuja pagado">Feb</div>
+                            <div class="pago-burbuja pendiente">Mar</div>
+                            <div class="pago-burbuja">Abr</div>
+                            <div class="pago-burbuja">May</div>
+                            <div class="pago-burbuja">Jun</div>
+                            </div>
+
+                        <div class="cliente-acciones">
+                            <button class="btn-detalles">Ver Detalles</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             
         </div>
@@ -90,7 +142,7 @@
                 <div class="modal-caja">
                     <div class="modal-cabecera">
                         <h4 style="margin: 0;">Pagos de: <span id="nombreClienteHistorial"></span></h4>
-                        <span class="cerrar-x" onclick="cerrarHistorial()">&times;</span>
+                        <span class="cerrar-x-modal" onclick="cerrarHistorial()">&times;</span>
                     </div>
                     
                     <div class="modal-cuerpo">
@@ -108,8 +160,10 @@
 
     <div id="modalPago" class="modal hidden">
         <div class="modal-content">
-            <span class="close" onclick="cerrarModalPago()">&times;</span>
-            <h2 style="margin-bottom: 10px;">Registrar Cobro</h2>
+            <div class="modal-cabecera">
+                <h2 style="margin-bottom: 10px;">Registrar Cobro</h2>
+                <span class="cerrar-x-modal" onclick="cerrarModalPago()">&times;</span>
+            </div>
             <p style="margin-bottom: 20px; color: #555;">
                 Cliente: <strong id="modal-nombre-cliente"></strong>
             </p>
@@ -136,7 +190,7 @@
 
     <div id="modalCliente" class="modal hidden">
         <div class="modal-content">
-            <span class="close" onclick="cerrarModal()">&times;</span>
+            <span class="cerrar-x-modal" onclick="cerrarModal()">&times;</span>
             <h2>Nuevo Cliente</h2>
             <form id="formCliente">
                 <label>Nombre Completo:</label>
@@ -192,6 +246,7 @@
     </div>
 
     <div id="modal-corte" class="hidden modal-fondo-corte">
+        
         <div class="modal-caja-corte">
             
             <div class="cabecera-modal-corte">
@@ -252,7 +307,7 @@
                     <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
                 </div>
             </div>
-
+            
             <div class="modal-acciones-corte">
                 <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre button">Solicitar Cierre al Administrador</button>
             </div>
@@ -270,6 +325,100 @@
             <button class="button" onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
         </div>
     </div>
+
+    <div id="modal-detalles-cliente" class="modal-overlay hidden">
+        <div class="modal-content">
+            
+            <div class="modal-cabecera">
+                <h2 id="detalle-nombre-cliente">Cargando...</h2>
+                <span id="detalle-badge-estado" class="badge-estado">Activo</span>
+                <span class="cerrar-x-modal" onclick="cerrarModalDetalles()">✖</span>
+            </div>
+
+            <div class="modal-body">
+                
+                <div class="seccion-detalle">
+                    <h3>📌 Ficha Técnica</h3>
+                    <div class="grid-info-cliente">
+                        
+                        <div class="info-grupo">
+                            <label>Dirección Física</label>
+                            <p id="detalle-direccion">-</p>
+                        </div>
+                        
+                        <div class="info-grupo">
+                            <label>Localidad / Paquete</label>
+                            <p id="detalle-localidad-paquete">-</p> 
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Fecha de Instalación</label>
+                            <p id="detalle-fecha-inst">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Día de Pago</label>
+                            <p id="detalle-dia-pago" class="resaltado-azul">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Dirección IP</label>
+                            <p id="detalle-ip" class="resaltado-tecnico">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Correo Electrónico</label>
+                            <p id="detalle-correo">-</p>
+                        </div>
+
+                    </div>
+
+                    <div class="acciones-contacto">
+                        <a id="btn-whatsapp" href="#" target="_blank" class="btn-contacto whatsapp">
+                            💬 Enviar WhatsApp al <span id="detalle-telefono"></span>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="seccion-finanzas" class="seccion-detalle">
+                    <div class="finanzas-header">
+                        <h3>💰 Historial Financiero</h3>
+                        <button class="btn-descarga-pdf" onclick="alert('Generación de PDF en construcción...')">
+                            <i class="fas fa-file-pdf"></i> Descargar PDF
+                        </button>
+                    </div>
+
+                    <div class="finanzas-resumen">
+                        <div class="tarjeta-resumen verde">
+                            <span>Total Pagado Histórico</span>
+                            <h4 id="detalle-total-pagado">$0.00</h4>
+                        </div>
+                        <div class="tarjeta-resumen alerta" id="tarjeta-pendientes">
+                            <span>Adeudo Pendiente</span>
+                            <h4 id="detalle-total-pendiente">$0.00</h4>
+                        </div>
+                    </div>
+
+                    <div class="tabla-contenedor">
+                        <table class="tabla-pagos">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Mes pagado</th>
+                                    <th>Monto</th>
+                                    <th>Atendido por</th>
+                                    <th>Tipo de Pago</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detalle-tabla-pagos">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
    
     <script>
         const host = window.location.hostname; 
@@ -277,6 +426,12 @@
         const urlBase = `http://${host}:${puerto}`;
         // 1. Verificar si hay una sesión activa
         const usuarioJson = sessionStorage.getItem('usuario');
+        const buscadorInput = document.getElementById('buscador-nombre');
+        const selectLocalidad = document.getElementById('filtro-localidad');
+        const inputBuscador = document.getElementById('buscador-nombre');
+        let configLocalidades = {};
+
+
         if (!usuarioJson) {
             window.location.href = 'index.html';
         }
@@ -307,34 +462,300 @@
         }
         let idCobrador = usuario.id
         cargarWidgetCorte();
-        // 4. Cargar clientes desde el servidor
-        async function cargarClientes() {
+
+        function renderizarHistorial(pagosCliente) {
+            return meses.map((mes, index) => {
+                // Buscamos si el cliente tiene un pago en ese mes (index + 1)
+                const pagoRealizado = pagosCliente.find(p => p.mes_numero === index + 1);
+                let clase = '';
+                if(pagoRealizado) {
+                    clase = pagoRealizado.id_estado === 1 ? 'pagado' : 'pendiente';
+                }
+                return `<div class="pago-burbuja ${clase}">${mes}</div>`;
+            }).join('');
+        }
+
+        async function cargarVistaAdminClientes() {
+            
+            const contenedor = document.getElementById('admin-clientes-container');
+            
+            
+            if (!contenedor) {
+                console.error("Error: No se encontró el contenedor 'admin-clientes-container' en el HTML.");
+                return;
+            }
+            
             try {
-                const response = await fetch(`${urlBase}/api/clientes`);
+                const response = await fetch(`${urlBase}/api/admin/clientes-historial`);
                 const clientes = await response.json();
-                const tbody = document.getElementById('lista-clientes-body');
+                let clientesVisibles = 0;
+                console.log("Datos recibidos en el Frontend:", clientes); // Confirmación
                 
-                tbody.innerHTML = '';
-                clientes.forEach(c => {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${c.id}</td>
-                            <td>${c.nombre_completo}</td>
-                            <td>${c.estado_servicio}</td>
-                            <td>
-                                <button class="button" onclick="seleccionarClienteDirecto(${JSON.stringify(c).replace(/"/g, '&quot;')})">
-                                    Registrar Pago
-                                </button>
-                            </td>
-                        </tr>
+                contenedor.innerHTML = ''; // Limpiamos
+
+                clientes.forEach(cliente => {
+                    clientesVisibles++;
+                    const card = document.createElement('div');
+                    card.className = 'cliente-card';
+                    card.setAttribute('data-localidad', cliente.localidad_id);
+                    let htmlBurbujasPagos = '';
+
+                    // BUSCAMOS EL COLOR EN EL DICCIONARIO (Si no existe, ponemos gris oscuro)
+                    const colorBorde = configLocalidades[cliente.localidad_id] 
+                                    ? configLocalidades[cliente.localidad_id].color 
+                                    : '#34495e';
+
+                    card.style.borderLeftColor = colorBorde; // ¡Magia! Pintamos el borde
+
+                    // --- NUEVA LÓGICA: LÍNEA DE TIEMPO ESTANDARIZADA ---
+
+                    // 1. Guardamos los pagos que el cliente SÍ ha hecho en una "lista rápida" (Set)
+                    let pagosRealizados = new Set(); 
+
+                    if (cliente.historial_pagos && cliente.historial_pagos.trim() !== "") {
+                        const pagosIndividuales = cliente.historial_pagos.split(',');
+
+                        pagosIndividuales.forEach(pagoRaw => {
+                            // pagoRaw se ve así: "Marzo 2026: 3" o "Enero 2025: 1"
+                            const partes = pagoRaw.split(':');
+                            
+                            // Verificamos que sí existan las dos partes (el mes y el estado)
+                            if (partes.length === 2) {
+                                const textoBurbuja = partes[0].trim(); // Ej. "Marzo 2026"
+                                const estadoPago = partes[1].trim();   // Ej. "1" o "3"
+
+                                // AQUÍ ESTÁ LA MAGIA: Solo lo marcamos como pagado si el estado NO es "3"
+                                if (estadoPago !== "3") {
+                                    let partesT = textoBurbuja.split(" ");
+                                    let soloMes = partesT[0].substring(0, 3); // "Mar"
+                                    let soloAnio = partesT[1].substring(2);   // "26"
+                                    
+                                    // Lo guardamos en formato corto: "Mar 26"
+                                    pagosRealizados.add(`${soloMes} ${soloAnio}`); 
+                                }
+                            }
+                        });
+                    }
+
+                    // 2. Creamos la Línea de Tiempo (12 meses en total)
+                    const nombresMeses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+                    let timeline = [];
+                    let fecha = new Date(); // El sistema sabe que hoy es el mes actual
+
+                    // Identificamos cómo se llama el mes actual en nuestro formato corto
+                    const textoMesActual = `${nombresMeses[fecha.getMonth()]} ${fecha.getFullYear().toString().substring(2)}`;
+
+                    // Retrocedemos 6 meses en el tiempo para empezar a dibujar desde ahí
+                    fecha.setMonth(fecha.getMonth() - 6);
+
+                    // Generamos 12 burbujas (6 meses atrás, el actual, y 5 hacia adelante)
+                    // Dibujamos 9 meses en total
+                    for (let i = 0; i < 9; i++) {
+                        let mesStr = nombresMeses[fecha.getMonth()];
+                        let anioStr = fecha.getFullYear().toString().substring(2);
+                        timeline.push(`${mesStr} ${anioStr}`);
+                        
+                        fecha.setMonth(fecha.getMonth() + 1); 
+                    }
+
+                    // 3. Construimos el HTML comparando la línea de tiempo con los pagos
+                    htmlBurbujasPagos = timeline.map(mesTimeline => {
+                        // Si el mes de la línea de tiempo está en la lista de pagos, es verde, si no, es gris
+                        let claseEstado = pagosRealizados.has(mesTimeline) ? "pago-realizado" : "pago-pendiente";
+                        
+                        // Si es el mes actual, le ponemos una clase extra para resaltarlo
+                        let claseActual = (mesTimeline === textoMesActual) ? "mes-actual" : "";
+
+                        return `<div class="pago-burbuja ${claseEstado} ${claseActual}">${mesTimeline}</div>`;
+                    }).join('');
+                    
+                    // AGREGAMOS LOS DATOS OCULTOS PARA EL FILTRO DE ORDEN
+                    card.setAttribute('data-id', cliente.id);
+                    card.setAttribute('data-nombre', cliente.nombre_completo);
+                    card.setAttribute('data-corte', cliente.dia_pago);
+                    card.setAttribute('data-ip', cliente.direccion_ip);
+                    card.setAttribute('data-fecha', cliente.fecha_instalacion || "2000-01-01");
+
+                    card.innerHTML = `
+                        <div class="cliente-header">
+                            <div class="cliente-info-principal">                              
+                                <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
+                                <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
+                            </div>
+                            <div class="cliente-pago-dia">
+                                <span class="label">Corte</span>
+                                <span class="dia">${cliente.dia_pago}</span>
+                            </div>
+                        </div>
+
+                        <div class="cliente-historial-pagos dynamic-history">
+                            ${htmlBurbujasPagos}
+                        </div>
+
+                        <div class="cliente-acciones-group">
+                            <button class="btn-registrar-pago" 
+                                onclick='seleccionarClienteDirecto(${JSON.stringify(cliente).replace(/'/g, "&apos;")})'>
+                                <i class="fas fa-dollar-sign">💵</i> Registrar Pago
+                            </button>
+                            
+                            <button class="btn-detalles-slim" onclick="abrirDetallesCliente(${cliente.id})">
+                                <i class="fas fa-eye">👁️</i> Detalles
+                            </button>
+                        </div>
                     `;
+                    contenedor.appendChild(card);
+                    // Después de renderizar las tarjetas
+                    const contenedoresMeses = document.querySelectorAll('.cliente-historial-pagos');
+                    contenedoresMeses.forEach(contenedor => {
+                        contenedor.scrollLeft = contenedor.scrollWidth; // Mueve el scroll al puro final
+                    });
                 });
+                activarScrollSincronizado();
+                // 3. Imprimimos el total final en nuestro nuevo elemento HTML
+                document.getElementById('contador-clientes').textContent = clientesVisibles;
             } catch (error) {
-                console.error("Error al cargar clientes", error);
+                console.error("Error cargando clientes:", error);
             }
         }
 
-        cargarClientes();
+        document.addEventListener('DOMContentLoaded', () => {
+
+            aplicarFiltros();
+            // Primero, cargamos los clientes al iniciar la página
+            cargarVistaAdminClientes();
+
+            // LÓGICA DEL BUSCADOR EN TIEMPO REAL
+            
+
+            inputBuscador.addEventListener('input', function(e) {
+                // Obtenemos el texto que escribió el usuario en minúsculas
+                const terminoBusqueda = e.target.value.toLowerCase();
+                
+                // Seleccionamos todas las tarjetas que están en pantalla
+                const tarjetas = document.querySelectorAll('.cliente-card');
+
+                tarjetas.forEach(tarjeta => {
+                    // Buscamos el nombre específico dentro de esa tarjeta
+                    const nombreCliente = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+
+                    // Si el nombre incluye lo que escribimos, mostramos la tarjeta, si no, la ocultamos
+                    if (nombreCliente.includes(terminoBusqueda)) {
+                        tarjeta.classList.remove('hidden'); 
+                    } else {
+                        tarjeta.classList.add('hidden');
+                    }
+                });
+            });
+        });
+
+        
+
+        function aplicarFiltros(){
+            // 1. Creamos la variable que llevará la cuenta
+            
+            // 1. EVENTO: CUANDO ESCRIBES UN NOMBRE
+             buscadorInput.addEventListener('input', function(e) {
+                    // Resetear el filtro de localidad a "todas"
+                    selectLocalidad.value = 'todas';
+                    
+                    const textoBusqueda = e.target.value.toLowerCase().trim();
+                    const tarjetas = document.querySelectorAll('.cliente-card');
+                    let clientesVisibles = 0;
+
+                    tarjetas.forEach(tarjeta => {
+                        const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+                        
+                        // Filtramos SOLO por el nombre
+                        if (nombre.includes(textoBusqueda)) {
+                            tarjeta.classList.remove('hidden');
+                            clientesVisibles++;
+                        } else {
+                            tarjeta.classList.add('hidden');
+                        }
+                    });
+                     // 3. Imprimimos el total final en nuestro nuevo elemento HTML
+                    document.getElementById('contador-clientes').textContent = clientesVisibles;
+                });
+
+            // 2. EVENTO: CUANDO SELECCIONAS UNA LOCALIDAD
+            selectLocalidad.addEventListener('change', function(e) {
+                // Limpiar el texto del buscador de nombre
+                buscadorInput.value = '';
+                
+                const localidadSeleccionada = String(e.target.value).trim();
+                const tarjetas = document.querySelectorAll('.cliente-card');
+                let clientesVisibles = 0;
+
+                tarjetas.forEach(tarjeta => {
+                    let idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
+                    idLocalidadTarjeta = idLocalidadTarjeta ? String(idLocalidadTarjeta).trim() : 'null';
+
+                    // Filtramos SOLO por la localidad
+                    if (localidadSeleccionada === "todas" || idLocalidadTarjeta === localidadSeleccionada) {
+                        tarjeta.classList.remove('hidden');
+                        clientesVisibles++;
+                    } else {
+                        tarjeta.classList.add('hidden');
+                        
+                    }
+                });
+                // 3. Imprimimos el total final en nuestro nuevo elemento HTML
+                document.getElementById('contador-clientes').textContent = clientesVisibles;
+            });
+            activarScrollSincronizado();
+        }
+              
+        // EVENTO: ORDENAR TARJETAS
+        document.getElementById('select-ordenar').addEventListener('change', function(e) {
+            const criterio = e.target.value;
+            const contenedor = document.getElementById('admin-clientes-container');
+            
+            // Obtenemos todas las tarjetas y las convertimos en un Array para poder ordenarlas
+            const tarjetas = Array.from(contenedor.querySelectorAll('.cliente-card'));
+
+            // Si vuelve a la opción por defecto, no hacemos nada (o podrías recargar)
+            if (criterio === "defecto") return;
+
+            tarjetas.sort((a, b) => {
+                let valA, valB;
+
+                switch(criterio) {
+                    case "id_asc":
+                        return parseInt(a.getAttribute('data-id')) - parseInt(b.getAttribute('data-id'));
+                    
+                    case "corte_asc":
+                        return parseInt(a.getAttribute('data-corte')) - parseInt(b.getAttribute('data-corte'));
+
+                    case "corte_desc": // NUEVO CASO: Orden descendente del 31 al 1
+                        return parseInt(b.getAttribute('data-corte')) - parseInt(a.getAttribute('data-corte'));
+                    
+                    case "nombre_asc":
+                        valA = a.getAttribute('data-nombre').toLowerCase();
+                        valB = b.getAttribute('data-nombre').toLowerCase();
+                        return valA.localeCompare(valB); // Orden alfabético A-Z
+                    
+                    case "ip_asc":
+                        valA = a.getAttribute('data-ip');
+                        valB = b.getAttribute('data-ip');
+                        // localeCompare con numeric: true ordena excelente tanto números (172) como IPs completas
+                        return valA.localeCompare(valB, undefined, {numeric: true}); 
+                    
+                    case "fecha_asc":
+                        return new Date(a.getAttribute('data-fecha')) - new Date(b.getAttribute('data-fecha'));
+                    
+                    case "fecha_desc":
+                        return new Date(b.getAttribute('data-fecha')) - new Date(a.getAttribute('data-fecha'));
+                        
+                    default:
+                        return 0;
+                }
+            });
+
+            // Re-inyectamos las tarjetas en el contenedor en el nuevo orden. 
+            // (JavaScript automáticamente las mueve de posición, no las duplica)
+            tarjetas.forEach(tarjeta => contenedor.appendChild(tarjeta));
+            activarScrollSincronizado();
+        });
 
         // Funciones para el Modal------------
         function mostrarFormularioCliente() {
@@ -351,24 +772,65 @@
         window.onload = function() {
             const hoy = new Date().toISOString().split('T')[0];
             document.getElementById('fecha_ins').setAttribute('max', hoy);
-            cargarClientes(); // Tu función existente
+            cargarVistaAdminClientes();
+            //cargarClientes(); // Tu función existente
         };
 
         async function cargarLocalidades() {
             const response = await fetch('/api/localidades');
             const localidades = await response.json();
             const select = document.getElementById('selectLocalidad');
+            const selectFiltro = document.getElementById('filtro-localidad');
             
             localidades.forEach(loc => {
+                
                 const option = document.createElement('option');
                 option.value = loc.id;
                 option.textContent = loc.nombre;
                 select.appendChild(option);
+
+                // 1. Llenamos nuestro diccionario global de colores
+                configLocalidades[loc.id] = { 
+                    nombre: loc.nombre, 
+                    color: loc.color || '#34495e' // Gris si no tiene color
+                };
+                
+                // 2. Llenamos el menú <select>
+                const optionFiltro = document.createElement('option');
+                optionFiltro.value = loc.id;
+                optionFiltro.textContent = loc.nombre;
+                selectFiltro.appendChild(optionFiltro);
             });
         }
 
         // Ejecuta esta función al cargar el panel
         cargarLocalidades();
+
+        function activarScrollSincronizado() {
+            const contenedoresMeses = document.querySelectorAll('.cliente-historial-pagos');
+            let contenedorLider = null;
+
+            contenedoresMeses.forEach(contenedor => {
+                // 1. Detectar quién es el líder (dónde está el mouse o el dedo del usuario)
+                contenedor.addEventListener('mouseenter', () => contenedorLider = contenedor);
+                contenedor.addEventListener('touchstart', () => contenedorLider = contenedor, {passive: true});
+
+                // 2. Escuchar el movimiento
+                contenedor.addEventListener('scroll', function() {
+                    // Si el contenedor que se está moviendo NO es el líder, detenemos la acción para evitar el eco
+                    if (contenedorLider !== this) return;
+
+                    const posicionActual = this.scrollLeft;
+
+                    // 3. Mover a todos los "seguidores" a la misma posición que el líder
+                    contenedoresMeses.forEach(seguidor => {
+                        if (seguidor !== contenedorLider) {
+                            seguidor.scrollLeft = posicionActual;
+                        }
+                    });
+                });
+            });
+        }
 
         // 2. Lógica de validación y envío
         document.getElementById('formCliente').addEventListener('submit', async (e) => {
@@ -451,7 +913,8 @@
                 if (data.success) {
                     alert("¡Cliente guardado correctamente!");
                     cerrarModal();
-                    cargarClientes();
+                    //cargarClientes();
+                    cargarVistaAdminClientes();
                 } else {
                     alert("Error del servidor: " + data.error);
                 }
@@ -880,7 +1343,180 @@
             };
         }
  
+        // Función para abrir el modal y cargar desde Node.js
+        async function abrirDetallesCliente(idCliente) {
+            // 1. Mostrar el Modal primero y poner un mensaje de carga
+            document.getElementById('modal-detalles-cliente').classList.remove('hidden');
+            document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
 
+            try {
+                /* // 2. Hacer la petición a nuestra nueva ruta de Node.js
+                // IMPORTANTE: Ajusta '/cliente-completo/' si tu servidor usa un prefijo como '/api/cliente-completo/'
+                const respuesta = await fetch(`/cliente-completo/${idCliente}`);
+                const data = await respuesta.json();
+
+                if (!respuesta.ok) throw new Error(data.error);
+
+                // Separamos los datos que nos mandó el servidor
+                const cliente = data.cliente;
+                console.log("¡Éxito! Info lista para la fase 1: ", cliente);
+                const pagos = data.pagos; // <--- ¡Esto ya está listo para la Fase 2! */
+
+                // --- LA MAGIA DE ARQUITECTURA: Peticiones en paralelo con Promise.all ---
+                // Esto dispara ambas consultas al mismo tiempo para máxima velocidad.
+                const [respuestaCompleto, respuestaPagado] = await Promise.all([
+                    fetch(`/cliente-completo/${idCliente}`), // Endpoint Fase 1
+                    fetch(`/api/estado-cuenta/${idCliente}`)             // TU ENDPOINT EXISTENTE DE LA IMAGEN 27
+                ]);
+
+                // Verificamos que ambas respuestas sean exitosas
+                if (!respuestaCompleto.ok) throw new Error("Error cargando detalles del cliente");
+                if (!respuestaPagado.ok) throw new Error("Error cargando total pagado del cliente");
+
+                // Convertimos ambas respuestas a JSON
+                const dataCompleto = await respuestaCompleto.json();
+                const dataPagado = await respuestaPagado.json();
+
+                // Separamos los datos para procesarlos
+                const cliente = dataCompleto.cliente;
+                const pagos = dataCompleto.pagos; // El arreglo de pagos con estado 0 y 1
+                const totalPagadoHistorico = dataPagado.total_pagado; // El valor único que devuelve tu endpoint de la Imagen 27
+
+                // 3. Inyectar datos en la FICHA TÉCNICA
+                document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
+                document.getElementById('detalle-direccion').textContent = cliente.direccion || 'Sin dirección';
+                
+                // Formatear la fecha para que se vea bonita (opcional)
+                let fechaInst = cliente.fecha_instalacion ? new Date(cliente.fecha_instalacion).toLocaleDateString() : 'N/A';
+                document.getElementById('detalle-fecha-inst').textContent = fechaInst;
+                
+                document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
+                document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
+                document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
+                
+                // Ahora usamos los nombres reales que trajimos del servidor
+                const loc = cliente.localidad_nombre || 'Sin localidad';
+                const paq = cliente.paquete || 'Sin paquete';
+                document.getElementById('detalle-localidad-paquete').textContent = `${loc} | Paquete: ${paq}`;
+
+                // 4. Configurar WhatsApp
+                const tel = cliente.telefono || '';
+                document.getElementById('detalle-telefono').textContent = tel || 'Sin teléfono';
+                const btnWhatsapp = document.getElementById('btn-whatsapp');
+
+                if (tel) {
+                    const telLimpio = tel.replace(/\D/g,''); 
+                    btnWhatsapp.href = `https://wa.me/${telLimpio}`;
+                    btnWhatsapp.style.display = 'inline-block';
+                } else {
+                    btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
+                }
+
+                // 5. Configurar Badge de Estado
+                const badge = document.getElementById('detalle-badge-estado');
+                badge.className = 'badge-estado'; 
+                
+                if(cliente.estado_servicio == 'activo') {
+                    badge.textContent = 'Activo';
+                    badge.classList.add('estado-activo');
+                } else if (cliente.estado == 'suspendido') {
+                    badge.textContent = 'Suspendido';
+                    badge.classList.add('estado-suspendido');
+                } else {
+                    badge.textContent = 'Retirado';
+                    badge.classList.add('estado-retirado');
+                }
+
+                // Dejamos un mensaje oculto en la consola para saber que los pagos llegaron bien
+                console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);
+                // --- INICIO FASE 2: FINANZAS ---
+                const tbodyPagos = document.getElementById('detalle-tabla-pagos');
+                tbodyPagos.innerHTML = ''; // Limpiamos la tabla de clientes anteriores
+                
+                let totalPagado = 0;
+                let totalPendiente = 0;
+
+                if (pagos.length === 0) {
+                    tbodyPagos.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:#7f8c8d;">No hay historial de pagos registrados para este cliente.</td></tr>';
+                } else {
+                    pagos.forEach(pago => {
+                        const monto = parseFloat(pago.monto) || 0;
+                        let badgeHTML = '';
+
+                        /* // Clasificamos si es un pago (0) o deuda (1)
+                        if (pago.estado == 0) {
+                            totalPagado += monto;
+                            badgeHTML = '<span class="badge-pago pago-cobrado">Cobrado</span>';
+                        } else if (pago.estado == 1) {
+                            totalPendiente += monto;
+                            badgeHTML = '<span class="badge-pago pago-pendiente">Pendiente</span>';
+                        } */
+
+                        // Formateamos la fecha (YYYY-MM-DD a un formato legible)
+                        // Ajusta la zona horaria si notas un desfase de un día
+                        /* const fechaObj = new Date(pago.fecha); 
+                        const fechaFormat = fechaObj.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
+                         */
+                        const fechaObj = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+                        // Dibujamos la fila (Usamos el ID de pago como "Folio")
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${fechaObj}</td>
+                            <td><b>${pago.mes_pagado}</b></td>
+                            <td>$${monto.toFixed(2)}</td>
+                            <td>${pago.cobrador_nombre || 'Desconocido'}</td>
+                            <td>${pago.tipo_pago}</td>
+                        `;
+                        tbodyPagos.appendChild(tr);
+                    });
+                }
+
+                // Asumiendo que 'calcularAdeudoEvolucionado' está definida globalmente en tu JS como en la Imagen 28
+                const deudaTeorica = calcularAdeudoEvolucionado(cliente.fecha_instalacion, cliente.costo_mensual);
+                const totalQueDeberiaHaberPagado = deudaTeorica.total;
+
+                console.log("deuda teorrica " + deudaTeorica.total)
+                
+                // Calculamos el adeudo real restando: Lo que debe teóricamente - Lo que ha pagado realmente
+                let adeudoPendiente = totalQueDeberiaHaberPagado - totalPagadoHistorico;
+                let totalPagadoHistoricoNume = parseInt(totalPagadoHistorico);
+
+                console.log("DeberiaHaberPagado" + totalQueDeberiaHaberPagado +" - "+"totalPagadoHistorico"+ totalPagadoHistorico +"=" + adeudoPendiente)
+
+                // Aseguramos que el adeudo no sea negativo por abonos adelantados (por seguridad)
+                //adeudoPendiente = Math.max(adeudoPendiente, 0);
+
+                // Inyectamos el valor en la segunda tarjeta gigante
+                document.getElementById('detalle-total-pendiente').textContent = `$${adeudoPendiente.toFixed(2)}`;
+                // Este valor viene directamente de tu endpoint financiero.
+                document.getElementById('detalle-total-pagado').textContent = `$${totalPagadoHistoricoNume.toFixed(2)}`;
+
+                /* // Actualizamos las tarjetas gigantes de resumen
+                document.getElementById('detalle-total-pagado').textContent = `$${totalPagado.toFixed(2)}`;
+                document.getElementById('detalle-total-pendiente').textContent = `$${totalPendiente.toFixed(2)}`;
+                 */
+                // Si no debe nada, la tarjeta amarilla se vuelve gris
+                // Actualizamos la lógica amarilla/gris de la tarjeta pendiente
+                const tarjetaPendiente = document.getElementById('tarjeta-pendientes');
+                if (adeudoPendiente > 0) {
+                    tarjetaPendiente.classList.add('alerta');
+                    tarjetaPendiente.style.borderLeftColor = '#f1c40f'; // Amarillo
+                } else {
+                    tarjetaPendiente.classList.remove('alerta');
+                    tarjetaPendiente.style.borderLeftColor = '#bdc3c7'; // Gris de "paz mental, cliente al corriente"
+                }
+                // --- FIN FASE 2 ---
+
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('detalle-nombre-cliente').textContent = "Error al cargar los datos";
+            }
+        }
+        
+        // Función para cerrar el modal
+        function cerrarModalDetalles() {
+            document.getElementById('modal-detalles-cliente').classList.add('hidden');
+        }
         async function cargarWidgetCorte() {
 
             if (!idCobrador) return;
@@ -1069,6 +1705,7 @@
                 console.error("Error al procesar corte:", error);
             }
         }
+        
 
         function ObtenerFecha(){
                  // 1. GENERAR LA FECHA LARGA AUTOMÁTICA

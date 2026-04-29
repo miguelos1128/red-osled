@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control - Sistema de Pagos</title>
     <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -383,7 +385,7 @@
                 <div id="seccion-finanzas" class="seccion-detalle">
                     <div class="finanzas-header">
                         <h3>💰 Historial Financiero</h3>
-                        <button class="btn-descarga-pdf" onclick="alert('Generación de PDF en construcción...')">
+                        <button class="btn-descarga-pdf" onclick="generarPDFEstadoCuenta()">
                             <i class="fas fa-file-pdf"></i> Descargar PDF
                         </button>
                     </div>
@@ -406,12 +408,13 @@
                                     <th>Fecha</th>
                                     <th>Mes pagado</th>
                                     <th>Monto</th>
-                                    <th>Atendido por</th>
+                                    <th>Cobrador</th>
                                     <th>Tipo de Pago</th>
                                 </tr>
                             </thead>
                             <tbody id="detalle-tabla-pagos">
-                                </tbody>
+                            
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -1350,18 +1353,6 @@
             document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
 
             try {
-                /* // 2. Hacer la petición a nuestra nueva ruta de Node.js
-                // IMPORTANTE: Ajusta '/cliente-completo/' si tu servidor usa un prefijo como '/api/cliente-completo/'
-                const respuesta = await fetch(`/cliente-completo/${idCliente}`);
-                const data = await respuesta.json();
-
-                if (!respuesta.ok) throw new Error(data.error);
-
-                // Separamos los datos que nos mandó el servidor
-                const cliente = data.cliente;
-                console.log("¡Éxito! Info lista para la fase 1: ", cliente);
-                const pagos = data.pagos; // <--- ¡Esto ya está listo para la Fase 2! */
-
                 // --- LA MAGIA DE ARQUITECTURA: Peticiones en paralelo con Promise.all ---
                 // Esto dispara ambas consultas al mismo tiempo para máxima velocidad.
                 const [respuestaCompleto, respuestaPagado] = await Promise.all([
@@ -1491,11 +1482,6 @@
                 // Este valor viene directamente de tu endpoint financiero.
                 document.getElementById('detalle-total-pagado').textContent = `$${totalPagadoHistoricoNume.toFixed(2)}`;
 
-                /* // Actualizamos las tarjetas gigantes de resumen
-                document.getElementById('detalle-total-pagado').textContent = `$${totalPagado.toFixed(2)}`;
-                document.getElementById('detalle-total-pendiente').textContent = `$${totalPendiente.toFixed(2)}`;
-                 */
-                // Si no debe nada, la tarjeta amarilla se vuelve gris
                 // Actualizamos la lógica amarilla/gris de la tarjeta pendiente
                 const tarjetaPendiente = document.getElementById('tarjeta-pendientes');
                 if (adeudoPendiente > 0) {
@@ -1506,13 +1492,112 @@
                     tarjetaPendiente.style.borderLeftColor = '#bdc3c7'; // Gris de "paz mental, cliente al corriente"
                 }
                 // --- FIN FASE 2 ---
-
+                     window.datosActualesPDF = {
+                        cliente: cliente,
+                        pagos: pagos,
+                        totalPagado: totalPagadoHistoricoNume,
+                        adeudo: adeudoPendiente
+                    };  
             } catch (error) {
                 console.error("Error:", error);
                 document.getElementById('detalle-nombre-cliente').textContent = "Error al cargar los datos";
             }
+             // Guardamos los datos globalmente para que el botón del PDF los pueda usar
+                   
         }
         
+        function generarPDFEstadoCuenta() {
+            // 1. Verificamos que tengamos datos cargados
+            if (!window.datosActualesPDF) {
+                alert("Aún no se han cargado los datos del cliente.");
+                return;
+            }
+
+            // 2. Extraemos las herramientas y los datos
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const { cliente, pagos, totalPagado, adeudo } = window.datosActualesPDF;
+
+            // 3. Diseño del Encabezado
+            doc.setFontSize(22);
+            doc.setTextColor(41, 128, 185); // Color azul
+            doc.text("ESTADO DE CUENTA", 105, 20, { align: "center" });
+
+            // 4. Datos del Cliente
+            doc.setFontSize(12);
+            doc.setTextColor(44, 62, 80); // Color oscuro
+            doc.text(`Cliente: ${cliente.nombre_completo || 'N/A'}`, 14, 35);
+            doc.text(`Dirección: ${cliente.direccion || 'N/A'}`, 14, 42);
+            doc.text(`Teléfono: ${cliente.telefono || 'N/A'}`, 14, 49);
+            
+            // Fecha de emisión del documento (Hoy)
+            const fechaHoy = new Date().toLocaleDateString('es-MX');
+            doc.text(`Fecha de Emisión: ${fechaHoy}`, 130, 35);
+            doc.text(`Día de Pago: ${cliente.dia_pago || 'N/A'}`, 130, 42);
+
+            // 5. Resumen Financiero (Las tarjetas de nuestra vista web)
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total Pagado Histórico: $${totalPagado.toFixed(2)}`, 14, 65);
+            
+            // Si hay deuda, la ponemos en rojo
+            if (adeudo > 0) {
+                doc.setTextColor(231, 76, 60); // Rojo
+            } else {
+                doc.setTextColor(39, 174, 96); // Verde
+            }
+            doc.text(`Adeudo Pendiente: $${adeudo.toFixed(2)}`, 130, 65);
+            
+            // Restaurar color y fuente normal para la tabla
+            doc.setTextColor(44, 62, 80);
+            doc.setFont(undefined, 'normal');
+
+            // 6. Título de la tabla
+            doc.setFontSize(14);
+            doc.text("Historial de Pagos", 14, 80);
+
+            // 7. Preparar los datos para la tabla (Transformamos el arreglo de objetos a un arreglo de arreglos)
+            const filasTabla = pagos.map(pago => {
+
+                const fechaFormat = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+               
+                return [
+                    fechaFormat, 
+                    `${pago.mes_pagado}`, 
+                    `$${parseFloat(pago.monto).toFixed(2)}`, 
+                    pago.cobrador_nombre || '-', 
+                    `${pago.tipo_pago}`
+                ];
+            });
+
+            // 8. Dibujar la tabla automáticamente con jspdf-autotable
+            doc.autoTable({
+                startY: 85,
+                head: [['Fecha', 'Mes pagado', 'Monto', 'Cobrador', 'Tipo']],
+                body: filasTabla,
+                theme: 'striped',
+                headStyles: { fillColor: [41, 128, 185] }, // Cabecera azul
+                styles: { fontSize: 10, cellPadding: 3 },
+                didParseCell: function(data) {
+                    // Pintar de verde o amarillo/naranja la columna de estado
+                    if (data.section === 'body' && data.column.index === 4) {
+                        if (data.cell.raw === 'Cobrado') {
+                            data.cell.styles.textColor = [39, 174, 96]; // Verde
+                            data.cell.styles.fontStyle = 'bold';
+                        } else if (data.cell.raw === 'Pendiente') {
+                            data.cell.styles.textColor = [211, 84, 0]; // Naranja oscuro
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    }
+                }
+            });
+
+            // 9. Descargar el archivo
+            // Reemplazamos espacios por guiones bajos para que el nombre del archivo sea limpio
+            const nombreArchivo = cliente.nombre_completo ? cliente.nombre_completo.replace(/\s+/g, '_') : 'Desconocido';
+            doc.save(`Estado_Cuenta_${nombreArchivo}.pdf`);
+        }
+
         // Función para cerrar el modal
         function cerrarModalDetalles() {
             document.getElementById('modal-detalles-cliente').classList.add('hidden');

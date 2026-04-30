@@ -18,7 +18,7 @@
         <div id="admin-section" class="admin-only">
             <h3>Gestión de Clientes (Solo Admin)</h3>
             <div class="actions">
-                <button class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
+                <button id="btn-nuevo-cliente" class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
             </div>
 
             <div class="main-section">
@@ -454,8 +454,17 @@
         document.getElementById('user-name').innerText = usuario.nombre;
 
         // 2. Lógica de Roles: Mostrar sección de admin si rol_id es 2
-        if (usuario.rol === 2) {
+        if (usuario.rol === 2 || usuario.rol === 3) {
             document.getElementById('admin-section').style.display = 'block';
+            // Verificamos si es el nuevo rol de Supervisor (ID: 3)
+            if (usuario.rol === 3) {
+                const btnNuevo = document.getElementById('btn-nuevo-cliente');
+                if (btnNuevo) {
+                    // Eliminamos el botón para que no exista en el DOM del Supervisor
+                    btnNuevo.remove(); 
+                    console.log("Interfaz ajustada: Botón de nuevo cliente oculto para Supervisor.");
+                }
+            }
         }
 
         // 3. Función para cerrar sesión
@@ -487,10 +496,31 @@
                 console.error("Error: No se encontró el contenedor 'admin-clientes-container' en el HTML.");
                 return;
             }
+
+            // 1. Recuperamos quién es el usuario actual desde el localStorage
+            const usuarioString = localStorage.getItem('usuario_actual');
+            
+            if (!usuarioString) {
+                console.error("No hay sesión iniciada");
+                return;
+            }
+
+            const usuario = JSON.parse(usuarioString);
+            
+            // 2. Construimos la URL con los parámetros del usuario
+            // Convertimos su arreglo de localidades [1, 2] a un texto "1,2"
+            const localidadesTexto = usuario.localidades.join(',');
+            
+            // Armamos la URL final: /api/admin/clientes-historial?rol=3&localidades=1,2
+            const urlFiltro = `${urlBase}/api/admin/clientes-historial?rol=${usuario.rol}&localidades=${localidadesTexto}`;
             
             try {
-                const response = await fetch(`${urlBase}/api/admin/clientes-historial`);
+                /* const response = await fetch(`${urlBase}/api/admin/clientes-historial`);
+                const clientes = await response.json(); */
+                // 3. Hacemos la petición a nuestra nueva URL inteligente
+                const response = await fetch(urlFiltro);
                 const clientes = await response.json();
+
                 let clientesVisibles = 0;
                 console.log("Datos recibidos en el Frontend:", clientes); // Confirmación
                 
@@ -806,22 +836,32 @@
             
             localidades.forEach(loc => {
                 
-                const option = document.createElement('option');
-                option.value = loc.id;
-                option.textContent = loc.nombre;
-                select.appendChild(option);
+                // LÓGICA DE FILTRADO:
+                // Si el usuario es Administrador (rol 2), ve todas.
+                // Si es Supervisor (rol 3), solo ve las que están en su lista de localidades.
+                const esAdmin = usuario.rol === 2;
+                const tienePermiso = usuario.localidades.includes(loc.id);
 
-                // 1. Llenamos nuestro diccionario global de colores
-                configLocalidades[loc.id] = { 
-                    nombre: loc.nombre, 
-                    color: loc.color || '#34495e' // Gris si no tiene color
-                };
-                
-                // 2. Llenamos el menú <select>
-                const optionFiltro = document.createElement('option');
-                optionFiltro.value = loc.id;
-                optionFiltro.textContent = loc.nombre;
-                selectFiltro.appendChild(optionFiltro);
+                if (esAdmin || tienePermiso) {
+                     const option = document.createElement('option');
+                    option.value = loc.id;
+                    option.textContent = loc.nombre;
+                    select.appendChild(option);
+
+                    // 1. Llenamos nuestro diccionario global de colores
+                    configLocalidades[loc.id] = { 
+                        nombre: loc.nombre, 
+                        color: loc.color || '#34495e' // Gris si no tiene color
+                    };
+                    
+                    // 2. Llenamos el menú <select>
+                    const optionFiltro = document.createElement('option');
+                    optionFiltro.value = loc.id;
+                    optionFiltro.textContent = loc.nombre;
+                    selectFiltro.appendChild(optionFiltro);
+                }
+
+               
             });
         }
 

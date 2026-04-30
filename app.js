@@ -189,20 +189,30 @@ app.listen(PORT, () => {
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
-    const { 
-        nombre_completo, telefono, correo, direccion, 
-        fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id
-    } = req.body;
-
-   
-
-    const query = `INSERT INTO clientes 
-                   (nombre_completo, telefono, correo, direccion, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-     console.log("Query", query);
-     console.log("Datos recibidos para el nuevo cliente:", req.body);
-    // 2. Abrimos el bloque try/catch
     try{
+        // 1. Obtenemos los datos del cuerpo de la petición (req.body)
+        const { 
+            nombre_completo, telefono, correo, direccion, 
+            fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id, rol_usuario
+        } = req.body;
+
+        // 2. VALIDACIÓN DE SEGURIDAD (Bloqueo de Creación)
+        // Comprobamos si el usuario NO es el Administrador (rol 2)
+        if (rol_usuario !== 2) {
+            // Detenemos la ejecución y enviamos un mensaje de error al navegador
+            return res.status(403).json({
+                success: false,
+                mensaje: "Acceso denegado: Tu rol no tiene permisos para crear clientes."
+            });
+        }
+
+        const query = `INSERT INTO clientes 
+                    (nombre_completo, telefono, correo, direccion, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        console.log("Query", query);
+        console.log("Datos recibidos para el nuevo cliente:", req.body);
+    // 2. Abrimos el bloque try/catch
+    
         // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
         const [result] = await db.query(query, [
         nombre_completo, telefono, correo, direccion, 

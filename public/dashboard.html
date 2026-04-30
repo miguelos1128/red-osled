@@ -961,7 +961,16 @@
                 costo_mensual: costo,
                 localidad_id: localidad
             };
-
+            // 2. NUEVO: Obtenemos el rol del usuario desde localStorage
+            const usuarioString = localStorage.getItem('usuario_actual');
+            if (usuarioString) {
+                const usuario = JSON.parse(usuarioString);
+                // Añadimos el rol al objeto que enviaremos al servidor
+                nuevoCliente.rol_usuario = usuario.rol; 
+            } else {
+                alert("Error: No hay sesión activa.");
+                return;
+            }
             // Enviar al servidor
             try {
                 const response = await fetch(`${urlBase}/api/clientes`, {

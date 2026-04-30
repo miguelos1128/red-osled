@@ -25,6 +25,8 @@ estos gastos pueden ser pago de mensualidad, tubos, etc.
 
 al ealizar un corte quede un historico de ese corte. 
 
+generar corte con libreria para solo descargar el PDF.
+
 Seguridad al intentar cargar un pago en 0 o negativo, bloquear boton al intentar hacer corte en 0, 
 
             // Dentro de cargarWidgetCorte, después del bucle forEach:

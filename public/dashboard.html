@@ -11,12 +11,15 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Bienvenido, <span id="user-name">...</span></h1>
+            <div>
+                <h1>Bienvenido, <span id="user-name">...</span></h1>
+                <h3 id="perfil">Gestión de Clientes (Solo Admin)</h3>
+            </div>
             <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
         </div>
 
         <div id="admin-section" class="admin-only">
-            <h3>Gestión de Clientes (Solo Admin)</h3>
+            
             <div class="actions">
                 <button id="btn-nuevo-cliente" class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
             </div>
@@ -433,6 +436,7 @@
         const selectLocalidad = document.getElementById('filtro-localidad');
         const inputBuscador = document.getElementById('buscador-nombre');
         let configLocalidades = {};
+        let perfilUsuario ="";
 
 
         if (!usuarioJson) {
@@ -452,6 +456,7 @@
         }
         const usuario = JSON.parse(usuarioJson);
         document.getElementById('user-name').innerText = usuario.nombre;
+        
 
         // 2. Lógica de Roles: Mostrar sección de admin si rol_id es 2
         if (usuario.rol === 2 || usuario.rol === 3) {
@@ -464,9 +469,15 @@
                     btnNuevo.remove(); 
                     console.log("Interfaz ajustada: Botón de nuevo cliente oculto para Supervisor.");
                 }
+                perfilUsuario = "Administrador Local";
+            }else if (usuario.rol === 2){
+                perfilUsuario = "Administrador"
             }
-        }
 
+        }else{
+            perfilUsuario = "Recepcionista"
+        }
+        document.getElementById('perfil').innerText = perfilUsuario;
         // 3. Función para cerrar sesión
         function logout() {
             sessionStorage.clear();

@@ -14,11 +14,14 @@ que el usuario pueda desglozar el histórico de pagos de un cliente -- OK
 
 que el usuario de bañe solo pueda ver los pagos de de bañe el de santa ana de santa ana --- OK
 
-vista de los pagos de todos los cliente para karen.
+vista de los pagos de todos los cliente para karen. -- OK
 
 mostrar vista previa del tickt y despues la opción de imrpimir cuando se realiza un pago.
+Enviar mensaje al cliente via whatsap.
 
-enviar comprobante por whatsap al cliente 
+Agregar un modulo de gastos para el perfil de administrador local que permita agregar gastos y descontarlo en el corte, 
+estos gastos pueden ser pago de mensualidad, tubos, etc.
+
 
 al ealizar un corte quede un historico de ese corte. 
 

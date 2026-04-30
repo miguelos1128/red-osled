@@ -73,20 +73,6 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
             localidadesArray = req.query.localidades.split(',').map(Number);
         }
 
-        /* // Esta consulta trae los datos del cliente y concatena sus pagos del año actual
-        // Resultado esperado: id, nombre, ip, dia_pago, localidad, y un string con meses pagados
-        const query = `
-            SELECT 
-                 c.id, c.nombre_completo, fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
-                IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
-            FROM clientes c
-            LEFT JOIN pagos p ON c.id = p.cliente_id 
-                AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
-            GROUP BY c.id, c.nombre_completo, c.direccion_ip, c.dia_pago, c.localidad_id
-            ORDER BY c.dia_pago;
-        `; 
-        //const query = `SELECT * FROM clientes`; */
-
         // 2. CONSTRUIR LA CONSULTA SQL BASE
         // (Dejamos un espacio antes del GROUP BY para poder insertar el WHERE si es necesario)
         let query = `
@@ -131,12 +117,7 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
     }
 });
 
-/* function verDetalles(idCliente) {
-    console.log("Consultando detalles del cliente ID:", idCliente);
-    alert("Próximamente: Detalles del cliente " + idCliente);
-}
-// Ruta para iniciar sesión (Login)
-// Agregamos "async" aquí */
+
 
 app.post('/api/login', async (req, res) => {
     const { correo, password } = req.body;

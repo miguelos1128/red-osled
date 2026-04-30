@@ -1080,7 +1080,14 @@
 
 
         }
-
+         function seleccionarClienteDirecto(cliente) {
+            // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            
+            // 2. Ejecutamos la lógica de selección que ya tenemos programada
+            seleccionarCliente(cliente);
+        }
+        
         function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {
             if (!fechaInstalacion) return { meses: 0, total: 0 };
 
@@ -1328,13 +1335,7 @@
             ventana.document.close();
         }
 
-        function seleccionarClienteDirecto(cliente) {
-            // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            
-            // 2. Ejecutamos la lógica de selección que ya tenemos programada
-            seleccionarCliente(cliente);
-        }
+       
 
         // Función para calcular adeudo inicial
         function calcularAdeudoInicial(fechaInstalacion, costoMensual) {

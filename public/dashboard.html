@@ -526,8 +526,6 @@
             const urlFiltro = `${urlBase}/api/admin/clientes-historial?rol=${usuario.rol}&localidades=${localidadesTexto}`;
             
             try {
-                /* const response = await fetch(`${urlBase}/api/admin/clientes-historial`);
-                const clientes = await response.json(); */
                 // 3. Hacemos la petición a nuestra nueva URL inteligente
                 const response = await fetch(urlFiltro);
                 const clientes = await response.json();
@@ -752,15 +750,6 @@
                     } else {
                         tarjeta.classList.add('hidden');
                     }
-                    /* 
-                    // Filtramos SOLO por la localidad
-                    if (localidadSeleccionada === "todas" || idLocalidadTarjeta === localidadSeleccionada) {
-                        tarjeta.classList.remove('hidden');
-                        clientesVisibles++;
-                    } else {
-                        tarjeta.classList.add('hidden');
-                        
-                    } */
                 });
                 // 3. Imprimimos el total final en nuestro nuevo elemento HTML
                 document.getElementById('contador-clientes').textContent = clientesVisibles;
@@ -1513,21 +1502,6 @@
                     pagos.forEach(pago => {
                         const monto = parseFloat(pago.monto) || 0;
                         let badgeHTML = '';
-
-                        /* // Clasificamos si es un pago (0) o deuda (1)
-                        if (pago.estado == 0) {
-                            totalPagado += monto;
-                            badgeHTML = '<span class="badge-pago pago-cobrado">Cobrado</span>';
-                        } else if (pago.estado == 1) {
-                            totalPendiente += monto;
-                            badgeHTML = '<span class="badge-pago pago-pendiente">Pendiente</span>';
-                        } */
-
-                        // Formateamos la fecha (YYYY-MM-DD a un formato legible)
-                        // Ajusta la zona horaria si notas un desfase de un día
-                        /* const fechaObj = new Date(pago.fecha); 
-                        const fechaFormat = fechaObj.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
-                         */
                         const fechaObj = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
                         // Dibujamos la fila (Usamos el ID de pago como "Folio")
                         const tr = document.createElement('tr');
@@ -1554,8 +1528,6 @@
 
                 console.log("DeberiaHaberPagado" + totalQueDeberiaHaberPagado +" - "+"totalPagadoHistorico"+ totalPagadoHistorico +"=" + adeudoPendiente)
 
-                // Aseguramos que el adeudo no sea negativo por abonos adelantados (por seguridad)
-                //adeudoPendiente = Math.max(adeudoPendiente, 0);
 
                 // Inyectamos el valor en la segunda tarjeta gigante
                 document.getElementById('detalle-total-pendiente').textContent = `$${adeudoPendiente.toFixed(2)}`;

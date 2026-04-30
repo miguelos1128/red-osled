@@ -63,34 +63,80 @@ app.get('/api/clientes', async (req, res) => {
 
 app.get('/api/admin/clientes-historial', async (req, res) => {
     try {
-        // Esta consulta trae los datos del cliente y concatena sus pagos del año actual
+        // 1. OBTENER DATOS DEL USUARIO DESDE LA URL (req.query)
+        // El frontend nos enviará algo como: ?rol=3&localidades=1,2
+        const rol = parseInt(req.query.rol);
+        
+        // Convertimos el texto "1,2" en un arreglo real de números: [1, 2]
+        let localidadesArray = [];
+        if (req.query.localidades) {
+            localidadesArray = req.query.localidades.split(',').map(Number);
+        }
+
+        /* // Esta consulta trae los datos del cliente y concatena sus pagos del año actual
         // Resultado esperado: id, nombre, ip, dia_pago, localidad, y un string con meses pagados
         const query = `
             SELECT 
-                 c.id, c.nombre_completo, fecha_instalacion, c.direccion_ip, c.dia_pago, c.localidad_id,
+                 c.id, c.nombre_completo, fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
                 IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
             FROM clientes c
             LEFT JOIN pagos p ON c.id = p.cliente_id 
                 AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
-            GROUP BY c.id, c.nombre_completo, c.direccion_ip, c.dia_pago, c.localidad_id;
+            GROUP BY c.id, c.nombre_completo, c.direccion_ip, c.dia_pago, c.localidad_id
+            ORDER BY c.dia_pago;
         `; 
-        //const query = `SELECT * FROM clientes`;
-        
+        //const query = `SELECT * FROM clientes`; */
 
-        const [clientes] = await db.query(query);
-        //console.log("Datos de la tabla puros:", clientes); // Veamos qué sale aquí
+        // 2. CONSTRUIR LA CONSULTA SQL BASE
+        // (Dejamos un espacio antes del GROUP BY para poder insertar el WHERE si es necesario)
+        let query = `
+            SELECT 
+                c.id, c.nombre_completo, fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
+                IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
+            FROM clientes c
+            LEFT JOIN pagos p ON c.id = p.cliente_id 
+                AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
+        `;
+
+        // Arreglo para guardar los valores que reemplazaremos en los signos de interrogación (?)
+        let queryParams = [];
+
+        // 3. APLICAR EL FILTRO DE LOCALIDADES (LA LÓGICA DE ROLES)
+        // Si es rol 3 (Supervisor) o rol 1 (Recepcionista) y tiene localidades asignadas:
+        if ((rol === 3 || rol === 1) && localidadesArray.length > 0) {
+            // Creamos los signos de interrogación dinámicamente. Ej: "?, ?, ?"
+            const placeholders = localidadesArray.map(() => '?').join(',');
+            
+            // Agregamos la condición a la consulta
+            query += ` WHERE c.localidad_id IN (${placeholders}) `;
+            
+            // Guardamos los números de las localidades para que la base de datos los procese de forma segura
+            queryParams = [...localidadesArray]; 
+        }
+
+        // 4. CERRAR LA CONSULTA
+        // Agregamos la agrupación y el orden sin importar si filtramos o no
+        query += `
+            GROUP BY c.id, c.nombre_completo, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id
+            ORDER BY c.dia_pago;
+        `;
+
+        // 5. EJECUTAR LA CONSULTA
+        // Pasamos el query y los parámetros de forma segura
+        const [clientes] = await db.query(query, queryParams);
         res.json(clientes);
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-function verDetalles(idCliente) {
+/* function verDetalles(idCliente) {
     console.log("Consultando detalles del cliente ID:", idCliente);
     alert("Próximamente: Detalles del cliente " + idCliente);
 }
 // Ruta para iniciar sesión (Login)
-// Agregamos "async" aquí
+// Agregamos "async" aquí */
 
 app.post('/api/login', async (req, res) => {
     const { correo, password } = req.body;
@@ -143,20 +189,30 @@ app.listen(PORT, () => {
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
-    const { 
-        nombre_completo, telefono, correo, direccion, 
-        fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id
-    } = req.body;
-
-   
-
-    const query = `INSERT INTO clientes 
-                   (nombre_completo, telefono, correo, direccion, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-     console.log("Query", query);
-     console.log("Datos recibidos para el nuevo cliente:", req.body);
-    // 2. Abrimos el bloque try/catch
     try{
+        // 1. Obtenemos los datos del cuerpo de la petición (req.body)
+        const { 
+            nombre_completo, telefono, correo, direccion, 
+            fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id, rol_usuario
+        } = req.body;
+
+        // 2. VALIDACIÓN DE SEGURIDAD (Bloqueo de Creación)
+        // Comprobamos si el usuario NO es el Administrador (rol 2)
+        if (rol_usuario !== 2) {
+            // Detenemos la ejecución y enviamos un mensaje de error al navegador
+            return res.status(403).json({
+                success: false,
+                mensaje: "Acceso denegado: Tu rol no tiene permisos para crear clientes."
+            });
+        }
+
+        const query = `INSERT INTO clientes 
+                    (nombre_completo, telefono, correo, direccion, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        console.log("Query", query);
+        console.log("Datos recibidos para el nuevo cliente:", req.body);
+    // 2. Abrimos el bloque try/catch
+    
         // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
         const [result] = await db.query(query, [
         nombre_completo, telefono, correo, direccion, 

@@ -5,18 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control - Sistema de Pagos</title>
     <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Bienvenido, <span id="user-name">...</span></h1>
+            <div>
+                <h1>Bienvenido, <span id="user-name">...</span></h1>
+                <h3 id="perfil">Gestión de Clientes (Solo Admin)</h3>
+            </div>
             <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
         </div>
 
         <div id="admin-section" class="admin-only">
-            <h3>Gestión de Clientes (Solo Admin)</h3>
+            
             <div class="actions">
-                <button class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
+                <button id="btn-nuevo-cliente" class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
             </div>
 
             <div class="main-section">
@@ -42,7 +47,7 @@
                         </select>
                     </div>
                     <div class="filtro-localidad-wrapper">
-                        <select id="filtro-localidad">
+                        <select id="filtro-localidad" multiple size="1">
                             <option value="todas">Todas las Localidades</option>
                         </select>
                     </div>
@@ -383,7 +388,7 @@
                 <div id="seccion-finanzas" class="seccion-detalle">
                     <div class="finanzas-header">
                         <h3>💰 Historial Financiero</h3>
-                        <button class="btn-descarga-pdf" onclick="alert('Generación de PDF en construcción...')">
+                        <button class="btn-descarga-pdf" onclick="generarPDFEstadoCuenta()">
                             <i class="fas fa-file-pdf"></i> Descargar PDF
                         </button>
                     </div>
@@ -406,12 +411,13 @@
                                     <th>Fecha</th>
                                     <th>Mes pagado</th>
                                     <th>Monto</th>
-                                    <th>Atendido por</th>
+                                    <th>Cobrador</th>
                                     <th>Tipo de Pago</th>
                                 </tr>
                             </thead>
                             <tbody id="detalle-tabla-pagos">
-                                </tbody>
+                            
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -430,6 +436,7 @@
         const selectLocalidad = document.getElementById('filtro-localidad');
         const inputBuscador = document.getElementById('buscador-nombre');
         let configLocalidades = {};
+        let perfilUsuario ="";
 
 
         if (!usuarioJson) {
@@ -449,12 +456,28 @@
         }
         const usuario = JSON.parse(usuarioJson);
         document.getElementById('user-name').innerText = usuario.nombre;
+        
 
         // 2. Lógica de Roles: Mostrar sección de admin si rol_id es 2
-        if (usuario.rol === 2) {
+        if (usuario.rol === 2 || usuario.rol === 3) {
             document.getElementById('admin-section').style.display = 'block';
-        }
+            // Verificamos si es el nuevo rol de Supervisor (ID: 3)
+            if (usuario.rol === 3) {
+                const btnNuevo = document.getElementById('btn-nuevo-cliente');
+                if (btnNuevo) {
+                    // Eliminamos el botón para que no exista en el DOM del Supervisor
+                    btnNuevo.remove(); 
+                    console.log("Interfaz ajustada: Botón de nuevo cliente oculto para Supervisor.");
+                }
+                perfilUsuario = "Administrador Local";
+            }else if (usuario.rol === 2){
+                perfilUsuario = "Administrador"
+            }
 
+        }else{
+            perfilUsuario = "Recepcionista"
+        }
+        document.getElementById('perfil').innerText = perfilUsuario;
         // 3. Función para cerrar sesión
         function logout() {
             sessionStorage.clear();
@@ -484,10 +507,29 @@
                 console.error("Error: No se encontró el contenedor 'admin-clientes-container' en el HTML.");
                 return;
             }
+
+            // 1. Recuperamos quién es el usuario actual desde el localStorage
+            const usuarioString = localStorage.getItem('usuario_actual');
+            
+            if (!usuarioString) {
+                console.error("No hay sesión iniciada");
+                return;
+            }
+
+            const usuario = JSON.parse(usuarioString);
+            
+            // 2. Construimos la URL con los parámetros del usuario
+            // Convertimos su arreglo de localidades [1, 2] a un texto "1,2"
+            const localidadesTexto = usuario.localidades.join(',');
+            
+            // Armamos la URL final: /api/admin/clientes-historial?rol=3&localidades=1,2
+            const urlFiltro = `${urlBase}/api/admin/clientes-historial?rol=${usuario.rol}&localidades=${localidadesTexto}`;
             
             try {
-                const response = await fetch(`${urlBase}/api/admin/clientes-historial`);
+                // 3. Hacemos la petición a nuestra nueva URL inteligente
+                const response = await fetch(urlFiltro);
                 const clientes = await response.json();
+
                 let clientesVisibles = 0;
                 console.log("Datos recibidos en el Frontend:", clientes); // Confirmación
                 
@@ -546,11 +588,11 @@
                     const textoMesActual = `${nombresMeses[fecha.getMonth()]} ${fecha.getFullYear().toString().substring(2)}`;
 
                     // Retrocedemos 6 meses en el tiempo para empezar a dibujar desde ahí
-                    fecha.setMonth(fecha.getMonth() - 6);
+                    fecha.setMonth(fecha.getMonth() - 20);
 
                     // Generamos 12 burbujas (6 meses atrás, el actual, y 5 hacia adelante)
                     // Dibujamos 9 meses en total
-                    for (let i = 0; i < 9; i++) {
+                    for (let i = 0; i < 24; i++) {
                         let mesStr = nombresMeses[fecha.getMonth()];
                         let anioStr = fecha.getFullYear().toString().substring(2);
                         timeline.push(`${mesStr} ${anioStr}`);
@@ -682,7 +724,11 @@
                 // Limpiar el texto del buscador de nombre
                 buscadorInput.value = '';
                 
-                const localidadSeleccionada = String(e.target.value).trim();
+                            // NUEVO: En lugar de un solo valor, obtenemos una lista (Array) de todo lo seleccionado
+                // Convertimos las opciones seleccionadas a un arreglo y extraemos solo su "value"
+                const opcionesSeleccionadas = Array.from(e.target.selectedOptions).map(opcion => opcion.value);
+                
+               // const localidadSeleccionada = String(e.target.value).trim();
                 const tarjetas = document.querySelectorAll('.cliente-card');
                 let clientesVisibles = 0;
 
@@ -690,13 +736,19 @@
                     let idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
                     idLocalidadTarjeta = idLocalidadTarjeta ? String(idLocalidadTarjeta).trim() : 'null';
 
-                    // Filtramos SOLO por la localidad
-                    if (localidadSeleccionada === "todas" || idLocalidadTarjeta === localidadSeleccionada) {
+                    // LÓGICA DE FILTRADO MÚLTIPLE:
+                    // 1. ¿El usuario seleccionó "todas"? o ¿desmarcó todo (lista vacía)?
+                    const mostrarTodas = opcionesSeleccionadas.includes("todas") || opcionesSeleccionadas.length === 0;
+                    
+                    // 2. ¿El ID de la localidad de esta tarjeta está dentro de la lista que eligió el usuario?
+                    const coincideLocalidad = opcionesSeleccionadas.includes(idLocalidadTarjeta);
+
+                    // Si cumple cualquiera de las dos condiciones, mostramos la tarjeta
+                    if (mostrarTodas || coincideLocalidad) {
                         tarjeta.classList.remove('hidden');
                         clientesVisibles++;
                     } else {
                         tarjeta.classList.add('hidden');
-                        
                     }
                 });
                 // 3. Imprimimos el total final en nuestro nuevo elemento HTML
@@ -784,22 +836,32 @@
             
             localidades.forEach(loc => {
                 
-                const option = document.createElement('option');
-                option.value = loc.id;
-                option.textContent = loc.nombre;
-                select.appendChild(option);
+                // LÓGICA DE FILTRADO:
+                // Si el usuario es Administrador (rol 2), ve todas.
+                // Si es Supervisor (rol 3), solo ve las que están en su lista de localidades.
+                const esAdmin = usuario.rol === 2;
+                const tienePermiso = usuario.localidades.includes(loc.id);
 
-                // 1. Llenamos nuestro diccionario global de colores
-                configLocalidades[loc.id] = { 
-                    nombre: loc.nombre, 
-                    color: loc.color || '#34495e' // Gris si no tiene color
-                };
-                
-                // 2. Llenamos el menú <select>
-                const optionFiltro = document.createElement('option');
-                optionFiltro.value = loc.id;
-                optionFiltro.textContent = loc.nombre;
-                selectFiltro.appendChild(optionFiltro);
+                if (esAdmin || tienePermiso) {
+                     const option = document.createElement('option');
+                    option.value = loc.id;
+                    option.textContent = loc.nombre;
+                    select.appendChild(option);
+
+                    // 1. Llenamos nuestro diccionario global de colores
+                    configLocalidades[loc.id] = { 
+                        nombre: loc.nombre, 
+                        color: loc.color || '#34495e' // Gris si no tiene color
+                    };
+                    
+                    // 2. Llenamos el menú <select>
+                    const optionFiltro = document.createElement('option');
+                    optionFiltro.value = loc.id;
+                    optionFiltro.textContent = loc.nombre;
+                    selectFiltro.appendChild(optionFiltro);
+                }
+
+               
             });
         }
 
@@ -899,7 +961,16 @@
                 costo_mensual: costo,
                 localidad_id: localidad
             };
-
+            // 2. NUEVO: Obtenemos el rol del usuario desde localStorage
+            const usuarioString = localStorage.getItem('usuario_actual');
+            if (usuarioString) {
+                const usuario = JSON.parse(usuarioString);
+                // Añadimos el rol al objeto que enviaremos al servidor
+                nuevoCliente.rol_usuario = usuario.rol; 
+            } else {
+                alert("Error: No hay sesión activa.");
+                return;
+            }
             // Enviar al servidor
             try {
                 const response = await fetch(`${urlBase}/api/clientes`, {
@@ -1058,7 +1129,14 @@
 
 
         }
-
+         function seleccionarClienteDirecto(cliente) {
+            // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            
+            // 2. Ejecutamos la lógica de selección que ya tenemos programada
+            seleccionarCliente(cliente);
+        }
+        
         function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {
             if (!fechaInstalacion) return { meses: 0, total: 0 };
 
@@ -1306,13 +1384,7 @@
             ventana.document.close();
         }
 
-        function seleccionarClienteDirecto(cliente) {
-            // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            
-            // 2. Ejecutamos la lógica de selección que ya tenemos programada
-            seleccionarCliente(cliente);
-        }
+       
 
         // Función para calcular adeudo inicial
         function calcularAdeudoInicial(fechaInstalacion, costoMensual) {
@@ -1350,18 +1422,6 @@
             document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
 
             try {
-                /* // 2. Hacer la petición a nuestra nueva ruta de Node.js
-                // IMPORTANTE: Ajusta '/cliente-completo/' si tu servidor usa un prefijo como '/api/cliente-completo/'
-                const respuesta = await fetch(`/cliente-completo/${idCliente}`);
-                const data = await respuesta.json();
-
-                if (!respuesta.ok) throw new Error(data.error);
-
-                // Separamos los datos que nos mandó el servidor
-                const cliente = data.cliente;
-                console.log("¡Éxito! Info lista para la fase 1: ", cliente);
-                const pagos = data.pagos; // <--- ¡Esto ya está listo para la Fase 2! */
-
                 // --- LA MAGIA DE ARQUITECTURA: Peticiones en paralelo con Promise.all ---
                 // Esto dispara ambas consultas al mismo tiempo para máxima velocidad.
                 const [respuestaCompleto, respuestaPagado] = await Promise.all([
@@ -1442,21 +1502,6 @@
                     pagos.forEach(pago => {
                         const monto = parseFloat(pago.monto) || 0;
                         let badgeHTML = '';
-
-                        /* // Clasificamos si es un pago (0) o deuda (1)
-                        if (pago.estado == 0) {
-                            totalPagado += monto;
-                            badgeHTML = '<span class="badge-pago pago-cobrado">Cobrado</span>';
-                        } else if (pago.estado == 1) {
-                            totalPendiente += monto;
-                            badgeHTML = '<span class="badge-pago pago-pendiente">Pendiente</span>';
-                        } */
-
-                        // Formateamos la fecha (YYYY-MM-DD a un formato legible)
-                        // Ajusta la zona horaria si notas un desfase de un día
-                        /* const fechaObj = new Date(pago.fecha); 
-                        const fechaFormat = fechaObj.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
-                         */
                         const fechaObj = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
                         // Dibujamos la fila (Usamos el ID de pago como "Folio")
                         const tr = document.createElement('tr');
@@ -1483,19 +1528,12 @@
 
                 console.log("DeberiaHaberPagado" + totalQueDeberiaHaberPagado +" - "+"totalPagadoHistorico"+ totalPagadoHistorico +"=" + adeudoPendiente)
 
-                // Aseguramos que el adeudo no sea negativo por abonos adelantados (por seguridad)
-                //adeudoPendiente = Math.max(adeudoPendiente, 0);
 
                 // Inyectamos el valor en la segunda tarjeta gigante
                 document.getElementById('detalle-total-pendiente').textContent = `$${adeudoPendiente.toFixed(2)}`;
                 // Este valor viene directamente de tu endpoint financiero.
                 document.getElementById('detalle-total-pagado').textContent = `$${totalPagadoHistoricoNume.toFixed(2)}`;
 
-                /* // Actualizamos las tarjetas gigantes de resumen
-                document.getElementById('detalle-total-pagado').textContent = `$${totalPagado.toFixed(2)}`;
-                document.getElementById('detalle-total-pendiente').textContent = `$${totalPendiente.toFixed(2)}`;
-                 */
-                // Si no debe nada, la tarjeta amarilla se vuelve gris
                 // Actualizamos la lógica amarilla/gris de la tarjeta pendiente
                 const tarjetaPendiente = document.getElementById('tarjeta-pendientes');
                 if (adeudoPendiente > 0) {
@@ -1506,13 +1544,112 @@
                     tarjetaPendiente.style.borderLeftColor = '#bdc3c7'; // Gris de "paz mental, cliente al corriente"
                 }
                 // --- FIN FASE 2 ---
-
+                     window.datosActualesPDF = {
+                        cliente: cliente,
+                        pagos: pagos,
+                        totalPagado: totalPagadoHistoricoNume,
+                        adeudo: adeudoPendiente
+                    };  
             } catch (error) {
                 console.error("Error:", error);
                 document.getElementById('detalle-nombre-cliente').textContent = "Error al cargar los datos";
             }
+             // Guardamos los datos globalmente para que el botón del PDF los pueda usar
+                   
         }
         
+        function generarPDFEstadoCuenta() {
+            // 1. Verificamos que tengamos datos cargados
+            if (!window.datosActualesPDF) {
+                alert("Aún no se han cargado los datos del cliente.");
+                return;
+            }
+
+            // 2. Extraemos las herramientas y los datos
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const { cliente, pagos, totalPagado, adeudo } = window.datosActualesPDF;
+
+            // 3. Diseño del Encabezado
+            doc.setFontSize(22);
+            doc.setTextColor(41, 128, 185); // Color azul
+            doc.text("ESTADO DE CUENTA", 105, 20, { align: "center" });
+
+            // 4. Datos del Cliente
+            doc.setFontSize(12);
+            doc.setTextColor(44, 62, 80); // Color oscuro
+            doc.text(`Cliente: ${cliente.nombre_completo || 'N/A'}`, 14, 35);
+            doc.text(`Dirección: ${cliente.direccion || 'N/A'}`, 14, 42);
+            doc.text(`Teléfono: ${cliente.telefono || 'N/A'}`, 14, 49);
+            
+            // Fecha de emisión del documento (Hoy)
+            const fechaHoy = new Date().toLocaleDateString('es-MX');
+            doc.text(`Fecha de Emisión: ${fechaHoy}`, 130, 35);
+            doc.text(`Día de Pago: ${cliente.dia_pago || 'N/A'}`, 130, 42);
+
+            // 5. Resumen Financiero (Las tarjetas de nuestra vista web)
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total Pagado Histórico: $${totalPagado.toFixed(2)}`, 14, 65);
+            
+            // Si hay deuda, la ponemos en rojo
+            if (adeudo > 0) {
+                doc.setTextColor(231, 76, 60); // Rojo
+            } else {
+                doc.setTextColor(39, 174, 96); // Verde
+            }
+            doc.text(`Adeudo Pendiente: $${adeudo.toFixed(2)}`, 130, 65);
+            
+            // Restaurar color y fuente normal para la tabla
+            doc.setTextColor(44, 62, 80);
+            doc.setFont(undefined, 'normal');
+
+            // 6. Título de la tabla
+            doc.setFontSize(14);
+            doc.text("Historial de Pagos", 14, 80);
+
+            // 7. Preparar los datos para la tabla (Transformamos el arreglo de objetos a un arreglo de arreglos)
+            const filasTabla = pagos.map(pago => {
+
+                const fechaFormat = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+               
+                return [
+                    fechaFormat, 
+                    `${pago.mes_pagado}`, 
+                    `$${parseFloat(pago.monto).toFixed(2)}`, 
+                    pago.cobrador_nombre || '-', 
+                    `${pago.tipo_pago}`
+                ];
+            });
+
+            // 8. Dibujar la tabla automáticamente con jspdf-autotable
+            doc.autoTable({
+                startY: 85,
+                head: [['Fecha', 'Mes pagado', 'Monto', 'Cobrador', 'Tipo']],
+                body: filasTabla,
+                theme: 'striped',
+                headStyles: { fillColor: [41, 128, 185] }, // Cabecera azul
+                styles: { fontSize: 10, cellPadding: 3 },
+                didParseCell: function(data) {
+                    // Pintar de verde o amarillo/naranja la columna de estado
+                    if (data.section === 'body' && data.column.index === 4) {
+                        if (data.cell.raw === 'Cobrado') {
+                            data.cell.styles.textColor = [39, 174, 96]; // Verde
+                            data.cell.styles.fontStyle = 'bold';
+                        } else if (data.cell.raw === 'Pendiente') {
+                            data.cell.styles.textColor = [211, 84, 0]; // Naranja oscuro
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    }
+                }
+            });
+
+            // 9. Descargar el archivo
+            // Reemplazamos espacios por guiones bajos para que el nombre del archivo sea limpio
+            const nombreArchivo = cliente.nombre_completo ? cliente.nombre_completo.replace(/\s+/g, '_') : 'Desconocido';
+            doc.save(`Estado_Cuenta_${nombreArchivo}.pdf`);
+        }
+
         // Función para cerrar el modal
         function cerrarModalDetalles() {
             document.getElementById('modal-detalles-cliente').classList.add('hidden');

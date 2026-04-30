@@ -72,7 +72,8 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
             FROM clientes c
             LEFT JOIN pagos p ON c.id = p.cliente_id 
                 AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
-            GROUP BY c.id, c.nombre_completo, c.direccion_ip, c.dia_pago, c.localidad_id;
+            GROUP BY c.id, c.nombre_completo, c.direccion_ip, c.dia_pago, c.localidad_id
+            ORDER BY c.dia_pago;
         `; 
         //const query = `SELECT * FROM clientes`;
         

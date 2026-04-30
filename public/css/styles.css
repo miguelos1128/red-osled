@@ -217,10 +217,17 @@ td {
     border-color: #007bff;
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
 }
+#buscador-nombre:hover {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
 .filtro-localidad-wrapper {
     flex: 1; /* Toma menos espacio */
     min-width: 200px;
+       margin: 10px 0;
+    display: inline-block;
 }
+
 
 #filtro-localidad {
     width: 100%;
@@ -231,6 +238,10 @@ td {
     outline: none;
     background-color: white;
     cursor: pointer;
+}
+#select-ordenar:hover {
+    border-color: #3b82f6; /* Color azul al pasar el mouse */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 #select-ordenar {
@@ -243,6 +254,44 @@ td {
     background-color: white;
     cursor: pointer;
 }
+
+#filtro-localidad:hover {
+    border-color: #3b82f6; /* Color azul al pasar el mouse */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Estilizar el select múltiple nativo */
+#filtro-localidad {
+    width: 100%;
+    min-width: 220px;
+    border:  1px solid #ddd;
+    border-radius: 25px;
+    padding: 12px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 0.95rem;
+    color: #374151;
+    background-color: white;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    /* Evita que se vea el borde azul tosco al hacer clic */
+}
+
+/* Estilizar las opciones (localidades) */
+#filtro-localidad option {
+    padding: 8px 12px; /* Separación entre cada checkbox/texto */
+    border-radius: 4px;
+    margin-bottom: 2px;
+    cursor: pointer;
+}
+
+/* Nota: Algunos navegadores no permiten cambiar el color de 
+   fondo de la selección de forma directa con CSS puro, 
+   pero el padding y el radio de borde sí se aplican */
+#filtro-localidad option:checked {
+    background-color: #eff6ff; /* Azul muy pálido */
+    color: #1e40af; /* Texto azul oscuro */
+}
+
 /* =======================================================
    ESTILOS COMPLETOS PARA LA VISUALIZACIÓN DE PAGOS ADMIN
    Diseño: Mobile First (Tarjetas) -> PC (Tabla)

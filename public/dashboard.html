@@ -44,7 +44,7 @@
                         </select>
                     </div>
                     <div class="filtro-localidad-wrapper">
-                        <select id="filtro-localidad">
+                        <select id="filtro-localidad" multiple size="1">
                             <option value="todas">Todas las Localidades</option>
                         </select>
                     </div>
@@ -685,7 +685,11 @@
                 // Limpiar el texto del buscador de nombre
                 buscadorInput.value = '';
                 
-                const localidadSeleccionada = String(e.target.value).trim();
+                            // NUEVO: En lugar de un solo valor, obtenemos una lista (Array) de todo lo seleccionado
+                // Convertimos las opciones seleccionadas a un arreglo y extraemos solo su "value"
+                const opcionesSeleccionadas = Array.from(e.target.selectedOptions).map(opcion => opcion.value);
+                
+               // const localidadSeleccionada = String(e.target.value).trim();
                 const tarjetas = document.querySelectorAll('.cliente-card');
                 let clientesVisibles = 0;
 
@@ -693,6 +697,21 @@
                     let idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
                     idLocalidadTarjeta = idLocalidadTarjeta ? String(idLocalidadTarjeta).trim() : 'null';
 
+                    // LÓGICA DE FILTRADO MÚLTIPLE:
+                    // 1. ¿El usuario seleccionó "todas"? o ¿desmarcó todo (lista vacía)?
+                    const mostrarTodas = opcionesSeleccionadas.includes("todas") || opcionesSeleccionadas.length === 0;
+                    
+                    // 2. ¿El ID de la localidad de esta tarjeta está dentro de la lista que eligió el usuario?
+                    const coincideLocalidad = opcionesSeleccionadas.includes(idLocalidadTarjeta);
+
+                    // Si cumple cualquiera de las dos condiciones, mostramos la tarjeta
+                    if (mostrarTodas || coincideLocalidad) {
+                        tarjeta.classList.remove('hidden');
+                        clientesVisibles++;
+                    } else {
+                        tarjeta.classList.add('hidden');
+                    }
+                    /* 
                     // Filtramos SOLO por la localidad
                     if (localidadSeleccionada === "todas" || idLocalidadTarjeta === localidadSeleccionada) {
                         tarjeta.classList.remove('hidden');
@@ -700,7 +719,7 @@
                     } else {
                         tarjeta.classList.add('hidden');
                         
-                    }
+                    } */
                 });
                 // 3. Imprimimos el total final en nuestro nuevo elemento HTML
                 document.getElementById('contador-clientes').textContent = clientesVisibles;

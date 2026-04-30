@@ -549,11 +549,11 @@
                     const textoMesActual = `${nombresMeses[fecha.getMonth()]} ${fecha.getFullYear().toString().substring(2)}`;
 
                     // Retrocedemos 6 meses en el tiempo para empezar a dibujar desde ahí
-                    fecha.setMonth(fecha.getMonth() - 6);
+                    fecha.setMonth(fecha.getMonth() - 20);
 
                     // Generamos 12 burbujas (6 meses atrás, el actual, y 5 hacia adelante)
                     // Dibujamos 9 meses en total
-                    for (let i = 0; i < 9; i++) {
+                    for (let i = 0; i < 24; i++) {
                         let mesStr = nombresMeses[fecha.getMonth()];
                         let anioStr = fecha.getFullYear().toString().substring(2);
                         timeline.push(`${mesStr} ${anioStr}`);

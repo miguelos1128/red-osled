@@ -238,12 +238,20 @@
 
                 <input type="email" id="cor_cli" placeholder="Correo Electrónico">
                 <textarea id="dir_cli" placeholder="Dirección completa" required style="width:100%; margin: 10px 0; border: 1px solid #ddd;"></textarea>
+                <textarea id="obs_cli" placeholder="Observaciones (opcional)" style="width:100%; margin: 0 0 10px; border: 1px solid #ddd;"></textarea>
 
-                <div class="mb-3">
-                    <label class="form-label">Localidad:</label>
-                    <select id="selectLocalidad" class="form-select" required>
-                        <option value="">Seleccione una localidad...</option>
-                        </select>
+                <div class="fila-localidad-renta mb-3">
+                    <div class="campo-localidad">
+                        <label class="form-label">Localidad:</label>
+                        <select id="selectLocalidad" class="form-select" required>
+                            <option value="">Seleccione una localidad...</option>
+                            </select>
+                    </div>
+                    <label class="switch-renta">
+                        <span>Modalidad RENTA</span>
+                        <input type="checkbox" id="es_renta_cli">
+                        <span class="slider-renta" data-off="OFF" data-on="ON"></span>
+                    </label>
                 </div>
 
                 <div style="display:flex; gap:10px;">
@@ -943,6 +951,7 @@
             const telefono = document.getElementById('tel_cli').value.trim();
             const correo = document.getElementById('cor_cli').value.trim();
             const direccion = document.getElementById('dir_cli').value.trim();
+            const observaciones = document.getElementById('obs_cli').value.trim();
             const fecha = document.getElementById('fecha_ins').value;
             const diaPago = parseInt(document.getElementById('dia_pago').value);
             const ip = parseInt(document.getElementById('ip_cli').value);
@@ -950,6 +959,7 @@
             const paquete = document.getElementById('paquete_cli').value;
             const costo = document.getElementById('costo_cli').value;
             const localidad = document.getElementById('selectLocalidad').value;
+            const esRenta = document.getElementById('es_renta_cli').checked ? 1 : 0;
 
             // --- LISTA DE ERRORES ---
             let errores = [];
@@ -993,6 +1003,8 @@
                 telefono: telefono,
                 correo: correo,
                 direccion: direccion,
+                observaciones: observaciones,
+                es_renta: esRenta,
                 fecha_instalacion: fecha,
                 dia_pago: diaPago,
                 direccion_ip: ip,   // Ahora sí enviamos un número limpio

@@ -135,6 +135,85 @@ td {
     padding: 5px 15px;
 }
 
+.fila-localidad-renta {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+}
+
+.campo-localidad {
+    flex: 1;
+}
+
+.switch-renta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #333;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.switch-renta input {
+    display: none;
+}
+
+.slider-renta {
+    width: 76px;
+    height: 34px;
+    border-radius: 999px;
+    background: #dfe3e8;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.slider-renta::before {
+    content: attr(data-off);
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #59636e;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.slider-renta::after {
+    content: "";
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    left: 3px;
+    top: 3px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease;
+}
+
+.switch-renta input:checked + .slider-renta {
+    background: #1a73e8;
+}
+
+.switch-renta input:checked + .slider-renta::before {
+    content: attr(data-on);
+    left: 12px;
+    right: auto;
+    color: white;
+}
+
+.switch-renta input:checked + .slider-renta::after {
+    transform: translateX(42px);
+}
+
+@media (max-width: 520px) {
+    .fila-localidad-renta {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
 /* Alineamos el título y el contador en la misma línea */
 .admin-titulo {
     display: flex;

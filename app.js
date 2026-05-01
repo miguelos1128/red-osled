@@ -173,7 +173,7 @@ app.post('/api/clientes', async (req, res) => {
     try{
         // 1. Obtenemos los datos del cuerpo de la petición (req.body)
         const { 
-            nombre_completo, telefono, correo, direccion, 
+            nombre_completo, telefono, correo, direccion, observaciones, es_renta,
             fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id, rol_usuario
         } = req.body;
 
@@ -188,15 +188,15 @@ app.post('/api/clientes', async (req, res) => {
         }
 
         const query = `INSERT INTO clientes 
-                    (nombre_completo, telefono, correo, direccion, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                    (nombre_completo, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         console.log("Query", query);
         console.log("Datos recibidos para el nuevo cliente:", req.body);
     // 2. Abrimos el bloque try/catch
     
         // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
         const [result] = await db.query(query, [
-        nombre_completo, telefono, correo, direccion, 
+        nombre_completo, telefono, correo, direccion, observaciones || null, es_renta ? 1 : 0,
         fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual,localidad_id
         ]);
         // 4a. Si todo sale bien, respondemos aquí

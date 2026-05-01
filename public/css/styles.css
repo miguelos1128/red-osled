@@ -742,6 +742,132 @@ td {
 
 .hidden { display: none !important; }
 
+.modal-pago-exitoso {
+    max-width: 520px;
+}
+
+.resumen-pago-ok {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: #f0fff4;
+    border: 1px solid #b7ebc6;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.icono-pago-ok {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #28a745;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    flex: 0 0 auto;
+}
+
+.resumen-titulo {
+    margin: 0 0 4px;
+    font-weight: bold;
+    color: #1f7a36;
+}
+
+.resumen-subtitulo {
+    margin: 0;
+    color: #444;
+}
+
+.resumen-pago-detalle {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 18px;
+}
+
+.resumen-pago-fila,
+.resumen-pago-total {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #eee;
+}
+
+.resumen-pago-fila small {
+    display: block;
+    color: #777;
+    margin-top: 3px;
+}
+
+.resumen-pago-total {
+    border-bottom: 0;
+    background: #f8f9fa;
+    font-size: 1.08em;
+}
+
+.acciones-pago-exitoso {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.acciones-pago-exitoso .button {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    padding: 13px 10px;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn-whatsapp-pago {
+    grid-column: 1 / -1;
+    background: #25d366;
+    color: white;
+}
+
+.btn-whatsapp-pago.disabled {
+    background: #9e9e9e;
+    pointer-events: none;
+}
+
+.btn-imprimir-pago {
+    background: #1a73e8;
+    color: white;
+}
+
+.btn-cerrar-pago {
+    background: #eef1f4;
+    color: #333;
+}
+
+@media (max-width: 520px) {
+    #modalPagoExitoso {
+        align-items: flex-end;
+    }
+
+    .modal-pago-exitoso {
+        max-width: none;
+        width: 100%;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .acciones-pago-exitoso {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-whatsapp-pago {
+        grid-column: auto;
+    }
+}
+
 
 /* Fondo oscuro que cubre toda la pantalla */
 .modal-fondo {

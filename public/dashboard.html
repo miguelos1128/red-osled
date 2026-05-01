@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -190,6 +190,37 @@
                     style="width: 100%; padding: 15px; margin-top: 20px; font-size: 1.1em; background-color: #28a745; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">
                 Confirmar y Pagar
             </button>
+        </div>
+    </div>
+
+    <div id="modalPagoExitoso" class="modal hidden" onclick="cerrarResumenPagoPorFondo(event)">
+        <div class="modal-content modal-pago-exitoso">
+            <div class="modal-cabecera">
+                <h2 style="margin-bottom: 10px;">Pago registrado</h2>
+                <span class="cerrar-x-modal" onclick="cerrarResumenPago(true)">&times;</span>
+            </div>
+
+            <div class="resumen-pago-ok">
+                <div class="icono-pago-ok">✓</div>
+                <div>
+                    <p class="resumen-titulo">Cobro guardado correctamente</p>
+                    <p id="resumen-pago-cliente" class="resumen-subtitulo"></p>
+                </div>
+            </div>
+
+            <div id="resumen-pago-detalle" class="resumen-pago-detalle"></div>
+
+            <div class="acciones-pago-exitoso">
+                <a id="btn-enviar-whatsapp-pago" class="btn-whatsapp-pago button" href="#" target="_blank" rel="noopener">
+                    Enviar WhatsApp
+                </a>
+                <button onclick="imprimirReciboUltimoPago()" class="btn-imprimir-pago button">
+                    Imprimir recibo
+                </button>
+                <button onclick="cerrarResumenPago(true)" class="btn-cerrar-pago button">
+                    Cerrar
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1228,6 +1259,8 @@
         }
 
         // Esta función va dentro del evento submit de tu formulario de pago
+        let ultimoDetallePago = null;
+
         async function procesarPagoFinal() {
             const monto = parseFloat(document.getElementById('monto-pago-input').value);
             
@@ -1264,8 +1297,8 @@
             const resultado = await response.json();
 
             if (resultado.success) {
-                // Aquí disparamos el ticket que vimos antes
-                generarTicketImpresion(resultado.detalle);
+                cerrarModalPago();
+                mostrarResumenPagoExitoso(resultado.detalle);
             } else {
                 alert("Error: " + resultado.error);
             }
@@ -1278,6 +1311,81 @@
 
 
         // 1. Esta función recibe la respuesta del servidor (el detalle de la cascada)
+        function mostrarResumenPagoExitoso(detalle) {
+            ultimoDetallePago = detalle;
+
+            const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
+            const detalleHtml = detalle.map(item => {
+                const tipoLabel = item.tipo === 'abono' ? 'Abono' : 'Mensualidad';
+                return `
+                    <div class="resumen-pago-fila">
+                        <span>${item.mes} <small>${tipoLabel}</small></span>
+                        <strong>$${parseFloat(item.monto).toFixed(2)}</strong>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('resumen-pago-cliente').textContent = clienteSeleccionado.nombre_completo;
+            document.getElementById('resumen-pago-detalle').innerHTML = `
+                ${detalleHtml}
+                <div class="resumen-pago-total">
+                    <span>Total recibido</span>
+                    <strong>$${total.toFixed(2)}</strong>
+                </div>
+            `;
+
+            configurarWhatsappPago(detalle, total);
+            document.getElementById('modalPagoExitoso').classList.remove('hidden');
+        }
+
+        function configurarWhatsappPago(detalle, total) {
+            const btnWhatsapp = document.getElementById('btn-enviar-whatsapp-pago');
+            const telefono = (clienteSeleccionado.telefono || '').replace(/\D/g, '');
+
+            if (!telefono) {
+                btnWhatsapp.classList.add('disabled');
+                btnWhatsapp.removeAttribute('href');
+                btnWhatsapp.textContent = 'Sin telefono';
+                return;
+            }
+
+            const telefonoWhatsapp = telefono.length === 10 ? `52${telefono}` : telefono;
+            const hora = new Date().getHours();
+            const saludoTiempo = hora < 12 ? 'dia' : hora < 19 ? 'tarde' : 'noche';
+            const pagosTexto = detalle
+                .map(item => `${item.mes} $${parseFloat(item.monto).toFixed(2)}`)
+                .join(', ');
+            const mensajeWhatsapp = `Hola, ${clienteSeleccionado.nombre_completo}\n\nSu pago correspondiente a ${pagosTexto} ha quedado registrado correctamente.\n\nMonto recibido: $${total.toFixed(2)}\nFecha de pago: ${new Date().toLocaleDateString('es-MX')}\n\n\u00A1Muchas gracias por su puntualidad!\nQue tenga una excelente ${saludoTiempo}.\n\nRED OSLED`;
+
+            btnWhatsapp.classList.remove('disabled');
+            btnWhatsapp.textContent = 'Enviar WhatsApp';
+            btnWhatsapp.href = `https://wa.me/${telefonoWhatsapp}?text=${encodeURIComponent(mensajeWhatsapp)}`;
+        }
+
+        function imprimirReciboUltimoPago() {
+            if (!ultimoDetallePago) {
+                alert("No hay un recibo disponible para imprimir.");
+                return;
+            }
+
+            generarTicketImpresion(ultimoDetallePago);
+        }
+
+        function cerrarResumenPago(recargar) {
+            document.getElementById('modalPagoExitoso').classList.add('hidden');
+            ultimoDetallePago = null;
+
+            if (recargar) {
+                location.reload();
+            }
+        }
+
+        function cerrarResumenPagoPorFondo(event) {
+            if (event.target.id === 'modalPagoExitoso') {
+                cerrarResumenPago(true);
+            }
+        }
+
         function mostrarResumenYPrepararImpresion(detalle) {
             let resumenTexto = "✅ PAGO REGISTRADO CON ÉXITO\n\n";
             resumenTexto += "El sistema ha distribuido el pago así:\n";
@@ -1374,7 +1482,6 @@
                         window.onload = function() { 
                             window.print(); 
                             window.close(); 
-                            window.opener.location.reload(); // Recarga la pestaña principal
                         };
                     <\/script>
                 </body>

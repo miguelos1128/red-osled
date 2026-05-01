@@ -397,7 +397,7 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
             `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 
-             WHERE p.usuario_id = ? AND p.estado_corte = 0  or p.estado_corte = 3
+             WHERE p.usuario_id = ? AND p.estado_corte = 0  or p.usuario_id = 7  and p.estado_corte = 3
              ORDER BY p.id DESC`,
             [usuarioId]
         );

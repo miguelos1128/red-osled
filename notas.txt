@@ -16,8 +16,8 @@ que el usuario de bañe solo pueda ver los pagos de de bañe el de santa ana de 
 
 vista de los pagos de todos los cliente para karen. -- OK
 
-mostrar vista previa del tickt y despues la opción de imrpimir cuando se realiza un pago.
-Enviar mensaje al cliente via whatsap.
+mostrar vista previa del tickt y despues la opción de imrpimir cuando se realiza un pago. --OK
+Enviar mensaje al cliente via whatsap. --OK
 
 Agregar un modulo de gastos para el perfil de administrador local que permita agregar gastos y descontarlo en el corte, 
 estos gastos pueden ser pago de mensualidad, tubos, etc.

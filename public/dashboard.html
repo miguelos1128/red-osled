@@ -367,7 +367,10 @@
             
             <div class="modal-cabecera">
                 <h2 id="detalle-nombre-cliente">Cargando...</h2>
-                <span id="detalle-badge-estado" class="badge-estado">Activo</span>
+                <div class="detalle-badges">
+                    <span id="detalle-badge-estado" class="badge-estado">Activo</span>
+                    <span id="detalle-badge-renta" class="badge-renta hidden">RENTA</span>
+                </div>
                 <span class="cerrar-x-modal" onclick="cerrarModalDetalles()">✖</span>
             </div>
 
@@ -648,11 +651,17 @@
                     card.setAttribute('data-corte', cliente.dia_pago);
                     card.setAttribute('data-ip', cliente.direccion_ip);
                     card.setAttribute('data-fecha', cliente.fecha_instalacion || "2000-01-01");
+                    const badgeRentaCard = Number(cliente.es_renta) === 1
+                        ? '<span class="cliente-badge-renta">RENTA</span>'
+                        : '';
 
                     card.innerHTML = `
                         <div class="cliente-header">
                             <div class="cliente-info-principal">                              
-                                <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
+                                <div class="cliente-nombre-linea">
+                                    <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
+                                    ${badgeRentaCard}
+                                </div>
                                 <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
                             </div>
                             <div class="cliente-pago-dia">
@@ -1581,7 +1590,9 @@
 
                 // 5. Configurar Badge de Estado
                 const badge = document.getElementById('detalle-badge-estado');
+                const badgeRenta = document.getElementById('detalle-badge-renta');
                 badge.className = 'badge-estado'; 
+                badgeRenta.classList.toggle('hidden', Number(cliente.es_renta) !== 1);
                 
                 if(cliente.estado_servicio == 'activo') {
                     badge.textContent = 'Activo';

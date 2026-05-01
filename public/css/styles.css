@@ -617,7 +617,7 @@ td {
 /* El botón de la X */
 
 .cerrar-x-modal {
-    font-size: 28px;
+    font-size: 35px;
     font-weight: bold;
     cursor: pointer;
     color: #888;
@@ -1000,6 +1000,11 @@ td {
     border-bottom: 2px solid #eee;
     padding-bottom: 10px;
     margin-bottom: 15px;
+}
+
+.modal-cabecera h2,
+.modal-cabecera h4 {
+    margin: 0;
 }
 
 

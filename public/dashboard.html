@@ -226,8 +226,10 @@
 
     <div id="modalCliente" class="modal hidden" onclick="cerrarModalPorFondo(event, 'modalCliente', cerrarModal)">
         <div class="modal-content">
-            <span class="cerrar-x-modal" onclick="cerrarModal()">&times;</span>
-            <h2>Nuevo Cliente</h2>
+            <div class="modal-cabecera">
+                <h2>Nuevo Cliente</h2>
+                <span class="cerrar-x-modal" onclick="cerrarModal()">&times;</span>
+            </div>
             <form id="formCliente">
                 <label>Nombre Completo:</label>
                 <input type="text" id="nom_cli" placeholder="Ej. Juan Pérez" required>
@@ -379,7 +381,7 @@
                     <span id="detalle-badge-estado" class="badge-estado">Activo</span>
                     <span id="detalle-badge-renta" class="badge-renta hidden">RENTA</span>
                 </div>
-                <span class="cerrar-x-modal" onclick="cerrarModalDetalles()">✖</span>
+                <span class="cerrar-x-modal" onclick="cerrarModalDetalles()">&times;</span>
             </div>
 
             <div class="modal-body">

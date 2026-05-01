@@ -422,6 +422,11 @@
 
                     </div>
 
+                    <div id="detalle-observaciones-grupo" class="info-grupo detalle-observaciones hidden">
+                        <label>Observaciones</label>
+                        <p id="detalle-observaciones">-</p>
+                    </div>
+
                     <div class="acciones-contacto">
                         <a id="btn-whatsapp" href="#" target="_blank" class="btn-contacto whatsapp">
                             💬 Enviar WhatsApp al <span id="detalle-telefono"></span>
@@ -1581,6 +1586,10 @@
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
                 document.getElementById('detalle-direccion').textContent = cliente.direccion || 'Sin dirección';
+                const observaciones = (cliente.observaciones || '').trim();
+                const grupoObservaciones = document.getElementById('detalle-observaciones-grupo');
+                document.getElementById('detalle-observaciones').textContent = observaciones;
+                grupoObservaciones.classList.toggle('hidden', !observaciones);
                 
                 // Formatear la fecha para que se vea bonita (opcional)
                 let fechaInst = cliente.fecha_instalacion ? new Date(cliente.fecha_instalacion).toLocaleDateString() : 'N/A';

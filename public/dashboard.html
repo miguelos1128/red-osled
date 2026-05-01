@@ -143,7 +143,7 @@
                 </div>
             </div>
 
-            <div id="modalHistorialCustom" class="modal-fondo" style="display: none;">
+            <div id="modalHistorialCustom" class="modal-fondo" style="display: none;" onclick="cerrarModalPorFondo(event, 'modalHistorialCustom', cerrarHistorial)">
                 <div class="modal-caja">
                     <div class="modal-cabecera">
                         <h4 style="margin: 0;">Pagos de: <span id="nombreClienteHistorial"></span></h4>
@@ -163,7 +163,7 @@
         </div>
     </div>
 
-    <div id="modalPago" class="modal hidden">
+    <div id="modalPago" class="modal hidden" onclick="cerrarModalPorFondo(event, 'modalPago', cerrarModalPago)">
         <div class="modal-content">
             <div class="modal-cabecera">
                 <h2 style="margin-bottom: 10px;">Registrar Cobro</h2>
@@ -224,7 +224,7 @@
         </div>
     </div>
 
-    <div id="modalCliente" class="modal hidden">
+    <div id="modalCliente" class="modal hidden" onclick="cerrarModalPorFondo(event, 'modalCliente', cerrarModal)">
         <div class="modal-content">
             <span class="cerrar-x-modal" onclick="cerrarModal()">&times;</span>
             <h2>Nuevo Cliente</h2>
@@ -289,13 +289,13 @@
         </div>
     </div>
 
-    <div id="modal-corte" class="hidden modal-fondo-corte">
+    <div id="modal-corte" class="hidden modal-fondo-corte" onclick="cerrarModalPorFondo(event, 'modal-corte', cerrarModalCorte)">
         
         <div class="modal-caja-corte">
             
             <div class="cabecera-modal-corte">
                 <h2 id="area-imprimible-corte-titulo">Reporte de Corte de Caja</h2>
-                <span class="cerrar-x-modal" onclick="document.getElementById('modal-corte').classList.add('hidden')">&times;</span>
+                <span class="cerrar-x-modal" onclick="cerrarModalCorte()">&times;</span>
             </div>
 
             <div id="area-imprimible-corte">
@@ -370,7 +370,7 @@
         </div>
     </div>
 
-    <div id="modal-detalles-cliente" class="modal-overlay hidden">
+    <div id="modal-detalles-cliente" class="modal-overlay hidden" onclick="cerrarModalPorFondo(event, 'modal-detalles-cliente', cerrarModalDetalles)">
         <div class="modal-content">
             
             <div class="modal-cabecera">
@@ -865,6 +865,12 @@
         function cerrarModal() {
             document.getElementById('modalCliente').classList.add('hidden');
             document.getElementById('formCliente').reset();
+        }
+
+        function cerrarModalPorFondo(event, modalId, cerrarCallback) {
+            if (event.target.id === modalId) {
+                cerrarCallback();
+            }
         }
 
         // Procesar el formulario
@@ -1926,6 +1932,10 @@
         // 2. Control de ventanas
         function abrirModalCorte() {
             document.getElementById('modal-corte').classList.remove('hidden');
+        }
+
+        function cerrarModalCorte() {
+            document.getElementById('modal-corte').classList.add('hidden');
         }
 
         function abrirModalAdmin() {

@@ -318,7 +318,33 @@
                     </div>
                 </div>
                 <div class="reporte-pie-total">
+                    <div class="resumen-corte-linea">
+                        <span>Total cobrado:</span>
+                        <strong>$<span id="lbl-corte-bruto-modal">0.00</span></strong>
+                    </div>
+                    <div id="resumen-gastos-corte" class="resumen-corte-linea gasto hidden">
+                        <span>Gastos:</span>
+                        <strong>-$<span id="lbl-corte-gastos-modal">0.00</span></strong>
+                    </div>
                     <h3>Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
+                </div>
+
+                <div id="seccion-gastos-corte" class="seccion-gastos-corte hidden">
+                    <h3>Registrar gasto</h3>
+                    <div class="form-gasto-corte">
+                        <input type="number" id="gasto-monto" min="0.01" step="0.01" placeholder="Monto ($)">
+                        <input type="text" id="gasto-descripcion" maxlength="255" placeholder="Descripción">
+                        <button class="button btn-agregar-gasto" onclick="registrarGastoCorte()">Agregar gasto</button>
+                    </div>
+
+                    <div class="gastos-corte-lista">
+                        <div class="gastos-corte-header">
+                            <span>Gasto</span>
+                            <span>Monto</span>
+                            <span>Acción</span>
+                        </div>
+                        <div id="lista-gastos-corte"></div>
+                    </div>
                 </div>
             </div>
 
@@ -348,8 +374,23 @@
                     <tbody id="tabla-autorizado-body-print">
                         </tbody>
                 </table>
+
+                <h3 class="titulo-print-seccion">Gastos descontados</h3>
+                <table class="tabla-impresion">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-gastos-body-print">
+                        </tbody>
+                </table>
                 
                 <div class="pie-impresion">
+                    <p>Total cobrado: $<span id="lbl-autorizado-bruto-print">0.00</span></p>
+                    <p>Gastos descontados: -$<span id="lbl-autorizado-gastos-print">0.00</span></p>
                     <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
                 </div>
             </div>
@@ -534,6 +575,9 @@
         }
         let idCobrador = usuario.id
         cargarWidgetCorte();
+        const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3;
+        document.getElementById('seccion-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
+        document.getElementById('resumen-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
 
         function renderizarHistorial(pagosCliente) {
             return meses.map((mes, index) => {
@@ -1811,7 +1855,7 @@
 
                 
                 // Actualizamos los resúmenes del widget (esto lo mantengo igual)
-                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_dinero || 0).toFixed(2);
+                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toFixed(2);
                 document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
 
                 // --- NUEVA LÓGICA PARA LLENAR EL REPORTE CON DIVS RESPONSIVOS ---
@@ -1819,9 +1863,17 @@
                 // Buscamos el nuevo contenedor del cuerpo del reporte
                 const reporteBody = document.getElementById('tabla-corte-body');
                 const lblTotalModal = document.getElementById('lbl-corte-total-modal');
+                const lblBrutoModal = document.getElementById('lbl-corte-bruto-modal');
+                const lblGastosModal = document.getElementById('lbl-corte-gastos-modal');
+                const listaGastosCorte = document.getElementById('lista-gastos-corte');
                 const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
                 const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
+                const lblBrutoPrint = document.getElementById('lbl-autorizado-bruto-print');
+                const lblGastosPrint = document.getElementById('lbl-autorizado-gastos-print');
+                const gastosBodyPrint = document.getElementById('tabla-gastos-body-print');
                 reporteAuthBodyPrint.innerHTML = '';
+                gastosBodyPrint.innerHTML = '';
+                listaGastosCorte.innerHTML = '';
                 let totalImpresion = 0;
                 document.getElementById('print-cobrador').innerText = usuario.nombre;
                 document.getElementById('print-fecha-larga').innerText = ObtenerFecha();
@@ -1900,17 +1952,143 @@
                     reporteAuthBodyPrint.appendChild(tr);
                 });
 
+                let totalGastos = 0;
+                const gastos = data.gastos || [];
+                if (gastos.length === 0) {
+                    listaGastosCorte.innerHTML = '<div class="gasto-vacio">Sin gastos registrados.</div>';
+                    gastosBodyPrint.innerHTML = '<tr><td colspan="3">Sin gastos registrados.</td></tr>';
+                } else {
+                    gastos.forEach(gasto => {
+                        const estado = parseInt(gasto.estado_corte);
+                        const montoGasto = parseFloat(gasto.monto) || 0;
+                        const fechaGasto = new Date(gasto.fecha_gasto).toLocaleString('es-MX', {
+                            year: 'numeric', month: 'numeric', day: 'numeric',
+                            hour: 'numeric', minute: 'numeric',
+                            hour12: false
+                        });
+                        const claseGasto = estado === 3 ? ' gasto-cancelado' : '';
+                        const botonGasto = estado === 0
+                            ? `<button class="btn-eliminar-pago" title="Cancelar gasto" onclick="cancelarGasto(${gasto.id})">×</button>`
+                            : '';
+
+                        if (estado === 0) totalGastos += montoGasto;
+
+                        const itemGasto = document.createElement('div');
+                        itemGasto.className = `gasto-corte-item${claseGasto}`;
+                        itemGasto.innerHTML = `
+                            <div>
+                                <strong>${gasto.descripcion}</strong>
+                                <span>${fechaGasto}</span>
+                            </div>
+                            <div class="gasto-corte-monto">$${montoGasto.toFixed(2)}</div>
+                            <div>${botonGasto}</div>
+                        `;
+                        listaGastosCorte.appendChild(itemGasto);
+
+                        if (estado === 0) {
+                            const trGasto = document.createElement('tr');
+                            trGasto.innerHTML = `
+                                <td>${fechaGasto}</td>
+                                <td>${gasto.descripcion}</td>
+                                <td>$${montoGasto.toFixed(2)}</td>
+                            `;
+                            gastosBodyPrint.appendChild(trGasto);
+                        }
+                    });
+
+                    if (!gastos.some(gasto => parseInt(gasto.estado_corte) === 0)) {
+                        gastosBodyPrint.innerHTML = '<tr><td colspan="3">Sin gastos activos.</td></tr>';
+                    }
+                }
+
+                const totalNeto = totalModal - totalGastos;
+
                 // 5. Actualizamos el total en el modal con la suma corregida
-                lblTotalModal.textContent = totalModal.toLocaleString('en-US', { 
+                lblBrutoModal.textContent = totalModal.toLocaleString('en-US', { 
                     minimumFractionDigits: 2, 
                     maximumFractionDigits: 2 
                 });
-                lblTotalPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblTotalModal.textContent = totalNeto.toLocaleString('en-US', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                });
+                lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
             } catch (error) {
                 console.error('Error en cargarWidgetCorte:', error);
                 // Opcional: mostrar un mensaje de error en la tabla
                 document.getElementById('tabla-corte-body').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error al cargar el reporte.</div>';
+            }
+        }
+
+        async function registrarGastoCorte() {
+            const montoInput = document.getElementById('gasto-monto');
+            const descripcionInput = document.getElementById('gasto-descripcion');
+            const monto = parseFloat(montoInput.value);
+            const descripcion = descripcionInput.value.trim();
+
+            if (!(usuario.rol === 2 || usuario.rol === 3)) {
+                alert("Tu rol no tiene permisos para registrar gastos.");
+                return;
+            }
+
+            if (!monto || monto <= 0) {
+                alert("Ingresa un monto de gasto válido.");
+                return;
+            }
+
+            if (!descripcion) {
+                alert("Ingresa una descripción para el gasto.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${urlBase}/api/gastos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuarioId: idCobrador, monto, descripcion })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert("Error al registrar gasto: " + (result.error || 'No se pudo guardar.'));
+                    return;
+                }
+
+                montoInput.value = '';
+                descripcionInput.value = '';
+                cargarWidgetCorte();
+            } catch (error) {
+                console.error("Error al registrar gasto:", error);
+                alert("No se pudo conectar con el servidor.");
+            }
+        }
+
+        async function cancelarGasto(idGasto) {
+            const confirmar = confirm("¿Estás seguro de que deseas cancelar este gasto?");
+            if (!confirmar) return;
+
+            try {
+                const response = await fetch(`${urlBase}/api/cancelar-gasto/${idGasto}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuarioId: idCobrador })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    cargarWidgetCorte();
+                } else {
+                    alert("Error al cancelar gasto: " + result.message);
+                }
+            } catch (error) {
+                console.error("Error al cancelar gasto:", error);
+                alert("No se pudo conectar con el servidor.");
             }
         }
 
@@ -1950,9 +2128,9 @@
         }
 
         function abrirModalAdmin() {
-            const lblTotalModal = document.getElementById('lbl-corte-total-modal');
+            const lblBrutoModal = document.getElementById('lbl-corte-bruto-modal');
     
-            if (lblTotalModal.textContent <= 0) {
+            if (parseFloat(lblBrutoModal.textContent.replace(/,/g, '')) <= 0) {
                 alert("⚠️ No se puede realizar el corte: No hay pagos pendientes para autorizar.");
                 return; // Detiene la ejecución aquí mismo
             }
@@ -2081,6 +2259,11 @@
                         .pie-impresion { 
                             text-align: right; 
                             margin-top: 20px; 
+                        }
+                        .titulo-print-seccion {
+                            margin-top: 24px;
+                            margin-bottom: 10px;
+                            font-size: 18px;
                         }
                     </style>
                 </head>

@@ -401,11 +401,86 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
              ORDER BY p.id DESC`,
             [usuarioId]
         );
-        console.log("ok funciona")
-        res.json({ resumen: resumen[0], detalles: detalles });
+        const [gastos] = await db.query(
+            `SELECT id, fecha_gasto, descripcion, monto, estado_corte
+             FROM gastos
+             WHERE usuario_id = ? AND estado_corte IN (0, 3)
+             ORDER BY id DESC`,
+            [usuarioId]
+        );
+        const totalGastos = gastos
+            .filter(gasto => parseInt(gasto.estado_corte) === 0)
+            .reduce((total, gasto) => total + (parseFloat(gasto.monto) || 0), 0);
+
+        resumen[0].total_gastos = totalGastos;
+        resumen[0].total_neto = (parseFloat(resumen[0].total_dinero) || 0) - totalGastos;
+
+        //console.log("ok funciona")
+        res.json({ resumen: resumen[0], detalles: detalles, gastos: gastos });
         
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/gastos', async (req, res) => {
+    const { usuarioId, monto, descripcion } = req.body;
+
+    try {
+        const montoNumero = parseFloat(monto);
+        const descripcionLimpia = (descripcion || '').trim();
+
+        if (!usuarioId) {
+            return res.status(400).json({ success: false, error: 'Usuario no válido.' });
+        }
+
+        if (!montoNumero || montoNumero <= 0) {
+            return res.status(400).json({ success: false, error: 'El monto del gasto debe ser mayor a cero.' });
+        }
+
+        if (!descripcionLimpia) {
+            return res.status(400).json({ success: false, error: 'La descripción del gasto es obligatoria.' });
+        }
+
+        const [usuarios] = await db.query(
+            'SELECT rol_id FROM usuarios WHERE id = ? AND rol_id IN (2, 3)',
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            return res.status(403).json({ success: false, error: 'Tu rol no tiene permisos para registrar gastos.' });
+        }
+
+        const [result] = await db.query(
+            'INSERT INTO gastos (usuario_id, monto, descripcion) VALUES (?, ?, ?)',
+            [usuarioId, montoNumero, descripcionLimpia]
+        );
+
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error('Error al registrar gasto:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/cancelar-gasto/:id', async (req, res) => {
+    const idGasto = req.params.id;
+    const { usuarioId } = req.body;
+
+    try {
+        const [result] = await db.query(
+            'UPDATE gastos SET estado_corte = 3 WHERE id = ? AND usuario_id = ? AND estado_corte = 0',
+            [idGasto, usuarioId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'No se encontró el gasto pendiente.' });
+        }
+
+        res.json({ success: true, message: 'Gasto cancelado correctamente.' });
+    } catch (error) {
+        console.error('Error al cancelar gasto:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
@@ -431,6 +506,16 @@ app.post('/api/procesar-corte', async (req, res) => {
 
         await db.query(
             'UPDATE pagos SET estado_corte = 4 WHERE usuario_id = ? AND estado_corte = 3',
+            [usuarioId]
+        );
+
+        await db.query(
+            'UPDATE gastos SET estado_corte = 1 WHERE usuario_id = ? AND estado_corte = 0',
+            [usuarioId]
+        );
+
+        await db.query(
+            'UPDATE gastos SET estado_corte = 4 WHERE usuario_id = ? AND estado_corte = 3',
             [usuarioId]
         );
         

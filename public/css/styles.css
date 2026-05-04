@@ -678,6 +678,126 @@ td {
     color: #666;
 }
 
+.resumen-corte-linea {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: #34495e;
+    margin: 4px 0;
+}
+
+.resumen-corte-linea.gasto {
+    color: #c0392b;
+}
+
+.seccion-gastos-corte {
+    border-top: 1px solid #e5e7eb;
+    margin-top: 18px;
+    padding-top: 16px;
+}
+
+.seccion-gastos-corte h3 {
+    margin: 0 0 10px;
+    color: #333;
+}
+
+.form-gasto-corte {
+    display: grid;
+    grid-template-columns: 120px 1fr auto;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.form-gasto-corte input {
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 0.95rem;
+}
+
+.btn-agregar-gasto {
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-weight: bold;
+}
+
+.gastos-corte-lista {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.gastos-corte-header,
+.gasto-corte-item {
+    display: grid;
+    grid-template-columns: 1fr 110px 64px;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+}
+
+.gastos-corte-header {
+    background: #f8f9fa;
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.gastos-corte-header span:nth-child(2),
+.gasto-corte-monto {
+    text-align: right;
+}
+
+.gastos-corte-header span:nth-child(3),
+.gasto-corte-item > div:last-child {
+    text-align: center;
+}
+
+.gasto-corte-item {
+    border-top: 1px solid #edf0f2;
+}
+
+.gasto-corte-item span {
+    display: block;
+    color: #6b7280;
+    font-size: 0.82rem;
+    margin-top: 3px;
+}
+
+.gasto-corte-monto {
+    color: #c0392b;
+    font-weight: bold;
+}
+
+.gasto-cancelado {
+    opacity: 0.55;
+    text-decoration: line-through;
+}
+
+.gasto-vacio {
+    padding: 14px;
+    color: #6b7280;
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    .form-gasto-corte {
+        grid-template-columns: 1fr;
+    }
+
+    .gastos-corte-header {
+        display: none;
+    }
+
+    .gasto-corte-item {
+        grid-template-columns: 1fr auto;
+    }
+}
+
 /* Labels para móvil (Fecha:, Mes:, etc.) */
 .label-movil {
     font-weight: bold;

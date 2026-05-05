@@ -1199,7 +1199,8 @@
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
                 document.getElementById('res-ip').innerText = cliente.direccion_ip;
-                document.getElementById('res-costo').innerText = cliente.costo_mensual;
+                const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('res-costo').innerText = costoFormateado;
                 document.getElementById('res-dia').textContent = cliente.dia_pago;
 
                 document.getElementById('btn-ver-pagos').onclick = function() {
@@ -1217,16 +1218,18 @@
                 const mesesAdeudo = (deudaReal / parseFloat(cliente.costo_mensual)).toFixed(1);
 
                 if (deudaReal > 0) {
+                    const deudaFormateada = deudaReal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     msgUltimoPago.innerHTML = `
                         <span style="color: #d32f2f; font-weight: bold; font-size: 1.1em;">
-                            ⚠️ ADEUDO ACTUAL: $${deudaReal.toFixed(2)}
+                            ⚠️ ADEUDO ACTUAL: $${deudaFormateada}
                         </span><br>
                         <span style="color: #555; font-size: 0.95em; font-weight: 500;">
                             Mes(es) en adeudo: ${mesesAdeudo}
                         </span>
                     `;
                 } else if (deudaReal < 0) {
-                    msgUltimoPago.innerHTML = `<span style="color: #1a73e8; font-weight: bold;">✅ Saldo a favor: $${Math.abs(deudaReal).toFixed(2)}</span>`;
+                    const saldoFormateado = Math.abs(deudaReal).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    msgUltimoPago.innerHTML = `<span style="color: #1a73e8; font-weight: bold;">✅ Saldo a favor: $${saldoFormateado}</span>`;
                 } else {
                     msgUltimoPago.innerHTML = `<span style="color: #2e7d32; font-weight: bold;">✅ Cuenta al corriente (Sin adeudos)</span>`;
                 }
@@ -1318,6 +1321,7 @@
                 // 2. Dibujamos cada pago estructurado en columnas
                 pagos.forEach(pago => {
                     const fecha = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+                    const montoFormateado = parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const li = document.createElement('li');
                     li.className = 'item-pago'; // <-- Clase clave para el CSS Grid
                     
@@ -1325,7 +1329,7 @@
                         <div class="col-mes"><span class="label-movil">Mes: </span>${pago.mes_pagado}</div>
                         <div class="col-fecha"><span class="label-movil">Fecha: </span>${fecha}</div>
                         <div class="col-cobro"><span class="label-movil">Cobró: </span>${pago.cobrador || 'Sistema'}</div>
-                        <div class="col-monto">$${pago.monto}</div>
+                        <div class="col-monto">$${montoFormateado}</div>
                     `;
                     lista.appendChild(li);
                 });
@@ -1395,20 +1399,22 @@
             const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
             const detalleHtml = detalle.map(item => {
                 const tipoLabel = item.tipo === 'abono' ? 'Abono' : 'Mensualidad';
+                const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 return `
                     <div class="resumen-pago-fila">
                         <span>${item.mes} <small>${tipoLabel}</small></span>
-                        <strong>$${parseFloat(item.monto).toFixed(2)}</strong>
+                        <strong>$${montoFormateado}</strong>
                     </div>
                 `;
             }).join('');
 
             document.getElementById('resumen-pago-cliente').textContent = clienteSeleccionado.nombre_completo;
+            const totalFormateado = total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             document.getElementById('resumen-pago-detalle').innerHTML = `
                 ${detalleHtml}
                 <div class="resumen-pago-total">
                     <span>Total recibido</span>
-                    <strong>$${total.toFixed(2)}</strong>
+                    <strong>$${totalFormateado}</strong>
                 </div>
             `;
 
@@ -1431,9 +1437,13 @@
             const hora = new Date().getHours();
             const saludoTiempo = hora < 12 ? 'dia' : hora < 19 ? 'tarde' : 'noche';
             const pagosTexto = detalle
-                .map(item => `${item.mes} $${parseFloat(item.monto).toFixed(2)}`)
+                .map(item => {
+                    const montoWA = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    return `${item.mes} $${montoWA}`;
+                })
                 .join(', ');
-            const mensajeWhatsapp = `Hola, ${clienteSeleccionado.nombre_completo}\n\nSu pago correspondiente a ${pagosTexto} ha quedado registrado correctamente.\n\nMonto recibido: $${total.toFixed(2)}\nFecha de pago: ${new Date().toLocaleDateString('es-MX')}\n\n\u00A1Muchas gracias por su puntualidad!\nQue tenga una excelente ${saludoTiempo}.\n\nRED OSLED`;
+            const totalFormateadoWA = total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const mensajeWhatsapp = `Hola, ${clienteSeleccionado.nombre_completo}\n\nSu pago correspondiente a ${pagosTexto} ha quedado registrado correctamente.\n\nMonto recibido: $${totalFormateadoWA}\nFecha de pago: ${new Date().toLocaleDateString('es-MX')}\n\n¡Muchas gracias por su puntualidad!\nQue tenga una excelente ${saludoTiempo}.\n\nRED OSLED`;
 
             btnWhatsapp.classList.remove('disabled');
             btnWhatsapp.textContent = 'Enviar WhatsApp';
@@ -1496,12 +1506,15 @@
             const ventana = window.open('', '_blank', 'width=900,height=1200');
             
             // Generamos las filas de la tabla del ticket
-            let filasTicket = detalle.map(item => `
+            let filasTicket = detalle.map(item => {
+                const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return `
                 <tr>
                     <td style="padding: 5px 0;">${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}</td>
-                    <td align="right" style="padding: 5px 0;">$${item.monto}</td>
+                    <td align="right" style="padding: 5px 0;">$${montoFormateado}</td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
 
             const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
 
@@ -1547,7 +1560,7 @@
                     <div class="divider" style="border-top: 2px solid #000;"></div>
                     
                     <div align="right" style="font-size: 18px;">
-                        <strong>TOTAL PAGADO: $${total}</strong>
+                        <strong>TOTAL PAGADO: $${totalFormateado}</strong>
                     </div>
                     
                     <div class="footer text-center">
@@ -1692,6 +1705,7 @@
                 } else {
                     pagos.forEach(pago => {
                         const monto = parseFloat(pago.monto) || 0;
+                        const montoFormateado = monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         let badgeHTML = '';
                         const fechaObj = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
                         // Dibujamos la fila (Usamos el ID de pago como "Folio")
@@ -1699,7 +1713,7 @@
                         tr.innerHTML = `
                             <td>${fechaObj}</td>
                             <td><b>${pago.mes_pagado}</b></td>
-                            <td>$${monto.toFixed(2)}</td>
+                            <td>$${montoFormateado}</td>
                             <td>${pago.cobrador_nombre || 'Desconocido'}</td>
                             <td>${pago.tipo_pago}</td>
                         `;
@@ -1720,10 +1734,12 @@
                 console.log("DeberiaHaberPagado" + totalQueDeberiaHaberPagado +" - "+"totalPagadoHistorico"+ totalPagadoHistorico +"=" + adeudoPendiente)
 
 
-                // Inyectamos el valor en la segunda tarjeta gigante
-                document.getElementById('detalle-total-pendiente').textContent = `$${adeudoPendiente.toFixed(2)}`;
+                // Inyectamos el valor en la segunda tarjeta gigante con formateo de comas
+                const adeudoFormateado = adeudoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const pagadoFormateado = totalPagadoHistoricoNume.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('detalle-total-pendiente').textContent = `$${adeudoFormateado}`;
                 // Este valor viene directamente de tu endpoint financiero.
-                document.getElementById('detalle-total-pagado').textContent = `$${totalPagadoHistoricoNume.toFixed(2)}`;
+                document.getElementById('detalle-total-pagado').textContent = `$${pagadoFormateado}`;
 
                 // Actualizamos la lógica amarilla/gris de la tarjeta pendiente
                 const tarjetaPendiente = document.getElementById('tarjeta-pendientes');
@@ -1781,7 +1797,7 @@
             // 5. Resumen Financiero (Las tarjetas de nuestra vista web)
             doc.setFontSize(14);
             doc.setFont(undefined, 'bold');
-            doc.text(`Total Pagado Histórico: $${totalPagado.toFixed(2)}`, 14, 65);
+            doc.text(`Total Pagado Histórico: $${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 65);
             
             // Si hay deuda, la ponemos en rojo
             if (adeudo > 0) {
@@ -1789,7 +1805,8 @@
             } else {
                 doc.setTextColor(39, 174, 96); // Verde
             }
-            doc.text(`Adeudo Pendiente: $${adeudo.toFixed(2)}`, 130, 65);
+            const adeudoFormateadoPDF = adeudo.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            doc.text(`Adeudo Pendiente: $${adeudoFormateadoPDF}`, 130, 65);
             
             // Restaurar color y fuente normal para la tabla
             doc.setTextColor(44, 62, 80);
@@ -1803,11 +1820,12 @@
             const filasTabla = pagos.map(pago => {
 
                 const fechaFormat = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+                const montoFormateado = parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                
                 return [
                     fechaFormat, 
                     `${pago.mes_pagado}`, 
-                    `$${parseFloat(pago.monto).toFixed(2)}`, 
+                    `$${montoFormateado}`, 
                     pago.cobrador_nombre || '-', 
                     `${pago.tipo_pago}`
                 ];
@@ -1854,8 +1872,8 @@
                 const data = await response.json();
 
                 
-                // Actualizamos los resúmenes del widget (esto lo mantengo igual)
-                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toFixed(2);
+                // Actualizamos los resúmenes del widget con formateo de comas
+                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
 
                 // --- NUEVA LÓGICA PARA LLENAR EL REPORTE CON DIVS RESPONSIVOS ---
@@ -1926,12 +1944,13 @@
                         : '';
                     
                     // 4. Inyectamos la estructura responsiva con las etiquetas para móvil
+                    const montoFormateado = parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     itemPago.innerHTML = `
                         <div class="col-fecha"><span class="label-movil">Fecha: </span>${fechaString}</div>
                         <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
                         <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
                         <div class = "monto-estado">
-                            <div class="col-monto">$${parseFloat(pago.monto).toFixed(2)}</div>
+                            <div class="col-monto">$${montoFormateado}</div>
                             <div class="col-estado ${claseEstado}">${nombreEstado}</div>
                         </div>
                         <div class="col-accion">${htmlBoton}</div>
@@ -1939,14 +1958,14 @@
                     
                     reporteBody.appendChild(itemPago);
 
-                    const tr = document.createElement('tr');
-                    
+                    const trPrint = document.createElement('tr');
+                    const montoPrintFormateado = parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     // Inyectamos <td> clásicos en lugar de los divs responsivos
-                    tr.innerHTML = `
+                    trPrint.innerHTML = `
                         <td>${fechaString}</td>
                         <td>${pago.cliente}</td>
                         <td>${pago.mes_pagado}</td>
-                        <td>$${parseFloat(pago.monto).toFixed(2)}</td>
+                        <td>$${montoPrintFormateado}</td>
                     `;
                     
                     reporteAuthBodyPrint.appendChild(tr);
@@ -1975,22 +1994,24 @@
 
                         const itemGasto = document.createElement('div');
                         itemGasto.className = `gasto-corte-item${claseGasto}`;
+                        const montoFormateado = montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         itemGasto.innerHTML = `
                             <div>
                                 <strong>${gasto.descripcion}</strong>
                                 <span>${fechaGasto}</span>
                             </div>
-                            <div class="gasto-corte-monto">$${montoGasto.toFixed(2)}</div>
+                            <div class="gasto-corte-monto">$${montoFormateado}</div>
                             <div>${botonGasto}</div>
                         `;
                         listaGastosCorte.appendChild(itemGasto);
 
                         if (estado === 0) {
                             const trGasto = document.createElement('tr');
+                            const montoFormateadoPrint = montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                             trGasto.innerHTML = `
                                 <td>${fechaGasto}</td>
                                 <td>${gasto.descripcion}</td>
-                                <td>$${montoGasto.toFixed(2)}</td>
+                                <td>$${montoFormateadoPrint}</td>
                             `;
                             gastosBodyPrint.appendChild(trGasto);
                         }
@@ -2003,19 +2024,19 @@
 
                 const totalNeto = totalModal - totalGastos;
 
-                // 5. Actualizamos el total en el modal con la suma corregida
-                lblBrutoModal.textContent = totalModal.toLocaleString('en-US', { 
+                // 5. Actualizamos el total en el modal con la suma corregida y formato es-MX
+                lblBrutoModal.textContent = totalModal.toLocaleString('es-MX', { 
                     minimumFractionDigits: 2, 
                     maximumFractionDigits: 2 
                 });
-                lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2 });
-                lblTotalModal.textContent = totalNeto.toLocaleString('en-US', { 
+                lblGastosModal.textContent = totalGastos.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                lblTotalModal.textContent = totalNeto.toLocaleString('es-MX', { 
                     minimumFractionDigits: 2, 
                     maximumFractionDigits: 2 
                 });
-                lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2 });
-                lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2 });
-                lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblBrutoPrint.textContent = totalModal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                lblGastosPrint.textContent = totalGastos.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                lblTotalPrint.textContent = totalNeto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             } catch (error) {
                 console.error('Error en cargarWidgetCorte:', error);
@@ -2035,8 +2056,23 @@
                 return;
             }
 
+            // ✅ VALIDACIÓN: Verificar si hay dinero en caja
+            const totalCajaLabel = document.getElementById('lbl-corte-total-modal');
+            const totalCaja = parseFloat(totalCajaLabel.textContent.replace(/,/g, '')) || 0;
+
+            if (totalCaja <= 0) {
+                alert("⚠️ No se puede registrar gastos: No hay efectivo disponible en caja. El total neto es de $" + totalCaja.toFixed(2));
+                return;
+            }
+
             if (!monto || monto <= 0) {
                 alert("Ingresa un monto de gasto válido.");
+                return;
+            }
+
+            // 🔒 VALIDACIÓN CRÍTICA: El gasto no puede exceder el dinero disponible en caja
+            if (monto > totalCaja) {
+                alert("⚠️ ¡CANDADO ACTIVADO! El gasto de $" + monto.toFixed(2) + " excede el efectivo disponible en caja.\n\nDinero disponible: $" + totalCaja.toFixed(2) + "\nIntentaste retirar: $" + monto.toFixed(2) + "\nDiferencia: -$" + (monto - totalCaja).toFixed(2));
                 return;
             }
 

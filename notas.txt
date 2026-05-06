@@ -20,7 +20,10 @@ mostrar vista previa del tickt y despues la opción de imrpimir cuando se realiz
 Enviar mensaje al cliente via whatsap. --OK
 
 Agregar un modulo de gastos para el perfil de administrador local que permita agregar gastos y descontarlo en el corte, 
-estos gastos pueden ser pago de mensualidad, tubos, etc.
+estos gastos pueden ser pago de mensualidad, tubos, etc.  --- OK
+
+
+Permitir a los usuarios modificar un número de telefono de algun cliente cuando este no tenga telefono registrado.
 
 
 al ealizar un corte quede un historico de ese corte. 

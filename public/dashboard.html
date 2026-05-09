@@ -1871,9 +1871,8 @@
                 const response = await fetch(`${urlBase}/api/corte-caja/${idCobrador}`);
                 const data = await response.json();
 
-                
                 // Actualizamos los resúmenes del widget (esto lo mantengo igual)
-                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toFixed(2);
+                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
 
                 // --- NUEVA LÓGICA PARA LLENAR EL REPORTE CON DIVS RESPONSIVOS ---
@@ -1949,7 +1948,7 @@
                         <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
                         <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
                         <div class = "monto-estado">
-                            <div class="col-monto">$${parseFloat(pago.monto).toFixed(2)}</div>
+                            <div class="col-monto">$${parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                             <div class="col-estado ${claseEstado}">${nombreEstado}</div>
                         </div>
                         <div class="col-accion">${htmlBoton}</div>
@@ -1964,7 +1963,7 @@
                         <td>${fechaString}</td>
                         <td>${pago.cliente}</td>
                         <td>${pago.mes_pagado}</td>
-                        <td>$${parseFloat(pago.monto).toFixed(2)}</td>
+                        <td>$${parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     `;
                     
                     reporteAuthBodyPrint.appendChild(tr);
@@ -1998,7 +1997,7 @@
                                 <strong>${gasto.descripcion}</strong>
                                 <span>${fechaGasto}</span>
                             </div>
-                            <div class="gasto-corte-monto">$${montoGasto.toFixed(2)}</div>
+                            <div class="gasto-corte-monto">$${montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                             <div>${botonGasto}</div>
                         `;
                         listaGastosCorte.appendChild(itemGasto);
@@ -2008,7 +2007,7 @@
                             trGasto.innerHTML = `
                                 <td>${fechaGasto}</td>
                                 <td>${gasto.descripcion}</td>
-                                <td>$${montoGasto.toFixed(2)}</td>
+                                <td>$${montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             `;
                             gastosBodyPrint.appendChild(trGasto);
                         }
@@ -2056,7 +2055,7 @@
             }
 
             if (totalCaja <= 0) {
-                alert("⚠️ No se puede registrar gastos: No hay efectivo disponible en caja. El total neto es de $" + totalCaja.toFixed(2));
+                alert("⚠️ No se puede registrar gastos: No hay efectivo disponible en caja. El total neto es de $" + totalCaja.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ". Si necesitas registrar un gasto, primero debes realizar el corte para limpiar la caja.");
                 return;
             }
 

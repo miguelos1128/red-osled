@@ -1872,8 +1872,8 @@
                 const data = await response.json();
 
                 
-                // Actualizamos los resúmenes del widget con formateo de comas
-                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                // Actualizamos los resúmenes del widget (esto lo mantengo igual)
+                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toFixed(2);
                 document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
 
                 // --- NUEVA LÓGICA PARA LLENAR EL REPORTE CON DIVS RESPONSIVOS ---
@@ -1944,13 +1944,12 @@
                         : '';
                     
                     // 4. Inyectamos la estructura responsiva con las etiquetas para móvil
-                    const montoFormateado = parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     itemPago.innerHTML = `
                         <div class="col-fecha"><span class="label-movil">Fecha: </span>${fechaString}</div>
                         <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
                         <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
                         <div class = "monto-estado">
-                            <div class="col-monto">$${montoFormateado}</div>
+                            <div class="col-monto">$${parseFloat(pago.monto).toFixed(2)}</div>
                             <div class="col-estado ${claseEstado}">${nombreEstado}</div>
                         </div>
                         <div class="col-accion">${htmlBoton}</div>
@@ -1958,14 +1957,14 @@
                     
                     reporteBody.appendChild(itemPago);
 
-                    const trPrint = document.createElement('tr');
-                    const montoPrintFormateado = parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const tr = document.createElement('tr');
+                    
                     // Inyectamos <td> clásicos en lugar de los divs responsivos
-                    trPrint.innerHTML = `
+                    tr.innerHTML = `
                         <td>${fechaString}</td>
                         <td>${pago.cliente}</td>
                         <td>${pago.mes_pagado}</td>
-                        <td>$${montoPrintFormateado}</td>
+                        <td>$${parseFloat(pago.monto).toFixed(2)}</td>
                     `;
                     
                     reporteAuthBodyPrint.appendChild(tr);
@@ -1994,24 +1993,22 @@
 
                         const itemGasto = document.createElement('div');
                         itemGasto.className = `gasto-corte-item${claseGasto}`;
-                        const montoFormateado = montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         itemGasto.innerHTML = `
                             <div>
                                 <strong>${gasto.descripcion}</strong>
                                 <span>${fechaGasto}</span>
                             </div>
-                            <div class="gasto-corte-monto">$${montoFormateado}</div>
+                            <div class="gasto-corte-monto">$${montoGasto.toFixed(2)}</div>
                             <div>${botonGasto}</div>
                         `;
                         listaGastosCorte.appendChild(itemGasto);
 
                         if (estado === 0) {
                             const trGasto = document.createElement('tr');
-                            const montoFormateadoPrint = montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                             trGasto.innerHTML = `
                                 <td>${fechaGasto}</td>
                                 <td>${gasto.descripcion}</td>
-                                <td>$${montoFormateadoPrint}</td>
+                                <td>$${montoGasto.toFixed(2)}</td>
                             `;
                             gastosBodyPrint.appendChild(trGasto);
                         }
@@ -2024,19 +2021,19 @@
 
                 const totalNeto = totalModal - totalGastos;
 
-                // 5. Actualizamos el total en el modal con la suma corregida y formato es-MX
-                lblBrutoModal.textContent = totalModal.toLocaleString('es-MX', { 
+                // 5. Actualizamos el total en el modal con la suma corregida
+                lblBrutoModal.textContent = totalModal.toLocaleString('en-US', { 
                     minimumFractionDigits: 2, 
                     maximumFractionDigits: 2 
                 });
-                lblGastosModal.textContent = totalGastos.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                lblTotalModal.textContent = totalNeto.toLocaleString('es-MX', { 
+                lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblTotalModal.textContent = totalNeto.toLocaleString('en-US', { 
                     minimumFractionDigits: 2, 
                     maximumFractionDigits: 2 
                 });
-                lblBrutoPrint.textContent = totalModal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                lblGastosPrint.textContent = totalGastos.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                lblTotalPrint.textContent = totalNeto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
             } catch (error) {
                 console.error('Error en cargarWidgetCorte:', error);

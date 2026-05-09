@@ -2029,14 +2029,27 @@
             const descripcionInput = document.getElementById('gasto-descripcion');
             const monto = parseFloat(montoInput.value);
             const descripcion = descripcionInput.value.trim();
-
+            const totalCajaLabel = document.getElementById('lbl-corte-total-modal');
+            const totalCaja = parseFloat(totalCajaLabel.textContent.replace(/,/g, '')) || 0;
+            
             if (!(usuario.rol === 2 || usuario.rol === 3)) {
                 alert("Tu rol no tiene permisos para registrar gastos.");
                 return;
             }
 
+            if (totalCaja <= 0) {
+                alert("⚠️ No se puede registrar gastos: No hay efectivo disponible en caja. El total neto es de $" + totalCaja.toFixed(2));
+                return;
+            }
+
             if (!monto || monto <= 0) {
                 alert("Ingresa un monto de gasto válido.");
+                return;
+            }
+
+            // 🔒 VALIDACIÓN CRÍTICA: El gasto no puede exceder el dinero disponible en caja
+            if (monto > totalCaja) {
+                alert("⚠️ ¡CANDADO ACTIVADO! El gasto de $" + monto.toFixed(2) + " excede el efectivo disponible en caja.\n\nDinero disponible: $" + totalCaja.toFixed(2) + "\nIntentaste retirar: $" + monto.toFixed(2) + "\nDiferencia: -$" + (monto - totalCaja).toFixed(2));
                 return;
             }
 

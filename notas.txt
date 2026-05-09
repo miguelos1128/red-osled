@@ -32,6 +32,8 @@ generar corte con libreria para solo descargar el PDF.
 
 Seguridad al intentar cargar un pago en 0 o negativo, bloquear boton al intentar hacer corte en 0, 
 
+prueba de commit
+
             // Dentro de cargarWidgetCorte, después del bucle forEach:
             const btnAutorizar = document.getElementById('btn-autorizar-accion'); // Asegúrate que tu botón tenga este ID
 

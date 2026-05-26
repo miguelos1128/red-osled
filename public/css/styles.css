@@ -724,6 +724,12 @@ td {
     font-weight: bold;
 }
 
+.btn-agregar-gasto:disabled,
+.form-gasto-corte input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .gastos-corte-lista {
     border: 1px solid #e5e7eb;
     border-radius: 8px;
@@ -1322,6 +1328,27 @@ td {
 .tarjeta-resumen.alerta { border-left-color: #f1c40f; }
 .tarjeta-resumen span { color: #7f8c8d; font-size: 0.85rem; text-transform: uppercase; font-weight: bold;}
 .tarjeta-resumen h4 { margin: 5px 0 0 0; font-size: 1.6rem; color: #2c3e50; }
+
+.meses-pendientes-box {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-left: 4px solid #f1c40f;
+    background: #fffdf2;
+    border-radius: 6px;
+}
+
+.meses-pendientes-box span {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.meses-pendientes-box p {
+    margin: 6px 0 0;
+    color: #2c3e50;
+    line-height: 1.45;
+}
 
 .tabla-contenedor { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; }
 .tabla-pagos { width: 100%; border-collapse: collapse; min-width: 500px; }

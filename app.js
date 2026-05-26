@@ -305,64 +305,72 @@ app.post('/api/registrar-pago', async (req, res) => {
     try {
         const [cliente] = await db.query('SELECT costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?', [clienteId]);
         if (!cliente.length) return res.status(404).json({ error: "Cliente no encontrado" });
-        const { costo_mensual, fecha_instalacion } = cliente[0];
+        const clienteData = cliente[0];
+        const costoMensual = parseFloat(clienteData.costo_mensual) || 0;
+        let saldoRestante = parseFloat(montoRecibido);
 
-        // 1. Traemos TODO el historial agrupado por mes de este cliente
-        const [pagosAgrupados] = await db.query(
-            'SELECT mes_pagado, SUM(monto) as pagado FROM pagos WHERE cliente_id = ? and estado_corte<3 GROUP BY mes_pagado',
+        if (!saldoRestante || saldoRestante <= 0) {
+            return res.status(400).json({ error: "Monto inválido" });
+        }
+
+        const [pagosExistentes] = await db.query(
+            'SELECT mes_pagado, monto FROM pagos WHERE cliente_id = ? AND estado_corte < 3',
             [clienteId]
         );
 
-        // Convertimos a un diccionario para lectura súper rápida (Ej: { "Mayo 2023": 600, "Junio 2023": 200 })
         const historial = {};
-        pagosAgrupados.forEach(p => { historial[p.mes_pagado] = parseFloat(p.pagado); });
-        console.log('Pagos Agrupados '+ pagosAgrupados)
+        pagosExistentes.forEach(pago => {
+            historial[pago.mes_pagado] = (historial[pago.mes_pagado] || 0) + (parseFloat(pago.monto) || 0);
+        });
 
-        // 2. EL ESCÁNER CRONOLÓGICO
-        let fechaReferencia = new Date(fecha_instalacion);
-
-        // --- CAMBIO AQUÍ: Saltamos al mes siguiente de la instalación ---
-        fechaReferencia.setMonth(fechaReferencia.getMonth() + 1);
-        // ----------------------------------------------------------------
-
-        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        let saldoRestante = parseFloat(montoRecibido);
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes);
         const registros = [];
+        const aplicarPagoMes = async (etiquetaMes, pendienteMes) => {
+            const pagadoAntes = historial[etiquetaMes] || 0;
+            const montoAAplicar = Math.min(saldoRestante, pendienteMes);
+            let nuevoTipo = (montoAAplicar >= pendienteMes && pagadoAntes === 0) ? 'completo' : 'abono';
 
-        // Caminamos mes a mes hacia el futuro
-        while (saldoRestante > 0) {
-            let mesActual = nombresMeses[fechaReferencia.getMonth()];
-            let anioActual = fechaReferencia.getFullYear();
-            let etiquetaMes = `${mesActual} ${anioActual}`;
+            if (pagadoAntes + montoAAplicar >= costoMensual) nuevoTipo = 'completo';
 
-            let pagadoEnEsteMes = historial[etiquetaMes] || 0;
-            let pendienteMes = costo_mensual - pagadoEnEsteMes;
+            await db.query(
+                'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
+                [clienteId, usuarioId, montoAAplicar, etiquetaMes, nuevoTipo]
+            );
 
-            // Si este mes tiene deuda (ya sea completo o falta un abono)
+            registros.push({ mes: etiquetaMes, monto: montoAAplicar, tipo: nuevoTipo });
+            saldoRestante -= montoAAplicar;
+            historial[etiquetaMes] = pagadoAntes + montoAAplicar;
+        };
+
+        for (const mesAdeudado of estadoCuenta.meses_adeudados) {
+            if (saldoRestante <= 0) break;
+            await aplicarPagoMes(mesAdeudado.mes, mesAdeudado.pendiente);
+        }
+
+        const fechaInstalacion = new Date(clienteData.fecha_instalacion);
+        const ultimoMesVencido = estadoCuenta.meses_vencidos[estadoCuenta.meses_vencidos.length - 1];
+        let cursor;
+
+        if (ultimoMesVencido) {
+            const [nombreMes, anioTexto] = ultimoMesVencido.split(' ');
+            const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            cursor = avanzarMesContable(parseInt(anioTexto), nombresMeses.indexOf(nombreMes), 1);
+        } else {
+            cursor = avanzarMesContable(fechaInstalacion.getFullYear(), fechaInstalacion.getMonth(), 1);
+        }
+
+        const anioLimite = new Date().getFullYear() + 2;
+
+        while (saldoRestante > 0 && cursor.anio <= anioLimite) {
+            const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
+            const pagadoEnEsteMes = historial[etiquetaMes] || 0;
+            const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes, 0);
+
             if (pendienteMes > 0) {
-                let montoAAplicar = Math.min(saldoRestante, pendienteMes);
-                let nuevoTipo = (montoAAplicar >= pendienteMes && pagadoEnEsteMes === 0) ? 'completo' : 'abono';
-                
-                // Forzamos que si completa el mes con este abono, diga completo.
-                if (pagadoEnEsteMes + montoAAplicar >= costo_mensual) nuevoTipo = 'completo';
-
-                // INSERTAMOS EL PAGO
-                await db.query(
-                    'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
-                    [clienteId, usuarioId, montoAAplicar, etiquetaMes, nuevoTipo]
-                );
-
-                registros.push({ mes: etiquetaMes, monto: montoAAplicar, tipo: nuevoTipo });
-                
-                saldoRestante -= montoAAplicar;
-                historial[etiquetaMes] = pagadoEnEsteMes + montoAAplicar; // Actualizamos memoria local
+                await aplicarPagoMes(etiquetaMes, pendienteMes);
             }
 
-            // Avanzamos al siguiente mes
-            fechaReferencia.setMonth(fechaReferencia.getMonth() + 1);
-
-            // Seguro de vida: Si por error de fechas se va al año 2050, detenemos el bucle
-            if (fechaReferencia.getFullYear() > new Date().getFullYear() + 2) break; 
+            cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
         }
 
         res.json({ success: true, detalle: registros });
@@ -382,6 +390,132 @@ app.get('/api/estado-cuenta/:id', async (req, res) => {
         res.json({ total_pagado: resultado[0].total_pagado || 0 });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+function obtenerEtiquetaMes(anio, mesIndex) {
+    const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    return `${nombresMeses[mesIndex]} ${anio}`;
+}
+
+function obtenerUltimoDiaMes(anio, mesIndex) {
+    return new Date(anio, mesIndex + 1, 0).getDate();
+}
+
+function avanzarMesContable(anio, mesIndex, cantidad = 1) {
+    const totalMeses = (anio * 12) + mesIndex + cantidad;
+    return {
+        anio: Math.floor(totalMeses / 12),
+        mesIndex: totalMeses % 12
+    };
+}
+
+function compararMesContable(anioA, mesA, anioB, mesB) {
+    return (anioA * 12 + mesA) - (anioB * 12 + mesB);
+}
+
+function mesEstaVencido(anio, mesIndex, diaPago, hoy = new Date()) {
+    const comparacionMes = compararMesContable(anio, mesIndex, hoy.getFullYear(), hoy.getMonth());
+
+    if (comparacionMes < 0) return true;
+    if (comparacionMes > 0) return false;
+
+    const ultimoDia = obtenerUltimoDiaMes(anio, mesIndex);
+    const diaVencimiento = Math.min(diaPago, ultimoDia);
+    return hoy.getDate() >= diaVencimiento;
+}
+
+function calcularEstadoCuentaServidor(cliente, pagos) {
+    const costoMensual = parseFloat(cliente.costo_mensual) || 0;
+    const fechaInstalacion = new Date(cliente.fecha_instalacion);
+    const diaPago = parseInt(cliente.dia_pago) || fechaInstalacion.getDate() || 1;
+    const totalPagado = pagos.reduce((total, pago) => total + (parseFloat(pago.monto) || 0), 0);
+    const pagosPorMes = {};
+
+    pagos.forEach(pago => {
+        const mes = pago.mes_pagado;
+        pagosPorMes[mes] = (pagosPorMes[mes] || 0) + (parseFloat(pago.monto) || 0);
+    });
+
+    const mesesAdeudados = [];
+    const mesesVencidos = [];
+    let cursor = avanzarMesContable(fechaInstalacion.getFullYear(), fechaInstalacion.getMonth(), 1);
+    const hoy = new Date();
+
+    while (compararMesContable(cursor.anio, cursor.mesIndex, hoy.getFullYear(), hoy.getMonth()) <= 0) {
+        if (mesEstaVencido(cursor.anio, cursor.mesIndex, diaPago, hoy)) {
+            const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
+            const pagadoEnMes = pagosPorMes[etiquetaMes] || 0;
+            const pendiente = Math.max(costoMensual - pagadoEnMes, 0);
+
+            mesesVencidos.push(etiquetaMes);
+
+            if (pendiente > 0) {
+                mesesAdeudados.push({
+                    mes: etiquetaMes,
+                    monto_esperado: costoMensual,
+                    monto_cubierto: Math.min(pagadoEnMes, costoMensual),
+                    pendiente: pendiente
+                });
+            }
+        }
+
+        cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
+    }
+
+    const mesesTranscurridos = mesesVencidos.length;
+    const totalTeorico = mesesTranscurridos * costoMensual;
+    const adeudoActual = mesesAdeudados.reduce((total, mes) => total + mes.pendiente, 0);
+    const saldoFavor = Math.max(totalPagado - totalTeorico, 0);
+    const mesesAdeudoDecimal = costoMensual > 0 ? adeudoActual / costoMensual : 0;
+
+    return {
+        total_pagado_historico: totalPagado,
+        total_teorico: totalTeorico,
+        adeudo_actual: adeudoActual,
+        saldo_favor: saldoFavor,
+        meses_transcurridos: mesesTranscurridos,
+        meses_adeudo_decimal: Number(mesesAdeudoDecimal.toFixed(2)),
+        meses_vencidos: mesesVencidos,
+        meses_adeudados: mesesAdeudados
+    };
+}
+
+app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
+    const clienteId = req.params.id;
+
+    try {
+        const [clienteRows] = await db.query(
+            `SELECT c.*, l.nombre AS localidad_nombre
+             FROM clientes c
+             LEFT JOIN localidades l ON c.localidad_id = l.id
+             WHERE c.id = ?`,
+            [clienteId]
+        );
+
+        if (clienteRows.length === 0) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+
+        const [pagos] = await db.query(
+            `SELECT p.*, u.nombre AS cobrador_nombre
+             FROM pagos p
+             LEFT JOIN usuarios u ON p.usuario_id = u.id
+             WHERE p.cliente_id = ? AND p.estado_corte < 3
+             ORDER BY p.id DESC`,
+            [clienteId]
+        );
+
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos);
+
+        res.json({
+            cliente: clienteRows[0],
+            historial_pagos: pagos,
+            estado_cuenta: estadoCuenta
+        });
+    } catch (error) {
+        console.error('Error al calcular estado de cuenta completo:', error);
+        res.status(500).json({ error: 'Error al calcular estado de cuenta del cliente' });
     }
 });
 
@@ -449,6 +583,26 @@ app.post('/api/gastos', async (req, res) => {
 
         if (usuarios.length === 0) {
             return res.status(403).json({ success: false, error: 'Tu rol no tiene permisos para registrar gastos.' });
+        }
+
+        const [resumenCaja] = await db.query(
+            `SELECT
+                IFNULL((SELECT SUM(monto) FROM pagos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_pagos,
+                IFNULL((SELECT SUM(monto) FROM gastos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_gastos`,
+            [usuarioId, usuarioId]
+        );
+
+        const efectivoDisponible = (parseFloat(resumenCaja[0].total_pagos) || 0) - (parseFloat(resumenCaja[0].total_gastos) || 0);
+
+        if (efectivoDisponible <= 0) {
+            return res.status(400).json({ success: false, error: 'No hay efectivo disponible para registrar gastos.' });
+        }
+
+        if (montoNumero > efectivoDisponible) {
+            return res.status(400).json({
+                success: false,
+                error: `El gasto excede el efectivo disponible ($${efectivoDisponible.toFixed(2)}).`
+            });
         }
 
         const [result] = await db.query(

@@ -494,6 +494,11 @@
                         </div>
                     </div>
 
+                    <div id="detalle-meses-pendientes-box" class="meses-pendientes-box hidden">
+                        <span>Meses pendientes</span>
+                        <p id="detalle-meses-pendientes">-</p>
+                    </div>
+
                     <div class="tabla-contenedor">
                         <table class="tabla-pagos">
                             <thead>
@@ -1191,10 +1196,11 @@
             console.log(cliente)//-----------------------------------------------------
 
             try {
-                // Consultamos TODO el dinero que ha pagado en su historia
-                const response = await fetch(`${urlBase}/api/estado-cuenta/${cliente.id}`);
+                // Consultamos el estado de cuenta calculado desde el servidor
+                const response = await fetch(`${urlBase}/api/clientes/${cliente.id}/estado-cuenta-completo`);
+                if (!response.ok) throw new Error("Error al consultar estado de cuenta");
                 const data = await response.json();
-                const totalPagadoHistorico = parseFloat(data.total_pagado);
+                const estadoCuenta = data.estado_cuenta;
 
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
@@ -1208,17 +1214,19 @@
                 };
                 
                 const msgUltimoPago = document.getElementById('res-ultimo-pago');
-                
-                // Calculamos la deuda teórica (como si nunca hubiera pagado)
-                const deudaTeorica = calcularAdeudoEvolucionado(cliente.fecha_instalacion, cliente.costo_mensual);
-                
-                // LA MAGIA: Deuda Real = (Lo que debería haber pagado) - (Lo que realmente ha pagado)
-                const deudaReal = deudaTeorica.total - totalPagadoHistorico;
-                // LA MAGIA AQUÍ: Calculamos los meses exactos en adeudo (con 1 decimal)
-                const mesesAdeudo = (deudaReal / parseFloat(cliente.costo_mensual)).toFixed(1);
+                const deudaReal = parseFloat(estadoCuenta.adeudo_actual) || 0;
+                const saldoFavor = parseFloat(estadoCuenta.saldo_favor) || 0;
+                const mesesAdeudo = parseFloat(estadoCuenta.meses_adeudo_decimal || 0).toFixed(1);
+                const mesesPendientes = estadoCuenta.meses_adeudados || [];
 
                 if (deudaReal > 0) {
                     const deudaFormateada = deudaReal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const mesesTexto = mesesPendientes.length > 0
+                        ? `<br><span style="color: #555; font-size: 0.9em;">Meses pendientes: ${mesesPendientes.map(item => {
+                            const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            return `${item.mes} $${pendiente}`;
+                        }).join(', ')}</span>`
+                        : '';
                     msgUltimoPago.innerHTML = `
                         <span style="color: #d32f2f; font-weight: bold; font-size: 1.1em;">
                             ⚠️ ADEUDO ACTUAL: $${deudaFormateada}
@@ -1226,9 +1234,10 @@
                         <span style="color: #555; font-size: 0.95em; font-weight: 500;">
                             Mes(es) en adeudo: ${mesesAdeudo}
                         </span>
+                        ${mesesTexto}
                     `;
-                } else if (deudaReal < 0) {
-                    const saldoFormateado = Math.abs(deudaReal).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                } else if (saldoFavor > 0) {
+                    const saldoFormateado = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     msgUltimoPago.innerHTML = `<span style="color: #1a73e8; font-weight: bold;">✅ Saldo a favor: $${saldoFormateado}</span>`;
                 } else {
                     msgUltimoPago.innerHTML = `<span style="color: #2e7d32; font-weight: bold;">✅ Cuenta al corriente (Sin adeudos)</span>`;
@@ -1620,25 +1629,14 @@
             document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
 
             try {
-                // --- LA MAGIA DE ARQUITECTURA: Peticiones en paralelo con Promise.all ---
-                // Esto dispara ambas consultas al mismo tiempo para máxima velocidad.
-                const [respuestaCompleto, respuestaPagado] = await Promise.all([
-                    fetch(`/cliente-completo/${idCliente}`), // Endpoint Fase 1
-                    fetch(`/api/estado-cuenta/${idCliente}`)             // TU ENDPOINT EXISTENTE DE LA IMAGEN 27
-                ]);
+                const respuestaEstadoCuenta = await fetch(`/api/clientes/${idCliente}/estado-cuenta-completo`);
 
-                // Verificamos que ambas respuestas sean exitosas
-                if (!respuestaCompleto.ok) throw new Error("Error cargando detalles del cliente");
-                if (!respuestaPagado.ok) throw new Error("Error cargando total pagado del cliente");
+                if (!respuestaEstadoCuenta.ok) throw new Error("Error cargando estado de cuenta del cliente");
 
-                // Convertimos ambas respuestas a JSON
-                const dataCompleto = await respuestaCompleto.json();
-                const dataPagado = await respuestaPagado.json();
-
-                // Separamos los datos para procesarlos
+                const dataCompleto = await respuestaEstadoCuenta.json();
                 const cliente = dataCompleto.cliente;
-                const pagos = dataCompleto.pagos; // El arreglo de pagos con estado 0 y 1
-                const totalPagadoHistorico = dataPagado.total_pagado; // El valor único que devuelve tu endpoint de la Imagen 27
+                const pagos = dataCompleto.historial_pagos || [];
+                const estadoCuenta = dataCompleto.estado_cuenta;
 
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
@@ -1721,32 +1719,38 @@
                     });
                 }
 
-                // Asumiendo que 'calcularAdeudoEvolucionado' está definida globalmente en tu JS como en la Imagen 28
-                const deudaTeorica = calcularAdeudoEvolucionado(cliente.fecha_instalacion, cliente.costo_mensual);
-                const totalQueDeberiaHaberPagado = deudaTeorica.total;
+                const adeudoPendiente = parseFloat(estadoCuenta.adeudo_actual) || 0;
+                const saldoFavor = parseFloat(estadoCuenta.saldo_favor) || 0;
+                const totalPagadoHistoricoNume = parseFloat(estadoCuenta.total_pagado_historico) || 0;
+                const mesesPendientes = estadoCuenta.meses_adeudados || [];
 
-                console.log("deuda teorrica " + deudaTeorica.total)
-                
-                // Calculamos el adeudo real restando: Lo que debe teóricamente - Lo que ha pagado realmente
-                let adeudoPendiente = totalQueDeberiaHaberPagado - totalPagadoHistorico;
-                let totalPagadoHistoricoNume = parseInt(totalPagadoHistorico);
-
-                console.log("DeberiaHaberPagado" + totalQueDeberiaHaberPagado +" - "+"totalPagadoHistorico"+ totalPagadoHistorico +"=" + adeudoPendiente)
-
-
-                // Inyectamos el valor en la segunda tarjeta gigante con formateo de comas
                 const adeudoFormateado = adeudoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const saldoFormateado = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const pagadoFormateado = totalPagadoHistoricoNume.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                document.getElementById('detalle-total-pendiente').textContent = `$${adeudoFormateado}`;
-                // Este valor viene directamente de tu endpoint financiero.
+                document.getElementById('detalle-total-pendiente').textContent = adeudoPendiente > 0 ? `$${adeudoFormateado}` : `$0.00`;
                 document.getElementById('detalle-total-pagado').textContent = `$${pagadoFormateado}`;
+
+                const mesesPendientesBox = document.getElementById('detalle-meses-pendientes-box');
+                const mesesPendientesTexto = mesesPendientes.map(item => {
+                    const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    return `${item.mes} $${pendiente}`;
+                }).join(', ');
+                document.getElementById('detalle-meses-pendientes').textContent = mesesPendientesTexto || '-';
+                mesesPendientesBox.classList.toggle('hidden', mesesPendientes.length === 0);
 
                 // Actualizamos la lógica amarilla/gris de la tarjeta pendiente
                 const tarjetaPendiente = document.getElementById('tarjeta-pendientes');
                 if (adeudoPendiente > 0) {
+                    tarjetaPendiente.querySelector('span').textContent = 'Adeudo Pendiente';
                     tarjetaPendiente.classList.add('alerta');
                     tarjetaPendiente.style.borderLeftColor = '#f1c40f'; // Amarillo
+                } else if (saldoFavor > 0) {
+                    tarjetaPendiente.querySelector('span').textContent = 'Saldo a Favor';
+                    document.getElementById('detalle-total-pendiente').textContent = `$${saldoFormateado}`;
+                    tarjetaPendiente.classList.remove('alerta');
+                    tarjetaPendiente.style.borderLeftColor = '#1a73e8';
                 } else {
+                    tarjetaPendiente.querySelector('span').textContent = 'Adeudo Pendiente';
                     tarjetaPendiente.classList.remove('alerta');
                     tarjetaPendiente.style.borderLeftColor = '#bdc3c7'; // Gris de "paz mental, cliente al corriente"
                 }
@@ -2019,6 +2023,7 @@
                 }
 
                 const totalNeto = totalModal - totalGastos;
+                actualizarCandadoGastos(totalNeto);
 
                 // 5. Actualizamos el total en el modal con la suma corregida
                 lblBrutoModal.textContent = totalModal.toLocaleString('en-US', { 
@@ -2039,6 +2044,18 @@
                 // Opcional: mostrar un mensaje de error en la tabla
                 document.getElementById('tabla-corte-body').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error al cargar el reporte.</div>';
             }
+        }
+
+        function actualizarCandadoGastos(efectivoDisponible) {
+            const montoInput = document.getElementById('gasto-monto');
+            const descripcionInput = document.getElementById('gasto-descripcion');
+            const btnAgregar = document.querySelector('.btn-agregar-gasto');
+            const bloquear = efectivoDisponible <= 0 || !(usuario.rol === 2 || usuario.rol === 3);
+
+            montoInput.disabled = bloquear;
+            descripcionInput.disabled = bloquear;
+            btnAgregar.disabled = bloquear;
+            btnAgregar.textContent = bloquear ? 'Sin efectivo' : 'Agregar gasto';
         }
 
         async function registrarGastoCorte() {

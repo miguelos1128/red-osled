@@ -49,7 +49,7 @@ app.get('/', (req, res) => {
     res.send('Servidor de Pagos de Internet funcionando 🚀');
 });
 
-// Ejemplo: Obtener todos los clientes (Para ver si la DB responde)
+/* // Ejemplo: Obtener todos los clientes (Para ver si la DB responde)
 app.get('/api/clientes', async (req, res) => {
     const query = 'SELECT * FROM clientes';
     try{
@@ -59,7 +59,7 @@ app.get('/api/clientes', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
     
-});
+}); */
 
 app.get('/api/admin/clientes-historial', async (req, res) => {
     try {
@@ -256,7 +256,7 @@ app.get('/api/buscar-clientes', async (req, res) => {
     }
 });
 
-// RUTA 1: Consultar el último pago de un cliente
+/* // RUTA 1: Consultar el último pago de un cliente
 app.get('/api/ultimo-pago/:id', async (req, res) => {
     const { id } = req.params;
     const query = `
@@ -273,7 +273,7 @@ app.get('/api/ultimo-pago/:id', async (req, res) => {
             return res.status(500).json({ error: "Error al consultar historial" });
     }
 });
-
+ */
 // Ruta para obtener el historial de los últimos 6 pagos de un cliente
 app.get('/api/clientes/:id/historial-pagos', async (req, res) => {
     const clienteId = req.params.id;
@@ -381,7 +381,7 @@ app.post('/api/registrar-pago', async (req, res) => {
     }
 });
 
-app.get('/api/estado-cuenta/:id', async (req, res) => {
+/* app.get('/api/estado-cuenta/:id', async (req, res) => {
     try {
         const clienteId = req.params.id;
         const [resultado] = await db.query('SELECT SUM(monto) AS total_pagado FROM pagos WHERE cliente_id = ? AND estado_corte NOT IN (3)',
@@ -391,7 +391,7 @@ app.get('/api/estado-cuenta/:id', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-});
+}); */
 
 function obtenerEtiquetaMes(anio, mesIndex) {
     const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -727,7 +727,7 @@ app.post('/api/cancelar-pago/:id', async (req, res) => {
         });
     }
 });
-
+/* 
 // RUTA PARA OBTENER EL PERFIL COMPLETO DEL CLIENTE (VERSIÓN CON PROMESAS)
 app.get('/cliente-completo/:id', async (req, res) => {
     const idCliente = req.params.id;
@@ -772,4 +772,4 @@ app.get('/cliente-completo/:id', async (req, res) => {
         console.error("Error al obtener perfil completo:", error);
         res.status(500).json({ error: 'Error interno del servidor al consultar la base de datos' });
     }
-});
+}); */

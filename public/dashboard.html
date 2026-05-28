@@ -1359,52 +1359,6 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
 
             window.open(linkWhats, "_blank");
         }
-        /* async function notificarCliente(cliente) {
-            let mensajeWhatsapp ='';
-            let telefonoWhatsapp =0
-
-            try {
-                // Consultamos el estado de cuenta calculado desde el servidor
-                const response = await fetch(`${urlBase}/api/clientes/${cliente}/estado-cuenta-completo`);
-                if (!response.ok) throw new Error("Error al consultar estado de cuenta");
-                const data = await response.json();
-                const estadoCuenta = data.estado_cuenta;
-                const infoCliente = data.cliente;
-                const telefono = (infoCliente.telefono || '').replace(/\D/g, '');
-                telefonoWhatsapp = telefono.length === 10 ? `52${telefono}` : telefono;
-
-                if (!telefono) {
-                    alert("El cliente no tiene un número de teléfono válido para enviar el mensaje de WhatsApp.");
-                    return;
-                }
-                mensajeWhatsapp =  `Hola ${infoCliente.nombre_completo} disculpa la molestia solo para recordarte que tú servicio presenta un saldo vencido de $`;
-            
-                const deudaReal = parseFloat(estadoCuenta.adeudo_actual) || 0;
-                const mesesPendientes = estadoCuenta.meses_adeudados || [];
-                
-                if (deudaReal > 0) {
-                    mensajeWhatsapp += `${deudaReal.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} correspondiente a los meses: `
-                    const mesesTexto = mesesPendientes.length > 0
-                        ? ` ${mesesPendientes.map(item => {
-                            const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                            return `${item.mes} $${pendiente}`;
-                        }).join(', ')}`
-                        : '';
-                
-                mensajeWhatsapp += mesesTexto + ` tu fecha de pago es el ${infoCliente.dia_pago} de cada mes espero contar con su pago. ¡Muchas gracias por su atención y confianza! `;
-                //console.log(mensajeWhatsapp);
-                } else {
-                    mensajeWhatsapp = `Hola ${cliente.nombre_completo} solo para informarte que tu cuenta está al corriente, no tienes adeudos pendientes. ¡Muchas gracias por tu puntualidad y confianza! `;
-                   //onsole.log(mensajeWhatsapp);
-                }
-               
-              } catch (error) {
-                console.error("Error:", error);
-            } 
-
-            const linkWhats = `https://wa.me/${telefonoWhatsapp}?text=${encodeURIComponent(mensajeWhatsapp)}`;
-            window.open(linkWhats, "_blank");
-        } */
 
         function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {
             if (!fechaInstalacion) return { meses: 0, total: 0 };

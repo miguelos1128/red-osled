@@ -1548,19 +1548,47 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
 
             const telefonoWhatsapp = telefono.length === 10 ? `52${telefono}` : telefono;
             const hora = new Date().getHours();
-            const saludoTiempo = hora < 12 ? 'dia' : hora < 19 ? 'tarde' : 'noche';
+            const saludoTiempo = hora < 12 ? 'día' : hora < 19 ? 'tarde' : 'noche';
+
+            const emojiSaludo = '\u{1F44B}';   // 👋
+            const emojiCorrecto = '\u{2705}';  // ✅
+            const emojiDinero = '\u{1F4B0}';   // 💰
+            const emojiFecha = '\u{1F4C5}';    // 📅
+            const emojiGracias = '\u{1F64C}';  // 🙌
+            const emojiMes = '\u{1F4CC}';      // 📌
+            const emojiDia = '\u{2600}\u{FE0F}'; // ☀️
+            const emojiTiempo = hora < 12 ? '☀️' : hora < 19 ? '🌇' : '🌜';
+           
             const pagosTexto = detalle
-                .map(item => {
-                    const montoWA = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                    return `${item.mes} $${montoWA}`;
-                })
-                .join(', ');
+                .map(p => `${emojiMes} *${p.mes}:* $${p.monto}`)
+                .join('\n');
             const totalFormateadoWA = total.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-            const mensajeWhatsapp = `Hola, ${clienteSeleccionado.nombre_completo}\n\nSu pago correspondiente a ${pagosTexto} ha quedado registrado correctamente.\n\nMonto recibido: $${totalFormateadoWA}\nFecha de pago: ${new Date().toLocaleDateString('es-MX')}\n\n¡Muchas gracias por su puntualidad!\nQue tenga una excelente ${saludoTiempo}.\n\nRED OSLED`;
+            const mensajeWhatsapp =
+`Hola *${clienteSeleccionado.nombre_completo}* ${emojiSaludo}
+
+Te confirmamos que tu pago correspondiente a:
+
+${pagosTexto}
+
+ha sido *registrado correctamente* ${emojiCorrecto}
+
+${emojiDinero} *Monto recibido:* $${totalFormateadoWA}
+${emojiFecha} *Fecha de pago:* ${new Date().toLocaleDateString('es-MX')}
+
+Agradecemos mucho tu puntualidad y confianza ${emojiGracias}
+
+Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
+
+*RED OSLED*`;
 
             btnWhatsapp.classList.remove('disabled');
             btnWhatsapp.textContent = 'Enviar WhatsApp';
-            btnWhatsapp.href = `https://wa.me/${telefonoWhatsapp}?text=${encodeURIComponent(mensajeWhatsapp)}`;
+
+
+            const linkWhats =
+            `https://api.whatsapp.com/send/?phone=${telefonoWhatsapp}&text=${encodeURIComponent(mensajeWhatsapp)}&type=phone_number&app_absent=0`;
+
+                window.open(linkWhats, "_blank");
         }
 
         function imprimirReciboUltimoPago() {

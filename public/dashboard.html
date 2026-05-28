@@ -483,7 +483,7 @@
                         </button>
                     </div>
 
-                    <div class="finanzas-resumen">
+                    <div class="finanzas-resu   men">
                         <div class="tarjeta-resumen verde">
                             <span>Total Pagado Histórico</span>
                             <h4 id="detalle-total-pagado">$0.00</h4>
@@ -751,7 +751,7 @@
                                 <i class="fas fa-eye">👁️</i> Detalles
                             </button>
 
-                            <button class="btn-detalles-slim" onclick='notificarCliente(${JSON.stringify(cliente).replace(/'/g, "&apos;")})'>
+                            <button class="btn-detalles-slim" onclick='notificarCliente(${cliente.id})'>
                                 <i class="fas fa-eye">🔔</i> Notificar
                             </button>
                         </div>
@@ -1266,23 +1266,27 @@
         
         // 2. Al hacer clic en un cliente de la lista
         async function notificarCliente(cliente) {
-            
-            let mensajeWhatsapp =  `Hola ${cliente.nombre_completo} disculpa la molestia solo para recordarte que tú servicio presenta un saldo vencido de $`;
-            const telefono = (cliente.telefono || '').replace(/\D/g, '');
-           
-            if (!telefono) {
-                alert("El cliente no tiene un número de teléfono válido para enviar el mensaje de WhatsApp.");
-                return;
-            }
-            const telefonoWhatsapp = telefono.length === 10 ? `52${telefono}` : telefono;
+            let mensajeWhatsapp ='';
+            let telefonoWhatsapp =0//= telefono.length === 10 ? `52${telefono}` : telefono;
 
             try {
                 // Consultamos el estado de cuenta calculado desde el servidor
-                const response = await fetch(`${urlBase}/api/clientes/${cliente.id}/estado-cuenta-completo`);
+                const response = await fetch(`${urlBase}/api/clientes/${cliente}/estado-cuenta-completo`);
                 if (!response.ok) throw new Error("Error al consultar estado de cuenta");
                 const data = await response.json();
                 const estadoCuenta = data.estado_cuenta;
 
+                const infoCliente = data.cliente;
+                const telefono = (infoCliente.telefono || '').replace(/\D/g, '');
+                telefonoWhatsapp = telefono.length === 10 ? `52${telefono}` : telefono;
+
+
+                if (!telefono) {
+                    alert("El cliente no tiene un número de teléfono válido para enviar el mensaje de WhatsApp.");
+                    return;
+                }
+                mensajeWhatsapp =  `Hola ${infoCliente.nombre_completo} disculpa la molestia solo para recordarte que tú servicio presenta un saldo vencido de $`;
+            
                 const deudaReal = parseFloat(estadoCuenta.adeudo_actual) || 0;
                 const mesesPendientes = estadoCuenta.meses_adeudados || [];
                 
@@ -1295,8 +1299,8 @@
                         }).join(', ')}`
                         : '';
                 
-                mensajeWhatsapp += mesesTexto + ` tu fecha de pago es el ${cliente.dia_pago} de cada mes espero contar con su pago. ¡Muchas gracias por su atención y confianza! `;
-                //nsole.log(mensajeWhatsapp);
+                mensajeWhatsapp += mesesTexto + ` tu fecha de pago es el ${infoCliente.dia_pago} de cada mes espero contar con su pago. ¡Muchas gracias por su atención y confianza! `;
+                //console.log(mensajeWhatsapp);
                 } else {
                     mensajeWhatsapp = `Hola ${cliente.nombre_completo} solo para informarte que tu cuenta está al corriente, no tienes adeudos pendientes. ¡Muchas gracias por tu puntualidad y confianza! `;
                    //onsole.log(mensajeWhatsapp);

@@ -497,6 +497,9 @@
                     <div id="detalle-meses-pendientes-box" class="meses-pendientes-box hidden">
                         <span>Meses pendientes</span>
                         <p id="detalle-meses-pendientes">-</p>
+                        <button class="btn-detalles-slim" onclick='notificarCliente()'>
+                                <i class="fas fa-eye">🔔</i> Notificar
+                        </button>
                     </div>
 
                     <div class="tabla-contenedor">
@@ -746,6 +749,10 @@
                             
                             <button class="btn-detalles-slim" onclick="abrirDetallesCliente(${cliente.id})">
                                 <i class="fas fa-eye">👁️</i> Detalles
+                            </button>
+
+                            <button class="btn-detalles-slim" onclick='notificarCliente(${JSON.stringify(cliente).replace(/'/g, "&apos;")})'>
+                                <i class="fas fa-eye">🔔</i> Notificar
                             </button>
                         </div>
                     `;
@@ -1205,7 +1212,7 @@
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
                 document.getElementById('res-ip').innerText = cliente.direccion_ip;
-                const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 document.getElementById('res-costo').innerText = costoFormateado;
                 document.getElementById('res-dia').textContent = cliente.dia_pago;
 
@@ -1220,10 +1227,10 @@
                 const mesesPendientes = estadoCuenta.meses_adeudados || [];
 
                 if (deudaReal > 0) {
-                    const deudaFormateada = deudaReal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const deudaFormateada = deudaReal.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                     const mesesTexto = mesesPendientes.length > 0
                         ? `<br><span style="color: #555; font-size: 0.9em;">Meses pendientes: ${mesesPendientes.map(item => {
-                            const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                             return `${item.mes} $${pendiente}`;
                         }).join(', ')}</span>`
                         : '';
@@ -1237,7 +1244,7 @@
                         ${mesesTexto}
                     `;
                 } else if (saldoFavor > 0) {
-                    const saldoFormateado = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const saldoFormateado = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                     msgUltimoPago.innerHTML = `<span style="color: #1a73e8; font-weight: bold;">✅ Saldo a favor: $${saldoFormateado}</span>`;
                 } else {
                     msgUltimoPago.innerHTML = `<span style="color: #2e7d32; font-weight: bold;">✅ Cuenta al corriente (Sin adeudos)</span>`;
@@ -1247,9 +1254,8 @@
             } catch (error) {
                 console.error("Error:", error);
             }
-
-
         }
+
          function seleccionarClienteDirecto(cliente) {
             // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
@@ -1258,6 +1264,52 @@
             seleccionarCliente(cliente);
         }
         
+        // 2. Al hacer clic en un cliente de la lista
+        async function notificarCliente(cliente) {
+            
+            let mensajeWhatsapp =  `Hola ${cliente.nombre_completo} disculpa la molestia solo para recordarte que tú servicio presenta un saldo vencido de $`;
+            const telefono = (cliente.telefono || '').replace(/\D/g, '');
+           
+            if (!telefono) {
+                alert("El cliente no tiene un número de teléfono válido para enviar el mensaje de WhatsApp.");
+                return;
+            }
+            const telefonoWhatsapp = telefono.length === 10 ? `52${telefono}` : telefono;
+
+            try {
+                // Consultamos el estado de cuenta calculado desde el servidor
+                const response = await fetch(`${urlBase}/api/clientes/${cliente.id}/estado-cuenta-completo`);
+                if (!response.ok) throw new Error("Error al consultar estado de cuenta");
+                const data = await response.json();
+                const estadoCuenta = data.estado_cuenta;
+
+                const deudaReal = parseFloat(estadoCuenta.adeudo_actual) || 0;
+                const mesesPendientes = estadoCuenta.meses_adeudados || [];
+                
+                if (deudaReal > 0) {
+                    mensajeWhatsapp += `${deudaReal.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} correspondiente a los meses: `
+                    const mesesTexto = mesesPendientes.length > 0
+                        ? ` ${mesesPendientes.map(item => {
+                            const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                            return `${item.mes} $${pendiente}`;
+                        }).join(', ')}`
+                        : '';
+                
+                mensajeWhatsapp += mesesTexto + ` tu fecha de pago es el ${cliente.dia_pago} de cada mes espero contar con su pago. ¡Muchas gracias por su atención y confianza! `;
+                //nsole.log(mensajeWhatsapp);
+                } else {
+                    mensajeWhatsapp = `Hola ${cliente.nombre_completo} solo para informarte que tu cuenta está al corriente, no tienes adeudos pendientes. ¡Muchas gracias por tu puntualidad y confianza! `;
+                   //onsole.log(mensajeWhatsapp);
+                }
+               
+              } catch (error) {
+                console.error("Error:", error);
+            } 
+
+            const linkWhats = `https://wa.me/${telefonoWhatsapp}?text=${encodeURIComponent(mensajeWhatsapp)}`;
+            window.open(linkWhats, "_blank");
+        }
+
         function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {
             if (!fechaInstalacion) return { meses: 0, total: 0 };
 
@@ -1280,6 +1332,8 @@
             };
         }
 
+
+        
         // 3. Abrir el modal de pago
         function prepararPago() {
 
@@ -1447,11 +1501,11 @@
             const saludoTiempo = hora < 12 ? 'dia' : hora < 19 ? 'tarde' : 'noche';
             const pagosTexto = detalle
                 .map(item => {
-                    const montoWA = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const montoWA = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                     return `${item.mes} $${montoWA}`;
                 })
                 .join(', ');
-            const totalFormateadoWA = total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const totalFormateadoWA = total.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
             const mensajeWhatsapp = `Hola, ${clienteSeleccionado.nombre_completo}\n\nSu pago correspondiente a ${pagosTexto} ha quedado registrado correctamente.\n\nMonto recibido: $${totalFormateadoWA}\nFecha de pago: ${new Date().toLocaleDateString('es-MX')}\n\n¡Muchas gracias por su puntualidad!\nQue tenga una excelente ${saludoTiempo}.\n\nRED OSLED`;
 
             btnWhatsapp.classList.remove('disabled');
@@ -2030,14 +2084,14 @@
                     minimumFractionDigits: 2, 
                     maximumFractionDigits: 2 
                 });
-                lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
                 lblTotalModal.textContent = totalNeto.toLocaleString('en-US', { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
+                    minimumFractionDigits: 0, 
+                    maximumFractionDigits: 0 
                 });
-                lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2 });
-                lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2 });
-                lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
 
             } catch (error) {
                 console.error('Error en cargarWidgetCorte:', error);
@@ -2072,7 +2126,7 @@
             }
 
             if (totalCaja <= 0) {
-                alert("⚠️ No se puede registrar gastos: No hay efectivo disponible en caja. El total neto es de $" + totalCaja.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ". Si necesitas registrar un gasto, primero debes realizar el corte para limpiar la caja.");
+                alert("⚠️ No se puede registrar gastos: No hay efectivo disponible en caja. El total neto es de $" + totalCaja.toLocaleString('en-US', { minimumFractionDigits: 0 }) + ". Si necesitas registrar un gasto, primero debes realizar el corte para limpiar la caja.");
                 return;
             }
 

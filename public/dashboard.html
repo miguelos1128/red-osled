@@ -495,11 +495,13 @@
                     </div>
 
                     <div id="detalle-meses-pendientes-box" class="meses-pendientes-box hidden">
-                        <span>Meses pendientes</span>
-                        <p id="detalle-meses-pendientes">-</p>
-                        <button class="btn-detalles-slim" onclick='notificarCliente()'>
-                                <i class="fas fa-eye">🔔</i> Notificar
-                        </button>
+                        <div>
+                            <span>Meses pendientes</span>
+                            <p id="detalle-meses-pendientes">-</p>
+                        </div>
+                        <div id="notificar-box">
+
+                        </div>
                     </div>
 
                     <div class="tabla-contenedor">
@@ -752,7 +754,7 @@
                             </button>
 
                             <button class="btn-detalles-slim" onclick='notificarCliente(${cliente.id})'>
-                                <i class="fas fa-eye">🔔</i> Notificar
+                                <i class="fas fa-eye">🔔</i> 
                             </button>
                         </div>
                     `;
@@ -1795,7 +1797,13 @@
                 }).join(', ');
                 document.getElementById('detalle-meses-pendientes').textContent = mesesPendientesTexto || '-';
                 mesesPendientesBox.classList.toggle('hidden', mesesPendientes.length === 0);
-
+                const notifcarBox = document.getElementById('notificar-box')
+                notifcarBox.innerHTML = `
+                
+                            <button class="btn-detalles-slim" onclick='notificarCliente(${idCliente})'>
+                                <i class="fas fa-eye">🔔</i>
+                            </button>
+                `;
                 // Actualizamos la lógica amarilla/gris de la tarjeta pendiente
                 const tarjetaPendiente = document.getElementById('tarjeta-pendientes');
                 if (adeudoPendiente > 0) {

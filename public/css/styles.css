@@ -1330,6 +1330,8 @@ td {
 .tarjeta-resumen h4 { margin: 5px 0 0 0; font-size: 1.6rem; color: #2c3e50; }
 
 .meses-pendientes-box {
+    display: flex;
+    justify-content: space-between;
     margin-bottom: 18px;
     padding: 12px 14px;
     border-left: 4px solid #f1c40f;

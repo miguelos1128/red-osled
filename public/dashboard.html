@@ -1268,8 +1268,100 @@
         
         // 2. Al hacer clic en un cliente de la lista
         async function notificarCliente(cliente) {
+
+            let mensajeWhatsapp = '';
+            let telefonoWhatsapp = '';
+
+            try {
+
+                const response = await fetch(`${urlBase}/api/clientes/${cliente}/estado-cuenta-completo`);
+
+                if (!response.ok) {
+                    throw new Error("Error al consultar estado de cuenta");
+                }
+
+                const data = await response.json();
+
+                const estadoCuenta = data.estado_cuenta;
+                const infoCliente = data.cliente;
+
+                const telefono = (infoCliente.telefono || '').replace(/\D/g, '');
+
+                telefonoWhatsapp = telefono.length === 10
+                    ? `52${telefono}`
+                    : telefono;
+
+                if (!telefonoWhatsapp) {
+                    alert("El cliente no tiene un número válido");
+                    return;
+                }
+
+                const deudaReal = parseFloat(estadoCuenta.adeudo_actual) || 0;
+                const mesesPendientes = estadoCuenta.meses_adeudados || [];
+
+                // Emojis seguros
+                const emojiSaludo = '👋';
+                const emojiMes = '📌';
+                const emojiFecha = '📅';
+                const emojiGracias = '🙌';
+                const emojiCorrecto = '✅';
+
+                if (deudaReal > 0) {
+
+                mensajeWhatsapp =
+`Hola *${infoCliente.nombre_completo}* ${emojiSaludo}
+
+Disculpa la molestia, solo para recordarte que tu servicio presenta un *saldo vencido de $${deudaReal.toLocaleString('es-MX', {
+minimumFractionDigits: 0,
+maximumFractionDigits: 0
+})}* correspondiente a los siguientes meses:
+
+`;
+
+            mesesPendientes.forEach(item => {
+
+                const pendiente = parseFloat(item.pendiente || 0)
+                    .toLocaleString('es-MX', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    });
+
+                mensajeWhatsapp += `${emojiMes} *${item.mes}:* $${pendiente}\n`;
+            });
+
+            mensajeWhatsapp += `
+
+${emojiFecha} Tu fecha de pago es el día *${infoCliente.dia_pago}* de cada mes.
+
+Agradecemos mucho tu atención y esperamos contar con tu pago. ${emojiGracias}
+
+¡Muchas gracias por tu confianza!`;
+
+                } else {
+
+                    mensajeWhatsapp =
+`Hola *${infoCliente.nombre_completo}* ${emojiSaludo}
+
+Solo para informarte que tu cuenta se encuentra *al corriente* y no presenta adeudos pendientes. ${emojiCorrecto}
+
+Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
+                }
+
+            } catch (error) {
+
+                console.error("Error:", error);
+                alert("Ocurrió un error al generar el mensaje");
+                return;
+            }
+
+            const linkWhats =
+        `https://api.whatsapp.com/send/?phone=${telefonoWhatsapp}&text=${encodeURIComponent(mensajeWhatsapp)}&type=phone_number&app_absent=0`;
+
+            window.open(linkWhats, "_blank");
+        }
+        /* async function notificarCliente(cliente) {
             let mensajeWhatsapp ='';
-            let telefonoWhatsapp =0//= telefono.length === 10 ? `52${telefono}` : telefono;
+            let telefonoWhatsapp =0
 
             try {
                 // Consultamos el estado de cuenta calculado desde el servidor
@@ -1277,11 +1369,9 @@
                 if (!response.ok) throw new Error("Error al consultar estado de cuenta");
                 const data = await response.json();
                 const estadoCuenta = data.estado_cuenta;
-
                 const infoCliente = data.cliente;
                 const telefono = (infoCliente.telefono || '').replace(/\D/g, '');
                 telefonoWhatsapp = telefono.length === 10 ? `52${telefono}` : telefono;
-
 
                 if (!telefono) {
                     alert("El cliente no tiene un número de teléfono válido para enviar el mensaje de WhatsApp.");
@@ -1314,7 +1404,7 @@
 
             const linkWhats = `https://wa.me/${telefonoWhatsapp}?text=${encodeURIComponent(mensajeWhatsapp)}`;
             window.open(linkWhats, "_blank");
-        }
+        } */
 
         function calcularAdeudoEvolucionado(fechaInstalacion, costoMensual) {
             if (!fechaInstalacion) return { meses: 0, total: 0 };

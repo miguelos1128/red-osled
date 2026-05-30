@@ -1317,6 +1317,72 @@ td {
     padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;
 }
 
+.gestion-servicio-box {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.gestion-servicio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.gestion-servicio-header h3 {
+    margin: 0;
+}
+
+.gestion-servicio-header span {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #eef2f7;
+    color: #34495e;
+    font-weight: bold;
+}
+
+.servicio-info-cuenta,
+#servicio-suspension-detalle {
+    margin: 6px 0 12px;
+    color: #5f6b7a;
+}
+
+.servicio-controles {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(130px, auto)) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.servicio-controles select,
+.servicio-controles input {
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.btn-suspender-servicio {
+    background: #d97706;
+    color: white;
+    border: none;
+}
+
+.btn-reactivar-servicio {
+    background: #27ae60;
+    color: white;
+    border: none;
+}
+
+@media (max-width: 760px) {
+    .servicio-controles {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* --- ESTILOS FASE 2: FINANZAS --- */
 .finanzas-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 .btn-descarga-pdf { background-color: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.3s;}

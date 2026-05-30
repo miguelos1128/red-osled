@@ -323,7 +323,11 @@ app.post('/api/registrar-pago', async (req, res) => {
             historial[pago.mes_pagado] = (historial[pago.mes_pagado] || 0) + (parseFloat(pago.monto) || 0);
         });
 
-        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes);
+        const [bitacora] = await db.query(
+            'SELECT * FROM bitacora_servicio WHERE cliente_id = ? ORDER BY id DESC',
+            [clienteId]
+        );
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora);
         const registros = [];
         const aplicarPagoMes = async (etiquetaMes, pendienteMes) => {
             const pagadoAntes = historial[etiquetaMes] || 0;
@@ -414,22 +418,60 @@ function compararMesContable(anioA, mesA, anioB, mesB) {
     return (anioA * 12 + mesA) - (anioB * 12 + mesB);
 }
 
-function mesEstaVencido(anio, mesIndex, diaPago, hoy = new Date()) {
+function sumarDias(fecha, dias) {
+    const resultado = new Date(fecha);
+    resultado.setDate(resultado.getDate() + dias);
+    return resultado;
+}
+
+function obtenerFechaVencimiento(anio, mesIndex, diaPago, diasCompensados = 0) {
+    const ultimoDia = obtenerUltimoDiaMes(anio, mesIndex);
+    const diaVencimiento = Math.min(diaPago, ultimoDia);
+    return sumarDias(new Date(anio, mesIndex, diaVencimiento, 23, 59, 59, 999), diasCompensados);
+}
+
+function calcularDiasEntre(fechaInicio, fechaFin = new Date()) {
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    const msPorDia = 1000 * 60 * 60 * 24;
+    return Math.max(0, Math.ceil((fin - inicio) / msPorDia));
+}
+
+function resumirBitacoraServicio(bitacora) {
+    const eventos = bitacora || [];
+    const suspensionActiva = eventos.find(evento => evento.estado === 'Activo') || null;
+    const diasCompensadosFinalizados = eventos.reduce((total, evento) => total + (parseInt(evento.dias_compensados) || 0), 0);
+    const diasCongeladosActivos = suspensionActiva && ['falta_pago', 'decision_usuario'].includes(suspensionActiva.tipo_evento)
+        ? calcularDiasEntre(suspensionActiva.fecha_inicio)
+        : 0;
+    const montoAjustes = eventos.reduce((total, evento) => total + (parseFloat(evento.monto_ajuste) || 0), 0);
+
+    return {
+        eventos,
+        suspension_activa: suspensionActiva,
+        dias_compensados: diasCompensadosFinalizados,
+        dias_congelados_activos: diasCongeladosActivos,
+        dias_compensados_efectivos: diasCompensadosFinalizados + diasCongeladosActivos,
+        monto_ajustes: montoAjustes
+    };
+}
+
+function mesEstaVencido(anio, mesIndex, diaPago, hoy = new Date(), diasCompensados = 0) {
     const comparacionMes = compararMesContable(anio, mesIndex, hoy.getFullYear(), hoy.getMonth());
 
     if (comparacionMes < 0) return true;
     if (comparacionMes > 0) return false;
 
-    const ultimoDia = obtenerUltimoDiaMes(anio, mesIndex);
-    const diaVencimiento = Math.min(diaPago, ultimoDia);
-    return hoy.getDate() >= diaVencimiento;
+    return hoy >= obtenerFechaVencimiento(anio, mesIndex, diaPago, diasCompensados);
 }
 
-function calcularEstadoCuentaServidor(cliente, pagos) {
+function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
     const costoMensual = parseFloat(cliente.costo_mensual) || 0;
     const fechaInstalacion = new Date(cliente.fecha_instalacion);
     const diaPago = parseInt(cliente.dia_pago) || fechaInstalacion.getDate() || 1;
     const totalPagado = pagos.reduce((total, pago) => total + (parseFloat(pago.monto) || 0), 0);
+    const resumenServicio = resumirBitacoraServicio(bitacora);
+    const diasCompensados = resumenServicio.dias_compensados_efectivos;
     const pagosPorMes = {};
 
     pagos.forEach(pago => {
@@ -439,11 +481,12 @@ function calcularEstadoCuentaServidor(cliente, pagos) {
 
     const mesesAdeudados = [];
     const mesesVencidos = [];
+    let fechaProximoPago = null;
     let cursor = avanzarMesContable(fechaInstalacion.getFullYear(), fechaInstalacion.getMonth(), 1);
     const hoy = new Date();
 
     while (compararMesContable(cursor.anio, cursor.mesIndex, hoy.getFullYear(), hoy.getMonth()) <= 0) {
-        if (mesEstaVencido(cursor.anio, cursor.mesIndex, diaPago, hoy)) {
+        if (mesEstaVencido(cursor.anio, cursor.mesIndex, diaPago, hoy, diasCompensados)) {
             const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
             const pagadoEnMes = pagosPorMes[etiquetaMes] || 0;
             const pendiente = Math.max(costoMensual - pagadoEnMes, 0);
@@ -458,14 +501,22 @@ function calcularEstadoCuentaServidor(cliente, pagos) {
                     pendiente: pendiente
                 });
             }
+        } else if (!fechaProximoPago) {
+            fechaProximoPago = obtenerFechaVencimiento(cursor.anio, cursor.mesIndex, diaPago, diasCompensados);
         }
 
         cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
     }
 
+    if (!fechaProximoPago) {
+        fechaProximoPago = obtenerFechaVencimiento(cursor.anio, cursor.mesIndex, diaPago, diasCompensados);
+    }
+
     const mesesTranscurridos = mesesVencidos.length;
-    const totalTeorico = mesesTranscurridos * costoMensual;
-    const adeudoActual = mesesAdeudados.reduce((total, mes) => total + mes.pendiente, 0);
+    const montoAjustes = resumenServicio.monto_ajustes;
+    const totalTeorico = (mesesTranscurridos * costoMensual) + montoAjustes;
+    const adeudoMensual = mesesAdeudados.reduce((total, mes) => total + mes.pendiente, 0);
+    const adeudoActual = adeudoMensual + montoAjustes;
     const saldoFavor = Math.max(totalPagado - totalTeorico, 0);
     const mesesAdeudoDecimal = costoMensual > 0 ? adeudoActual / costoMensual : 0;
 
@@ -477,7 +528,14 @@ function calcularEstadoCuentaServidor(cliente, pagos) {
         meses_transcurridos: mesesTranscurridos,
         meses_adeudo_decimal: Number(mesesAdeudoDecimal.toFixed(2)),
         meses_vencidos: mesesVencidos,
-        meses_adeudados: mesesAdeudados
+        meses_adeudados: mesesAdeudados,
+        adeudo_mensual: adeudoMensual,
+        monto_ajustes: montoAjustes,
+        dias_compensados: resumenServicio.dias_compensados,
+        dias_congelados_activos: resumenServicio.dias_congelados_activos,
+        dias_compensados_efectivos: diasCompensados,
+        fecha_proximo_pago: fechaProximoPago,
+        servicio: resumenServicio
     };
 }
 
@@ -506,16 +564,123 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
             [clienteId]
         );
 
-        const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos);
+        const [bitacora] = await db.query(
+            `SELECT *
+             FROM bitacora_servicio
+             WHERE cliente_id = ?
+             ORDER BY id DESC`,
+            [clienteId]
+        );
+
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora);
 
         res.json({
             cliente: clienteRows[0],
             historial_pagos: pagos,
+            bitacora_servicio: bitacora,
             estado_cuenta: estadoCuenta
         });
     } catch (error) {
         console.error('Error al calcular estado de cuenta completo:', error);
         res.status(500).json({ error: 'Error al calcular estado de cuenta del cliente' });
+    }
+});
+
+app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
+    const clienteId = req.params.id;
+    const { tipo_evento, dias_compensados, fecha_inicio, fecha_fin } = req.body;
+    const tiposValidos = ['falta_pago', 'decision_usuario', 'falla_tecnica'];
+
+    try {
+        if (!tiposValidos.includes(tipo_evento)) {
+            return res.status(400).json({ success: false, error: 'Tipo de suspensión no válido.' });
+        }
+
+        const [activos] = await db.query(
+            'SELECT id FROM bitacora_servicio WHERE cliente_id = ? AND estado = "Activo" LIMIT 1',
+            [clienteId]
+        );
+
+        if (activos.length > 0 && tipo_evento !== 'falla_tecnica') {
+            return res.status(400).json({ success: false, error: 'El cliente ya tiene una suspensión activa.' });
+        }
+
+        if (tipo_evento === 'falla_tecnica') {
+            const dias = parseInt(dias_compensados) || (fecha_inicio && fecha_fin ? calcularDiasEntre(fecha_inicio, fecha_fin) : 0);
+
+            if (dias <= 0) {
+                return res.status(400).json({ success: false, error: 'Indica los días compensados de la falla técnica.' });
+            }
+
+            await db.query(
+                `INSERT INTO bitacora_servicio
+                    (cliente_id, tipo_evento, fecha_inicio, fecha_fin, dias_compensados, monto_ajuste, estado)
+                 VALUES (?, ?, ?, ?, ?, 0.00, 'Finalizado')`,
+                [clienteId, tipo_evento, fecha_inicio || new Date(), fecha_fin || new Date(), dias]
+            );
+
+            return res.json({ success: true, message: 'Falla técnica registrada.' });
+        }
+
+        await db.query(
+            `INSERT INTO bitacora_servicio
+                (cliente_id, tipo_evento, fecha_inicio, fecha_fin, dias_compensados, monto_ajuste, estado)
+             VALUES (?, ?, NOW(), NULL, 0, 0.00, 'Activo')`,
+            [clienteId, tipo_evento]
+        );
+
+        await db.query(
+            'UPDATE clientes SET estado_servicio = ? WHERE id = ?',
+            ['Suspendido', clienteId]
+        );
+
+        res.json({ success: true, message: 'Servicio suspendido correctamente.' });
+    } catch (error) {
+        console.error('Error al suspender servicio:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/clientes/:id/reactivar-servicio', async (req, res) => {
+    const clienteId = req.params.id;
+
+    try {
+        const [activos] = await db.query(
+            'SELECT * FROM bitacora_servicio WHERE cliente_id = ? AND estado = "Activo" ORDER BY id DESC LIMIT 1',
+            [clienteId]
+        );
+
+        if (activos.length === 0) {
+            return res.status(404).json({ success: false, error: 'No hay suspensión activa para este cliente.' });
+        }
+
+        const evento = activos[0];
+        const diasCompensados = evento.tipo_evento === 'decision_usuario'
+            ? calcularDiasEntre(evento.fecha_inicio)
+            : 0;
+        const montoAjuste = evento.tipo_evento === 'falta_pago' ? 50 : 0;
+
+        await db.query(
+            `UPDATE bitacora_servicio
+             SET fecha_fin = NOW(), dias_compensados = ?, monto_ajuste = ?, estado = 'Finalizado'
+             WHERE id = ?`,
+            [diasCompensados, montoAjuste, evento.id]
+        );
+
+        await db.query(
+            'UPDATE clientes SET estado_servicio = ? WHERE id = ?',
+            ['activo', clienteId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Servicio reactivado correctamente.',
+            dias_compensados: diasCompensados,
+            monto_ajuste: montoAjuste
+        });
+    } catch (error) {
+        console.error('Error al reactivar servicio:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 

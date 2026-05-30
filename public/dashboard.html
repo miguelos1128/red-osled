@@ -473,6 +473,31 @@
                             💬 Enviar WhatsApp al <span id="detalle-telefono"></span>
                         </a>
                     </div>
+
+                    <div id="gestion-servicio-box" class="gestion-servicio-box">
+                        <div class="gestion-servicio-header">
+                            <h3>Gestión de Servicio</h3>
+                            <span id="servicio-estado-texto">-</span>
+                        </div>
+                        <p id="servicio-info-cuenta" class="servicio-info-cuenta">-</p>
+
+                        <div id="servicio-activo-controles" class="servicio-controles">
+                            <select id="select-tipo-suspension" onchange="actualizarFormularioSuspension()">
+                                <option value="falta_pago">Falta de Pago</option>
+                                <option value="decision_usuario">Decisión del Usuario</option>
+                                <option value="falla_tecnica">Falla Técnica</option>
+                            </select>
+                            <input type="number" id="dias-falla-tecnica" class="hidden" min="1" placeholder="Días sin servicio">
+                            <input type="date" id="falla-fecha-inicio" class="hidden">
+                            <input type="date" id="falla-fecha-fin" class="hidden">
+                            <button class="button btn-suspender-servicio" onclick="registrarEventoServicio()">Registrar evento</button>
+                        </div>
+
+                        <div id="servicio-suspendido-controles" class="servicio-controles hidden">
+                            <p id="servicio-suspension-detalle"></p>
+                            <button class="button btn-reactivar-servicio" onclick="reactivarServicioCliente()">Reactivar Servicio</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="seccion-finanzas" class="seccion-detalle">
@@ -483,7 +508,7 @@
                         </button>
                     </div>
 
-                    <div class="finanzas-resu   men">
+                    <div class="finanzas-resumen">
                         <div class="tarjeta-resumen verde">
                             <span>Total Pagado Histórico</span>
                             <h4 id="detalle-total-pagado">$0.00</h4>
@@ -584,6 +609,7 @@
             window.location.href = 'index.html';
         }
         let idCobrador = usuario.id
+        let clienteDetalleActualId = null;
         cargarWidgetCorte();
         const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3;
         document.getElementById('seccion-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
@@ -1753,9 +1779,147 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 montoTotal
             };
         }
+
+        function actualizarFormularioSuspension() {
+            const tipo = document.getElementById('select-tipo-suspension').value;
+            const mostrarFalla = tipo === 'falla_tecnica';
+            document.getElementById('dias-falla-tecnica').classList.toggle('hidden', !mostrarFalla);
+            document.getElementById('falla-fecha-inicio').classList.toggle('hidden', !mostrarFalla);
+            document.getElementById('falla-fecha-fin').classList.toggle('hidden', !mostrarFalla);
+        }
+
+        function formatearTipoEventoServicio(tipo) {
+            const etiquetas = {
+                falta_pago: 'Falta de Pago',
+                decision_usuario: 'Decisión del Usuario',
+                falla_tecnica: 'Falla Técnica'
+            };
+            return etiquetas[tipo] || tipo;
+        }
+
+        function configurarGestionServicio(cliente, servicio) {
+            const estadoTexto = document.getElementById('servicio-estado-texto');
+            const controlesActivo = document.getElementById('servicio-activo-controles');
+            const controlesSuspendido = document.getElementById('servicio-suspendido-controles');
+            const detalleSuspension = document.getElementById('servicio-suspension-detalle');
+            const suspensionActiva = servicio?.suspension_activa || null;
+            const estadoServicio = (cliente.estado_servicio || '').toLowerCase();
+
+            if (estadoServicio === 'suspendido' || suspensionActiva) {
+                controlesActivo.classList.add('hidden');
+                controlesSuspendido.classList.remove('hidden');
+                estadoTexto.textContent = 'Suspendido';
+
+                if (suspensionActiva) {
+                    const fechaInicio = new Date(suspensionActiva.fecha_inicio).toLocaleString('es-MX');
+                    detalleSuspension.textContent = `${formatearTipoEventoServicio(suspensionActiva.tipo_evento)} desde ${fechaInicio}`;
+                } else {
+                    detalleSuspension.textContent = 'Suspensión activa sin bitácora encontrada.';
+                }
+            } else {
+                controlesSuspendido.classList.add('hidden');
+                controlesActivo.classList.remove('hidden');
+                estadoTexto.textContent = 'Activo';
+                detalleSuspension.textContent = '';
+                actualizarFormularioSuspension();
+            }
+        }
+
+        function configurarInfoCuentaServicio(estadoCuenta) {
+            const fechaProximo = estadoCuenta.fecha_proximo_pago
+                ? new Date(estadoCuenta.fecha_proximo_pago).toLocaleDateString('es-MX')
+                : 'N/A';
+            const diasCompensados = parseInt(estadoCuenta.dias_compensados_efectivos) || 0;
+            const ajustes = parseFloat(estadoCuenta.monto_ajustes) || 0;
+            const ajusteTexto = ajustes > 0
+                ? ` | Ajustes: $${ajustes.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : '';
+
+            document.getElementById('servicio-info-cuenta').textContent =
+                `Próximo pago real: ${fechaProximo} | Días compensados: ${diasCompensados}${ajusteTexto}`;
+        }
+
+        async function registrarEventoServicio() {
+            if (!clienteDetalleActualId) return;
+
+            const tipo = document.getElementById('select-tipo-suspension').value;
+            const diasFalla = parseInt(document.getElementById('dias-falla-tecnica').value);
+            const fechaInicioFalla = document.getElementById('falla-fecha-inicio').value;
+            const fechaFinFalla = document.getElementById('falla-fecha-fin').value;
+            const payload = { tipo_evento: tipo };
+
+            if (tipo === 'falla_tecnica') {
+                if ((!diasFalla || diasFalla <= 0) && (!fechaInicioFalla || !fechaFinFalla)) {
+                    alert('Indica cuántos días falló el servicio o captura fecha inicio y fin.');
+                    return;
+                }
+                if (diasFalla > 0) payload.dias_compensados = diasFalla;
+                if (fechaInicioFalla) payload.fecha_inicio = fechaInicioFalla;
+                if (fechaFinFalla) payload.fecha_fin = fechaFinFalla;
+            }
+
+            const confirmar = confirm(`¿Confirmas registrar ${formatearTipoEventoServicio(tipo)} para este cliente?`);
+            if (!confirmar) return;
+
+            try {
+                const response = await fetch(`${urlBase}/api/clientes/${clienteDetalleActualId}/suspender-servicio`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert(result.error || 'No se pudo registrar el evento.');
+                    return;
+                }
+
+                alert(result.message || 'Evento registrado correctamente.');
+                abrirDetallesCliente(clienteDetalleActualId);
+                cargarVistaAdminClientes();
+            } catch (error) {
+                console.error('Error registrando evento de servicio:', error);
+                alert('No se pudo conectar con el servidor.');
+            }
+        }
+
+        async function reactivarServicioCliente() {
+            if (!clienteDetalleActualId) return;
+
+            const confirmar = confirm('¿Confirmas reactivar el servicio de este cliente?');
+            if (!confirmar) return;
+
+            try {
+                const response = await fetch(`${urlBase}/api/clientes/${clienteDetalleActualId}/reactivar-servicio`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert(result.error || 'No se pudo reactivar el servicio.');
+                    return;
+                }
+
+                let mensaje = result.message || 'Servicio reactivado correctamente.';
+                if (result.dias_compensados > 0) {
+                    mensaje += `\nDías compensados: ${result.dias_compensados}`;
+                }
+                if (result.monto_ajuste > 0) {
+                    mensaje += `\nAjuste generado: $${parseFloat(result.monto_ajuste).toFixed(2)}`;
+                }
+                alert(mensaje);
+                abrirDetallesCliente(clienteDetalleActualId);
+                cargarVistaAdminClientes();
+            } catch (error) {
+                console.error('Error reactivando servicio:', error);
+                alert('No se pudo conectar con el servidor.');
+            }
+        }
  
         // Función para abrir el modal y cargar desde Node.js
         async function abrirDetallesCliente(idCliente) {
+            clienteDetalleActualId = idCliente;
             // 1. Mostrar el Modal primero y poner un mensaje de carga
             document.getElementById('modal-detalles-cliente').classList.remove('hidden');
             document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
@@ -1809,17 +1973,21 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const badgeRenta = document.getElementById('detalle-badge-renta');
                 badge.className = 'badge-estado'; 
                 badgeRenta.classList.toggle('hidden', Number(cliente.es_renta) !== 1);
+                const estadoServicio = (cliente.estado_servicio || '').toLowerCase();
                 
-                if(cliente.estado_servicio == 'activo') {
+                if(estadoServicio === 'activo') {
                     badge.textContent = 'Activo';
                     badge.classList.add('estado-activo');
-                } else if (cliente.estado == 'suspendido') {
+                } else if (estadoServicio === 'suspendido') {
                     badge.textContent = 'Suspendido';
                     badge.classList.add('estado-suspendido');
                 } else {
                     badge.textContent = 'Retirado';
                     badge.classList.add('estado-retirado');
                 }
+
+                configurarGestionServicio(cliente, estadoCuenta.servicio);
+                configurarInfoCuentaServicio(estadoCuenta);
 
                 // Dejamos un mensaje oculto en la consola para saber que los pagos llegaron bien
                 console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);

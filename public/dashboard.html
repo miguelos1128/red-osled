@@ -610,6 +610,8 @@
         }
         let idCobrador = usuario.id
         let clienteDetalleActualId = null;
+        let suspensionServicioActual = null;
+        let estadoCuentaDetalleActual = null;
         cargarWidgetCorte();
         const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3;
         document.getElementById('seccion-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
@@ -1537,11 +1539,13 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
 
             const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
             const detalleHtml = detalle.map(item => {
-                const tipoLabel = item.tipo === 'abono' ? 'Abono' : 'Mensualidad';
+                const tipoLabel = item.tipo === 'reconexion' ? 'Reconexión' : item.tipo === 'abono' ? 'Abono' : 'Mensualidad';
+                const concepto = item.tipo === 'reconexion' ? 'Reconexión' : item.mes;
+                const subtitulo = item.tipo === 'reconexion' ? '' : ` <small>${tipoLabel}</small>`;
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 return `
                     <div class="resumen-pago-fila">
-                        <span>${item.mes} <small>${tipoLabel}</small></span>
+                        <span>${concepto}${subtitulo}</span>
                         <strong>$${montoFormateado}</strong>
                     </div>
                 `;
@@ -1675,15 +1679,19 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             // Generamos las filas de la tabla del ticket
             let filasTicket = detalle.map(item => {
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const concepto = item.tipo === 'reconexion'
+                    ? 'Reconexión'
+                    : `${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}`.trim();
                 return `
                 <tr>
-                    <td style="padding: 5px 0;">${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}</td>
+                    <td style="padding: 5px 0;">${concepto}</td>
                     <td align="right" style="padding: 5px 0;">$${montoFormateado}</td>
                 </tr>
             `;
             }).join('');
 
             const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
+            const totalFormateado = total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             // Escribimos el HTML del ticket (Estilo Recibo Térmico)
             ventana.document.write(`
@@ -1802,13 +1810,18 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const controlesActivo = document.getElementById('servicio-activo-controles');
             const controlesSuspendido = document.getElementById('servicio-suspendido-controles');
             const detalleSuspension = document.getElementById('servicio-suspension-detalle');
+            const btnReactivar = document.querySelector('.btn-reactivar-servicio');
             const suspensionActiva = servicio?.suspension_activa || null;
             const estadoServicio = (cliente.estado_servicio || '').toLowerCase();
+            suspensionServicioActual = suspensionActiva;
 
             if (estadoServicio === 'suspendido' || suspensionActiva) {
                 controlesActivo.classList.add('hidden');
                 controlesSuspendido.classList.remove('hidden');
                 estadoTexto.textContent = 'Suspendido';
+                btnReactivar.textContent = suspensionActiva?.tipo_evento === 'falta_pago'
+                    ? 'Cobrar y Reactivar'
+                    : 'Reactivar Servicio';
 
                 if (suspensionActiva) {
                     const fechaInicio = new Date(suspensionActiva.fecha_inicio).toLocaleString('es-MX');
@@ -1829,7 +1842,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const fechaProximo = estadoCuenta.fecha_proximo_pago
                 ? new Date(estadoCuenta.fecha_proximo_pago).toLocaleDateString('es-MX')
                 : 'N/A';
-            const diasCompensados = parseInt(estadoCuenta.dias_compensados_efectivos) || 0;
+            const diasCompensados = parseInt(estadoCuenta.dias_compensados) || 0;
             const ajustes = parseFloat(estadoCuenta.monto_ajustes) || 0;
             const ajusteTexto = ajustes > 0
                 ? ` | Ajustes: $${ajustes.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -1886,6 +1899,50 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         async function reactivarServicioCliente() {
             if (!clienteDetalleActualId) return;
 
+            if (suspensionServicioActual?.tipo_evento === 'falta_pago') {
+                const adeudoMensual = parseFloat(estadoCuentaDetalleActual?.adeudo_mensual) || 0;
+                const montoReconexion = 50;
+                const minimoReactivacion = adeudoMensual + montoReconexion;
+                const minimoTexto = minimoReactivacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const montoTexto = prompt(
+                    `Monto recibido para reactivar el servicio.\n\nMínimo requerido: $${minimoTexto}\nIncluye adeudo pendiente + $50.00 de reconexión.`,
+                    minimoReactivacion.toFixed(2)
+                );
+
+                if (montoTexto === null) return;
+
+                const montoRecibido = parseFloat(montoTexto.replace(/[^0-9.]/g, ''));
+                if (!montoRecibido || montoRecibido <= 0) {
+                    alert('Captura un monto válido para reactivar.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${urlBase}/api/clientes/${clienteDetalleActualId}/reactivar-con-pago`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            usuarioId: idCobrador,
+                            montoRecibido
+                        })
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok || !result.success) {
+                        alert(result.error || 'No se pudo reactivar el servicio.');
+                        return;
+                    }
+
+                    document.getElementById('modal-detalles-cliente').classList.add('hidden');
+                    mostrarResumenPagoExitoso(result.detalle || []);
+                    cargarVistaAdminClientes();
+                } catch (error) {
+                    console.error('Error reactivando servicio con pago:', error);
+                    alert('No se pudo conectar con el servidor.');
+                }
+                return;
+            }
+
             const confirmar = confirm('¿Confirmas reactivar el servicio de este cliente?');
             if (!confirmar) return;
 
@@ -1904,6 +1961,9 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 let mensaje = result.message || 'Servicio reactivado correctamente.';
                 if (result.dias_compensados > 0) {
                     mensaje += `\nDías compensados: ${result.dias_compensados}`;
+                }
+                if (result.nuevo_dia_pago) {
+                    mensaje += `\nNuevo día de pago: ${result.nuevo_dia_pago}`;
                 }
                 if (result.monto_ajuste > 0) {
                     mensaje += `\nAjuste generado: $${parseFloat(result.monto_ajuste).toFixed(2)}`;
@@ -1933,6 +1993,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const cliente = dataCompleto.cliente;
                 const pagos = dataCompleto.historial_pagos || [];
                 const estadoCuenta = dataCompleto.estado_cuenta;
+                clienteSeleccionado = cliente;
+                estadoCuentaDetalleActual = estadoCuenta;
 
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';

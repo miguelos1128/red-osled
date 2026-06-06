@@ -472,6 +472,10 @@
                         <a id="btn-whatsapp" href="#" target="_blank" class="btn-contacto whatsapp">
                             💬 Enviar WhatsApp al <span id="detalle-telefono"></span>
                         </a>
+                        <div id="editar-box">
+
+                        </div>
+                        
                     </div>
                 </div>
 
@@ -1800,6 +1804,13 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     const telLimpio = tel.replace(/\D/g,''); 
                     btnWhatsapp.href = `https://wa.me/${telLimpio}`;
                     btnWhatsapp.style.display = 'inline-block';
+                    const EditarBox = document.getElementById('editar-box')
+                        EditarBox.innerHTML = `
+                        
+                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente})'>
+                                        <i class="fas fa-eye">✏️</i>
+                                    </button>
+                        `;
                 } else {
                     btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
                 }
@@ -1906,7 +1917,49 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
              // Guardamos los datos globalmente para que el botón del PDF los pueda usar
                    
         }
-        
+        async function modificaTelefonoCliente(idCliente) {
+            // 1. Mostramos una ventana emergente nativa para pedir el nuevo número
+            const nuevoTelefono = prompt("Por favor, ingresa el nuevo número de teléfono (solo números):");
+
+            // 2. Validamos que el usuario no haya presionado "Cancelar" y que no esté vacío
+            if (nuevoTelefono !== null && nuevoTelefono.trim() !== "") {
+                
+                try {
+                    // 3. Enviamos la petición al servidor usando fetch
+                    const response = await fetch(`/api/clientes/${idCliente}/telefono`, {
+                        method: 'PUT', // Usamos PUT porque estamos modificando un dato existente
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        // Convertimos los datos a formato JSON para enviarlos
+                        body: JSON.stringify({ nuevoTelefono: nuevoTelefono.trim() }) 
+                    });
+
+                    const data = await response.json();
+
+                    // 4. Revisamos si el servidor respondió con éxito
+                    if (response.ok) {
+                        alert("¡El teléfono se ha actualizado correctamente!");
+                        
+                        // 5. Opcional pero recomendado: Recargar los detalles para ver el cambio reflejado
+                        // Si tienes una función como abrirDetallesCliente(idCliente), llámala aquí:
+                        abrirDetallesCliente(idCliente); 
+                        
+                    } else {
+                        // Si hubo un error (ej. el servidor falló), lo mostramos
+                        alert("Hubo un problema: " + data.error);
+                    }
+
+                } catch (error) {
+                    console.error("Error en la comunicación con el servidor:", error);
+                    alert("Ocurrió un error al intentar comunicar con el servidor.");
+                }
+            } else if (nuevoTelefono === "") {
+                alert("El número de teléfono no puede estar vacío.");
+            }
+            // Si es null, significa que el usuario presionó "Cancelar", así que no hacemos nada.
+        } 
+
         function generarPDFEstadoCuenta() {
             // 1. Verificamos que tengamos datos cargados
             if (!window.datosActualesPDF) {

@@ -727,6 +727,29 @@ app.post('/api/cancelar-pago/:id', async (req, res) => {
         });
     }
 });
+// Ruta para actualizar el teléfono de un cliente
+app.put('/api/clientes/:id/telefono', async (req, res) => {
+    // 1. Obtenemos el ID del cliente desde la URL
+    const idCliente = req.params.id;
+    // 2. Obtenemos el nuevo teléfono desde el cuerpo de la petición (body)
+    const { nuevoTelefono } = req.body;
+
+    try {
+        // 3. Preparamos la consulta SQL para actualizar solo el campo del teléfono
+        // Nota: Asegúrate de que el campo en tu base de datos se llame 'telefono'
+        const query = 'UPDATE clientes SET telefono = ? WHERE id = ?';
+        
+        // 4. Ejecutamos la consulta en la base de datos
+        await db.execute(query, [nuevoTelefono, idCliente]);
+
+        // 5. Respondemos al navegador que todo salió bien
+        res.json({ success: true, message: 'Teléfono actualizado correctamente' });
+
+    } catch (error) {
+        console.error('Error al actualizar el teléfono:', error);
+        res.status(500).json({ error: 'Error interno del servidor al actualizar el teléfono' });
+    }
+});
 /* 
 // RUTA PARA OBTENER EL PERFIL COMPLETO DEL CLIENTE (VERSIÓN CON PROMESAS)
 app.get('/cliente-completo/:id', async (req, res) => {
@@ -773,3 +796,5 @@ app.get('/cliente-completo/:id', async (req, res) => {
         res.status(500).json({ error: 'Error interno del servidor al consultar la base de datos' });
     }
 }); */
+
+

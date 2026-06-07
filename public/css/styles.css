@@ -1311,7 +1311,10 @@ td {
 }
 
 /* Botón WhatsApp */
-.acciones-contacto { margin-top: 20px; }
+.acciones-contacto { 
+    display: flex;
+    margin-top: 10px; 
+}
 .btn-contacto.whatsapp {
     display: inline-block; background-color: #25D366; color: white;
     padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;

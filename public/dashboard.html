@@ -211,9 +211,14 @@
             <div id="resumen-pago-detalle" class="resumen-pago-detalle"></div>
 
             <div class="acciones-pago-exitoso">
-                <a id="btn-enviar-whatsapp-pago" class="btn-whatsapp-pago button" href="#" target="_blank" rel="noopener">
-                    Enviar WhatsApp
-                </a>
+                <div class="acciones-contacto" >   
+                    <a id="btn-enviar-whatsapp-pago" class="btn-whatsapp-pago button" href="#" target="_blank" rel="noopener">
+                        Enviar WhatsApp
+                    </a>
+                    <div id="editar-box-cobro">
+
+                    </div>
+                </div>
                 <button onclick="imprimirReciboUltimoPago()" class="btn-imprimir-pago button">
                     Imprimir recibo
                 </button>
@@ -541,7 +546,7 @@
         const inputBuscador = document.getElementById('buscador-nombre');
         let configLocalidades = {};
         let perfilUsuario ="";
-
+        let detallePago;
 
         if (!usuarioJson) {
             window.location.href = 'index.html';
@@ -1497,7 +1502,15 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
 
             if (resultado.success) {
                 cerrarModalPago();
+                const EditarBoxCobro = document.getElementById('editar-box-cobro')
+                        EditarBoxCobro.innerHTML = `
+                        
+                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${clienteSeleccionado.id},2)'>
+                                        <i class="fas fa-eye">✏️</i>
+                                    </button>
+                        `;
                 mostrarResumenPagoExitoso(resultado.detalle);
+                detallePago = resultado.detalle
             } else {
                 alert("Error: " + resultado.error);
             }
@@ -1534,9 +1547,11 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                     <strong>$${totalFormateado}</strong>
                 </div>
             `;
-
+           
             configurarWhatsappPago(detalle, total);
+            
             document.getElementById('modalPagoExitoso').classList.remove('hidden');
+            
         }
 
         function configurarWhatsappPago(detalle, total) {
@@ -1807,7 +1822,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     const EditarBox = document.getElementById('editar-box')
                         EditarBox.innerHTML = `
                         
-                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente})'>
+                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},1)'>
                                         <i class="fas fa-eye">✏️</i>
                                     </button>
                         `;
@@ -1917,7 +1932,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
              // Guardamos los datos globalmente para que el botón del PDF los pueda usar
                    
         }
-        async function modificaTelefonoCliente(idCliente) {
+        async function modificaTelefonoCliente(idCliente,bandera) {
             // 1. Mostramos una ventana emergente nativa para pedir el nuevo número
             const nuevoTelefono = prompt("Por favor, ingresa el nuevo número de teléfono (solo números):");
 
@@ -1940,10 +1955,14 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     // 4. Revisamos si el servidor respondió con éxito
                     if (response.ok) {
                         alert("¡El teléfono se ha actualizado correctamente!");
+                        if (bandera==1){
+                            abrirDetallesCliente(idCliente); 
+                        }else if (bandera ==2){
+                            
+                            clienteSeleccionado.telefono = nuevoTelefono
+                            mostrarResumenPagoExitoso(detallePago);
+                        }
                         
-                        // 5. Opcional pero recomendado: Recargar los detalles para ver el cambio reflejado
-                        // Si tienes una función como abrirDetallesCliente(idCliente), llámala aquí:
-                        abrirDetallesCliente(idCliente); 
                         
                     } else {
                         // Si hubo un error (ej. el servidor falló), lo mostramos

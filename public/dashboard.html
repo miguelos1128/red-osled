@@ -1526,6 +1526,13 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
         function mostrarResumenPagoExitoso(detalle) {
             ultimoDetallePago = detalle;
 
+            // 1. GENERAMOS LA FECHA Y HORA EXACTA DEL REGISTRO
+            const ahora = new Date();
+            const fechaFormateada = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const horaFormateada = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const fechaHoraRegistro = `${fechaFormateada} a las ${horaFormateada}`;
+
+            // 2. CALCULAMOS TOTALES Y ARMAMOS LAS FILAS
             const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
             const detalleHtml = detalle.map(item => {
                 const tipoLabel = item.tipo === 'abono' ? 'Abono' : 'Mensualidad';
@@ -1540,18 +1547,23 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
 
             document.getElementById('resumen-pago-cliente').textContent = clienteSeleccionado.nombre_completo;
             const totalFormateado = total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
+            // 3. INYECTAMOS TODO, INCLUYENDO LA MARCA DE TIEMPO AL FINAL
             document.getElementById('resumen-pago-detalle').innerHTML = `
+                
+                <div class="resumen-pago-fecha">
+                    📅 Registrado el: <strong>${fechaHoraRegistro}</strong>
+                </div>
                 ${detalleHtml}
                 <div class="resumen-pago-total">
                     <span>Total recibido</span>
                     <strong>$${totalFormateado}</strong>
                 </div>
             `;
-           
+            
             configurarWhatsappPago(detalle, total);
             
             document.getElementById('modalPagoExitoso').classList.remove('hidden');
-            
         }
 
         function configurarWhatsappPago(detalle, total) {

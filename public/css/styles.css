@@ -1023,6 +1023,14 @@ td {
     border-bottom: 1px solid #eee;
 }
 
+.resumen-pago-fecha{
+    text-align: center;
+    color: #666; 
+    font-size: 1em; 
+    padding-top: 10px;
+    padding-bottom: 10px; 
+    border-bottom: 1px dashed #ccc;
+}
 .resumen-pago-fila small {
     display: block;
     color: #777;
@@ -1036,9 +1044,18 @@ td {
 }
 
 .acciones-pago-exitoso {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap; /* Permite que los elementos bajen a la siguiente línea */
+    gap: 10px; /* Espacio entre los botones */
+    margin-top: 20px;
+}
+
+/* 2. Hacemos que los botones de WhatsApp e Imprimir compartan la mitad de arriba */
+.acciones-pago-exitoso .btn-whatsapp-pago,
+.acciones-pago-exitoso .btn-imprimir-pago {
+    flex: 1; /* Hacen que ambos botones se estiren por igual (50% y 50%) */
+    text-align: center;
+    box-sizing: border-box;
 }
 
 .acciones-pago-exitoso .button {
@@ -1068,9 +1085,25 @@ td {
     color: white;
 }
 
+/* Estilo específico para el botón de Cerrar */
 .btn-cerrar-pago {
-    background: #eef1f4;
-    color: #333;
+    width: 100%; /* Toma todo el ancho disponible */
+    flex-basis: 100%; /* Le dice a flexbox que este elemento ocupa toda la fila */
+    padding: 12px 0;
+    background-color: #e74c3c; /* Color rojo */
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+/* Efecto Hover (cuando pasas el mouse por encima) */
+.btn-cerrar-pago:hover {
+    background-color: #c0392b; /* Un rojo más oscuro al hacer hover */
 }
 
 @media (max-width: 520px) {

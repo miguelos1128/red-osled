@@ -56,7 +56,6 @@ button {
     font-weight: bold;
     cursor: pointer;
     transition: background 0.3s;
-    margin-top: 10px;
 }
 
 .button:hover {
@@ -1230,7 +1229,9 @@ td {
     flex-direction: column; /* Apila uno sobre otro */
     margin-top: 15px; /* Espacio con los datos de arriba */
 }
-
+.grupo-botones-pago .btn-pago {
+    margin-top: 10px; /* Aseguramos que no queden márgenes raros */   
+}
 /* Estilo del botón de eliminar */
 .btn-eliminar-pago {
     background: none;
@@ -1346,7 +1347,9 @@ td {
 /* Botón WhatsApp */
 .acciones-contacto { 
     display: flex;
-    margin-top: 10px; 
+    width: 50%;
+    align-items: center;
+    flex-direction: row;
 }
 .btn-contacto.whatsapp {
     display: inline-block; background-color: #25D366; color: white;

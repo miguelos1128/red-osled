@@ -1270,7 +1270,7 @@
          function seleccionarClienteDirecto(cliente) {
             // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            
+            cerrarModalDetalles()
             // 2. Ejecutamos la lógica de selección que ya tenemos programada
             seleccionarCliente(cliente);
         }
@@ -1909,7 +1909,10 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 mesesPendientesBox.classList.toggle('hidden', mesesPendientes.length === 0);
                 const notifcarBox = document.getElementById('notificar-box')
                 notifcarBox.innerHTML = `
-                
+                            <button class="btn-registrar-pago" 
+                                onclick='seleccionarClienteDirecto(${JSON.stringify(cliente).replace(/'/g, "&apos;")})'>
+                                <i class="fas fa-dollar-sign">💵</i> Registrar Pago
+                            </button>
                             <button class="btn-detalles-slim" onclick='notificarCliente(${idCliente})'>
                                 <i class="fas fa-eye">🔔</i>
                             </button>

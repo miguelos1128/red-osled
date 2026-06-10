@@ -459,6 +459,7 @@
                         <div class="info-grupo">
                             <label>Dirección IP</label>
                             <p id="detalle-ip" class="resaltado-tecnico">-</p>
+                            <!-- <a id="detalle-ip" class="resaltado-tecnico" href="192.168.254.100">-</a> -->
                         </div>
 
                         <div class="info-grupo">
@@ -1815,6 +1816,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 
                 document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
+               /*  document.getElementById('detalle-ip').href = cliente.Link || '#'; */
                 document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
                 
                 // Ahora usamos los nombres reales que trajimos del servidor

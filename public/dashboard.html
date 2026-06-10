@@ -1949,11 +1949,29 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         }
         async function modificaTelefonoCliente(idCliente,bandera) {
             // 1. Mostramos una ventana emergente nativa para pedir el nuevo número
-            const nuevoTelefono = prompt("Por favor, ingresa el nuevo número de teléfono (solo números):");
+            let nuevoTelefono = prompt("Por favor, ingresa el nuevo número de teléfono (solo números):");
 
-            // 2. Validamos que el usuario no haya presionado "Cancelar" y que no esté vacío
-            if (nuevoTelefono !== null && nuevoTelefono.trim() !== "") {
+            // 2. CICLO DE VALIDACIÓN: Se repite si se equivoca, se detiene si presiona Cancelar (null)
+            while (nuevoTelefono !== null) {
+                // Quitamos espacios en blanco al inicio o al final por si se le fue un espacio sin querer
+                nuevoTelefono = nuevoTelefono.trim();
                 
+                // EL CANDADO: Evaluamos si cumple exactamente con 10 números
+                if (/^\d{10}$/.test(nuevoTelefono)) {
+                    break; // El número es perfecto, rompemos el ciclo y continuamos
+                } else {
+                    // Si tiene letras, le faltan o le sobran números, volvemos a preguntar
+                    nuevoTelefono = prompt("⚠️ Número inválido.\n\nDebes ingresar EXACTAMENTE 10 dígitos, sin espacios ni letras.\n\nInténtalo de nuevo:");
+                }
+            }
+
+            // 3. Si el usuario presionó "Cancelar", detenemos todo el proceso
+            if (nuevoTelefono === null) {
+                return; 
+            }
+
+            // 4. Si el código llega hasta aquí, estamos 100% seguros de que es un número de 10 dígitos
+       
                 try {
                     // 3. Enviamos la petición al servidor usando fetch
                     const response = await fetch(`/api/clientes/${idCliente}/telefono`, {
@@ -1988,10 +2006,12 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     console.error("Error en la comunicación con el servidor:", error);
                     alert("Ocurrió un error al intentar comunicar con el servidor.");
                 }
-            } else if (nuevoTelefono === "") {
+            /* } else if (nuevoTelefono === "") {
                 alert("El número de teléfono no puede estar vacío.");
+            }else if (nuevoTelefono.length !== 10){
+                alert("El Teléfono debe tener exactamente 10 dígitos.");
             }
-            // Si es null, significa que el usuario presionó "Cancelar", así que no hacemos nada.
+            // Si es null, significa que el usuario presionó "Cancelar", así que no hacemos nada. */
         } 
 
         function generarPDFEstadoCuenta() {

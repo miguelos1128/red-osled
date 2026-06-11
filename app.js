@@ -153,7 +153,6 @@ app.post('/api/login', async (req, res) => {
                 }
             });
         } else {
-            console.log('Usuario no encontrado');
             res.status(401).json({ success: false, mensaje: "Correo o contraseña incorrectos" });
         }
     } catch (err) {
@@ -757,7 +756,6 @@ app.put('/api/clientes/:id/alias', async (req, res) => {
     const idCliente = req.params.id;
     // 2. Obtenemos el nuevo teléfono desde el cuerpo de la petición (body)
     const { nuevoAlias } = req.body;
-    console.log("Alias recibido"+ nuevoAlias);
 
     try {
         // 3. Preparamos la consulta SQL para actualizar solo el campo del teléfono
@@ -769,7 +767,6 @@ app.put('/api/clientes/:id/alias', async (req, res) => {
 
         // 5. Respondemos al navegador que todo salió bien
         res.json({ success: true, message: 'Alias actualizado correctamente' });
-        console.log('Alias actualizado correctamente');
 
     } catch (error) {
         console.error('Error al actualizar el teléfono:', error);

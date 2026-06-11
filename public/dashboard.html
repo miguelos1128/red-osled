@@ -566,9 +566,9 @@
         const usuarioString = localStorage.getItem('usuario_actual');
 
         if (usuarioString) {
-            const usuario = JSON.parse(usuarioString);
+            const usuario = JSON.parse(usuarioString);/* 
             console.log("El rol de este usuario es:", usuario.rol);
-            console.log("Sus localidades son:", usuario.localidades); // Ej: [1, 3]
+            console.log("Sus localidades son:", usuario.localidades); // Ej: [1, 3] */
         } else {
             // Si no hay datos, significa que no se ha logueado, lo regresamos al login
             window.location.href = '/index.html';
@@ -586,7 +586,6 @@
                 if (btnNuevo) {
                     // Eliminamos el botón para que no exista en el DOM del Supervisor
                     btnNuevo.remove(); 
-                    console.log("Interfaz ajustada: Botón de nuevo cliente oculto para Supervisor.");
                 }
                 perfilUsuario = "Administrador Local";
             }else if (usuario.rol === 2){
@@ -1211,7 +1210,7 @@
                         <strong>${c.nombre_completo}</strong> - IP: ${c.direccion_ip}
                     </div>
                 `).join('');
-                console.log("Clientes cargados:", clientes);
+                /* console.log("Clientes cargados:", clientes); */
             } catch (error) {
                 console.error("Error al buscar:", error);
             }
@@ -1222,9 +1221,7 @@
             
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
-            clienteSeleccionado = cliente;
-            console.log( "cliente Seeleccionead" + cliente.url_portal)
-            
+            clienteSeleccionado = cliente;            
             // Limpiar las listas flotantes
             document.getElementById('sugerenciasNombre').innerHTML = '';
             document.getElementById('sugerenciasIP').innerHTML = '';
@@ -1235,7 +1232,6 @@
             } else {
                 document.getElementById('buscarIP').value = cliente.direccion_ip;
             }
-            console.log("Alias del cliente" + cliente.alias_cliente)//-----------------------------------------------------
 
             try {
                 // Consultamos el estado de cuenta calculado desde el servidor
@@ -1702,7 +1698,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
         // 2. Función que crea el ticket visual
         function generarTicketImpresion(detalle) {
-            console.log(detalle)
+            //console.log(detalle)
             if (!detalle || detalle.length === 0) {
                 alert("Error: No hay datos para el ticket. El pago se registró pero el desglose falló.");
                 location.reload();
@@ -1810,7 +1806,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const mesesDeuda = meses < 0 ? 0 : meses;
             const montoTotal = mesesDeuda * costoMensual;
 
-            console.log("meses deuda: "+ mesesDeuda + "montoTotal: " + montoTotal)
+            //console.log("meses deuda: "+ mesesDeuda + "montoTotal: " + montoTotal)
 
             return {
                 mesesDeuda,
@@ -1900,8 +1896,6 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     badge.classList.add('estado-retirado');
                 }
 
-                // Dejamos un mensaje oculto en la consola para saber que los pagos llegaron bien
-                console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);
                 // --- INICIO FASE 2: FINANZAS ---
                 const tbodyPagos = document.getElementById('detalle-tabla-pagos');
                 tbodyPagos.innerHTML = ''; // Limpiamos la tabla de clientes anteriores
@@ -2062,7 +2056,6 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                             abrirDetallesCliente(idCliente); 
                         }else{
                             clienteSeleccionado.alias_cliente = nuevoAlias
-                            console.log("ok, el alias ahora es "+clienteSeleccionado.alias_cliente);
                             mostrarResumenPagoExitoso(detallePago);
                         }
                     } else {
@@ -2240,7 +2233,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                         mostrarBoton = true;  // ACTIVO solo en pendiente
                         totalModal += parseFloat(pago.monto) || 0;
                     }
-                    console.log("clase: "+claseEstado +" nombre "+nombreEstado )
+                    //console.log("clase: "+claseEstado +" nombre "+nombreEstado )
                     // 3. Creamos el contenedor de la tarjeta/fila (reporte-item-pago)
                     const itemPago = document.createElement('div');
                     itemPago.className = 'reporte-item-pago'; // <-- Clase clave para el CSS Grid
@@ -2453,7 +2446,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         async function cancelarPago(idPago) {
         // Confirmación antes de borrar
         const confirmar = confirm("¿Estás seguro de que deseas cancelar este pago?");
-        console.log("is pago:"+ idPago)
+        //console.log("is pago:"+ idPago)
         if (confirmar) {
             try {
                 const response = await fetch(`/api/cancelar-pago/${idPago}`, {

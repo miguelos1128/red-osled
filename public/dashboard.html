@@ -1077,10 +1077,23 @@
                 alert("Por favor corrige los siguientes errores:\n\n" + errores.join("\n"));
                 return; // Detenemos el código aquí, no se envía nada al servidor
             }
+            let link_portal= "";
+
+            if (paquete=== '16M') {
+                link_portal = "http://192.168.20."+ip+"/";
+            }else if (localidad == 1 || localidad == 2 || localidad == 6){
+                link_portal = "http://192.168.7."+ip+"/";
+            }else if(localidad == 3 || localidad ==5){
+                link_portal = "http://192.168.8."+ip+"/";
+            }else if(localidad == 4){
+                link_portal = "http://192.168.25."+ip+"/";
+            }
 
             // Si todo está bien, preparamos el objeto
             const nuevoCliente = {
                 nombre_completo: nombre,
+                alias_cliente: nombre,
+                url_portal: link_portal,
                 telefono: telefono,
                 correo: correo,
                 direccion: direccion,

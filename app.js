@@ -77,7 +77,7 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         // (Dejamos un espacio antes del GROUP BY para poder insertar el WHERE si es necesario)
         let query = `
             SELECT 
-                c.id, c.nombre_completo, c.telefono, c.es_renta, fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
+                c.id, c.nombre_completo, c.url_portal, c.alias_cliente, c.telefono, c.es_renta, fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
                 IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
             FROM clientes c
             LEFT JOIN pagos p ON c.id = p.cliente_id 
@@ -744,6 +744,32 @@ app.put('/api/clientes/:id/telefono', async (req, res) => {
 
         // 5. Respondemos al navegador que todo salió bien
         res.json({ success: true, message: 'Teléfono actualizado correctamente' });
+
+    } catch (error) {
+        console.error('Error al actualizar el teléfono:', error);
+        res.status(500).json({ error: 'Error interno del servidor al actualizar el teléfono' });
+    }
+});
+
+// Ruta para actualizar el Alias de un cliente
+app.put('/api/clientes/:id/alias', async (req, res) => {
+    // 1. Obtenemos el ID del cliente desde la URL
+    const idCliente = req.params.id;
+    // 2. Obtenemos el nuevo teléfono desde el cuerpo de la petición (body)
+    const { nuevoAlias } = req.body;
+    console.log("Alias recibido"+ nuevoAlias);
+
+    try {
+        // 3. Preparamos la consulta SQL para actualizar solo el campo del teléfono
+        // Nota: Asegúrate de que el campo en tu base de datos se llame 'telefono'
+        const query = 'UPDATE clientes SET alias_cliente = ? WHERE id = ?';
+        
+        // 4. Ejecutamos la consulta en la base de datos
+        await db.execute(query, [nuevoAlias, idCliente]);
+
+        // 5. Respondemos al navegador que todo salió bien
+        res.json({ success: true, message: 'Alias actualizado correctamente' });
+        console.log('Alias actualizado correctamente');
 
     } catch (error) {
         console.error('Error al actualizar el teléfono:', error);

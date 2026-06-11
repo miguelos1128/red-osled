@@ -77,7 +77,7 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         // (Dejamos un espacio antes del GROUP BY para poder insertar el WHERE si es necesario)
         let query = `
             SELECT 
-                c.id, c.nombre_completo, c.telefono, c.es_renta, fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
+                c.id, c.nombre_completo, c.url_portal, c.alias_cliente, c.telefono, c.es_renta, fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
                 IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
             FROM clientes c
             LEFT JOIN pagos p ON c.id = p.cliente_id 
@@ -153,7 +153,6 @@ app.post('/api/login', async (req, res) => {
                 }
             });
         } else {
-            console.log('Usuario no encontrado');
             res.status(401).json({ success: false, mensaje: "Correo o contraseña incorrectos" });
         }
     } catch (err) {
@@ -173,7 +172,7 @@ app.post('/api/clientes', async (req, res) => {
     try{
         // 1. Obtenemos los datos del cuerpo de la petición (req.body)
         const { 
-            nombre_completo, telefono, correo, direccion, observaciones, es_renta,
+            nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta,
             fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id, rol_usuario
         } = req.body;
 
@@ -188,15 +187,15 @@ app.post('/api/clientes', async (req, res) => {
         }
 
         const query = `INSERT INTO clientes 
-                    (nombre_completo, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                    (nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         console.log("Query", query);
         console.log("Datos recibidos para el nuevo cliente:", req.body);
     // 2. Abrimos el bloque try/catch
     
         // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
         const [result] = await db.query(query, [
-        nombre_completo, telefono, correo, direccion, observaciones || null, es_renta ? 1 : 0,
+        nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones || null, es_renta ? 1 : 0,
         fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual,localidad_id
         ]);
         // 4a. Si todo sale bien, respondemos aquí
@@ -256,24 +255,7 @@ app.get('/api/buscar-clientes', async (req, res) => {
     }
 });
 
-/* // RUTA 1: Consultar el último pago de un cliente
-app.get('/api/ultimo-pago/:id', async (req, res) => {
-    const { id } = req.params;
-    const query = `
-        SELECT mes_pagado, fecha_pago, monto,  tipo_pago
-        FROM pagos 
-        WHERE cliente_id = ? and estado_corte < 3
-        ORDER BY fecha_pago DESC LIMIT 1`;
-    try{
-        const [result] = await db.query(query, [id]);
-        // Si hay resultados, mandamos el primero, si no, mandamos null
-        res.json(result.length > 0 ? result[0] : null);
-    }catch(err){
-        console.error("Error en DB:", err);
-            return res.status(500).json({ error: "Error al consultar historial" });
-    }
-});
- */
+
 // Ruta para obtener el historial de los últimos 6 pagos de un cliente
 app.get('/api/clientes/:id/historial-pagos', async (req, res) => {
     const clienteId = req.params.id;
@@ -750,51 +732,30 @@ app.put('/api/clientes/:id/telefono', async (req, res) => {
         res.status(500).json({ error: 'Error interno del servidor al actualizar el teléfono' });
     }
 });
-/* 
-// RUTA PARA OBTENER EL PERFIL COMPLETO DEL CLIENTE (VERSIÓN CON PROMESAS)
-app.get('/cliente-completo/:id', async (req, res) => {
+
+// Ruta para actualizar el Alias de un cliente
+app.put('/api/clientes/:id/alias', async (req, res) => {
+    // 1. Obtenemos el ID del cliente desde la URL
     const idCliente = req.params.id;
+    // 2. Obtenemos el nuevo teléfono desde el cuerpo de la petición (body)
+    const { nuevoAlias } = req.body;
 
     try {
-        // Consulta 1: Datos del cliente + Nombre de la localidad
-        const queryCliente = `
-            SELECT c.*, l.nombre AS localidad_nombre 
-            FROM clientes c 
-            LEFT JOIN localidades l ON c.localidad_id = l.id 
-            WHERE c.id = ?
-        `;
+        // 3. Preparamos la consulta SQL para actualizar solo el campo del teléfono
+        // Nota: Asegúrate de que el campo en tu base de datos se llame 'telefono'
+        const query = 'UPDATE clientes SET alias_cliente = ? WHERE id = ?';
         
-        // Ejecutamos usando tu formato de promesas
-        const [clienteRows] = await db.execute(queryCliente, [idCliente]);
+        // 4. Ejecutamos la consulta en la base de datos
+        await db.execute(query, [nuevoAlias, idCliente]);
 
-        // Si no hay cliente, retornamos error 404
-        if (clienteRows.length === 0) {
-            return res.status(404).json({ error: 'Cliente no encontrado' });
-        }
-
-        // Consulta 2: Historial de pagos + Nombre del usuario que cobró
-        const queryPagos = `
-            SELECT p.*, u.nombre AS cobrador_nombre 
-            FROM pagos p 
-            LEFT JOIN usuarios u ON p.usuario_id = u.id 
-            WHERE p.cliente_id = ? AND p.estado_corte IN (0, 1) 
-            ORDER BY p.id DESC
-        `;
-        
-        // Ejecutamos la consulta de pagos
-        const [pagosRows] = await db.execute(queryPagos, [idCliente]);
-
-        // Enviamos el paquete completo de regreso al navegador
-        res.json({
-            cliente: clienteRows[0], // Mandamos el objeto único del cliente
-            pagos: pagosRows         // Mandamos el arreglo completo de pagos
-        });
+        // 5. Respondemos al navegador que todo salió bien
+        res.json({ success: true, message: 'Alias actualizado correctamente' });
 
     } catch (error) {
-        // Manejo de errores siguiendo tu estructura
-        console.error("Error al obtener perfil completo:", error);
-        res.status(500).json({ error: 'Error interno del servidor al consultar la base de datos' });
+        console.error('Error al actualizar el teléfono:', error);
+        res.status(500).json({ error: 'Error interno del servidor al actualizar el teléfono' });
     }
-}); */
+});
+
 
 

@@ -205,6 +205,9 @@
                 <div>
                     <p class="resumen-titulo">Cobro guardado correctamente</p>
                     <p id="resumen-pago-cliente" class="resumen-subtitulo"></p>
+                    <div id="editar-box-alias">
+
+                    </div>
                 </div>
             </div>
 
@@ -422,7 +425,13 @@
         <div class="modal-content">
             
             <div class="modal-cabecera">
-                <h2 id="detalle-nombre-cliente">Cargando...</h2>
+                <div>
+                    <h2 id="detalle-nombre-cliente">Cargando...</h2>
+                    <div id="editar-box-alias-detalles">
+
+                    </div>
+                </div>
+                
                 <div class="detalle-badges">
                     <span id="detalle-badge-estado" class="badge-estado">Activo</span>
                     <span id="detalle-badge-renta" class="badge-renta hidden">RENTA</span>
@@ -458,7 +467,8 @@
 
                         <div class="info-grupo">
                             <label>Dirección IP</label>
-                            <p id="detalle-ip" class="resaltado-tecnico">-</p>
+                            <!--  <p id="detalle-ip" class="resaltado-tecnico">-</p> -->
+                            <a id="detalle-ip" class="resaltado-tecnico" href="#" target="_blank">-</a>
                         </div>
 
                         <div class="info-grupo">
@@ -556,9 +566,9 @@
         const usuarioString = localStorage.getItem('usuario_actual');
 
         if (usuarioString) {
-            const usuario = JSON.parse(usuarioString);
+            const usuario = JSON.parse(usuarioString);/* 
             console.log("El rol de este usuario es:", usuario.rol);
-            console.log("Sus localidades son:", usuario.localidades); // Ej: [1, 3]
+            console.log("Sus localidades son:", usuario.localidades); // Ej: [1, 3] */
         } else {
             // Si no hay datos, significa que no se ha logueado, lo regresamos al login
             window.location.href = '/index.html';
@@ -576,7 +586,6 @@
                 if (btnNuevo) {
                     // Eliminamos el botón para que no exista en el DOM del Supervisor
                     btnNuevo.remove(); 
-                    console.log("Interfaz ajustada: Botón de nuevo cliente oculto para Supervisor.");
                 }
                 perfilUsuario = "Administrador Local";
             }else if (usuario.rol === 2){
@@ -1076,10 +1085,23 @@
                 alert("Por favor corrige los siguientes errores:\n\n" + errores.join("\n"));
                 return; // Detenemos el código aquí, no se envía nada al servidor
             }
+            let link_portal= "";
+
+            if (paquete=== '16M') {
+                link_portal = "http://192.168.20."+ip+"/";
+            }else if (localidad == 1 || localidad == 2 || localidad == 6){
+                link_portal = "http://192.168.7."+ip+"/";
+            }else if(localidad == 3 || localidad ==5){
+                link_portal = "http://192.168.8."+ip+"/";
+            }else if(localidad == 4){
+                link_portal = "http://192.168.25."+ip+"/";
+            }
 
             // Si todo está bien, preparamos el objeto
             const nuevoCliente = {
                 nombre_completo: nombre,
+                alias_cliente: nombre,
+                url_portal: link_portal,
                 telefono: telefono,
                 correo: correo,
                 direccion: direccion,
@@ -1188,7 +1210,7 @@
                         <strong>${c.nombre_completo}</strong> - IP: ${c.direccion_ip}
                     </div>
                 `).join('');
-                console.log("Clientes cargados:", clientes);
+                /* console.log("Clientes cargados:", clientes); */
             } catch (error) {
                 console.error("Error al buscar:", error);
             }
@@ -1199,8 +1221,7 @@
             
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
-            clienteSeleccionado = cliente;
-            
+            clienteSeleccionado = cliente;            
             // Limpiar las listas flotantes
             document.getElementById('sugerenciasNombre').innerHTML = '';
             document.getElementById('sugerenciasIP').innerHTML = '';
@@ -1211,7 +1232,6 @@
             } else {
                 document.getElementById('buscarIP').value = cliente.direccion_ip;
             }
-            console.log(cliente)//-----------------------------------------------------
 
             try {
                 // Consultamos el estado de cuenta calculado desde el servidor
@@ -1504,11 +1524,14 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                 cerrarModalPago();
                 const EditarBoxCobro = document.getElementById('editar-box-cobro')
                         EditarBoxCobro.innerHTML = `
-                        
                                     <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${clienteSeleccionado.id},2)'>
                                         <i class="fas fa-eye">✏️</i>
                                     </button>
                         `;
+                
+
+
+
                 mostrarResumenPagoExitoso(resultado.detalle);
                 detallePago = resultado.detalle
             } else {
@@ -1545,7 +1568,13 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                 `;
             }).join('');
 
-            document.getElementById('resumen-pago-cliente').textContent = clienteSeleccionado.nombre_completo;
+            document.getElementById('resumen-pago-cliente').textContent = clienteSeleccionado.nombre_completo ;
+            const EditarBoxAlias = document.getElementById('editar-box-alias')
+                        EditarBoxAlias.innerHTML = `
+                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${clienteSeleccionado.id},2)'>
+                                        <i class="fas fa-eye">Alias: ${clienteSeleccionado.alias_cliente} ✏️</i>
+                                    </p>
+                        `;
             const totalFormateado = total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             
             // 3. INYECTAMOS TODO, INCLUYENDO LA MARCA DE TIEMPO AL FINAL
@@ -1595,7 +1624,7 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                 .join('\n');
             const totalFormateadoWA = total.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
             const mensajeWhatsapp =
-`Hola *${clienteSeleccionado.nombre_completo}* ${emojiSaludo}
+`Hola *${clienteSeleccionado.alias_cliente}* ${emojiSaludo}
 
 Te confirmamos que tu pago correspondiente a:
 
@@ -1669,7 +1698,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
         // 2. Función que crea el ticket visual
         function generarTicketImpresion(detalle) {
-            console.log(detalle)
+            //console.log(detalle)
             if (!detalle || detalle.length === 0) {
                 alert("Error: No hay datos para el ticket. El pago se registró pero el desglose falló.");
                 location.reload();
@@ -1777,7 +1806,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const mesesDeuda = meses < 0 ? 0 : meses;
             const montoTotal = mesesDeuda * costoMensual;
 
-            console.log("meses deuda: "+ mesesDeuda + "montoTotal: " + montoTotal)
+            //console.log("meses deuda: "+ mesesDeuda + "montoTotal: " + montoTotal)
 
             return {
                 mesesDeuda,
@@ -1801,6 +1830,13 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const pagos = dataCompleto.historial_pagos || [];
                 const estadoCuenta = dataCompleto.estado_cuenta;
 
+                const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
+                        EditarBoxAlias.innerHTML = `
+                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
+                                        <i class="fas fa-eye">Alias: ${cliente.alias_cliente} ✏️</i>
+                                    </p>
+                        `;
+
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
                 document.getElementById('detalle-direccion').textContent = cliente.direccion || 'Sin dirección';
@@ -1815,6 +1851,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 
                 document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
+                document.getElementById('detalle-ip').href = cliente.url_portal || '#'; 
                 document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
                 
                 // Ahora usamos los nombres reales que trajimos del servidor
@@ -1859,8 +1896,6 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     badge.classList.add('estado-retirado');
                 }
 
-                // Dejamos un mensaje oculto en la consola para saber que los pagos llegaron bien
-                console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);
                 // --- INICIO FASE 2: FINANZAS ---
                 const tbodyPagos = document.getElementById('detalle-tabla-pagos');
                 tbodyPagos.innerHTML = ''; // Limpiamos la tabla de clientes anteriores
@@ -1964,39 +1999,76 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     nuevoTelefono = prompt("⚠️ Número inválido.\n\nDebes ingresar EXACTAMENTE 10 dígitos, sin espacios ni letras.\n\nInténtalo de nuevo:");
                 }
             }
-
+            
             // 3. Si el usuario presionó "Cancelar", detenemos todo el proceso
             if (nuevoTelefono === null) {
                 return; 
             }
+            // 4. Validamos que el usuario no haya presionado "Cancelar" y que no esté vacío
+            try {
+                // 3. Enviamos la petición al servidor usando fetch
+                const response = await fetch(`/api/clientes/${idCliente}/telefono`, {
+                    method: 'PUT', // Usamos PUT porque estamos modificando un dato existente
+                    headers: {
+                        'Content-Type': 'application/json'
+                   },
+                    // Convertimos los datos a formato JSON para enviarlos
+                    body: JSON.stringify({ nuevoTelefono: nuevoTelefono.trim() }) 
+                });
 
-            // 4. Si el código llega hasta aquí, estamos 100% seguros de que es un número de 10 dígitos
-       
+                const data = await response.json();
+
+                // 4. Revisamos si el servidor respondió con éxito
+                if (response.ok) {
+                    alert("¡El teléfono se ha actualizado correctamente!");
+                    if (bandera==1){
+                        abrirDetallesCliente(idCliente); 
+                    }else if (bandera ==2){
+                            
+                        clienteSeleccionado.telefono = nuevoTelefono
+                        mostrarResumenPagoExitoso(detallePago);
+                    }
+                        
+                } else {
+                    // Si hubo un error (ej. el servidor falló), lo mostramos
+                    alert("Hubo un problema: " + data.error);
+                }
+
+            } catch (error) {
+               console.error("Error en la comunicación con el servidor:", error);
+                alert("Ocurrió un error al intentar comunicar con el servidor.");
+            }
+        }
+
+        async function modificaAliasCliente(idCliente,bandera) {
+            // 1. Mostramos una ventana emergente nativa para pedir el nuevo número
+            //const nuevoTelefono = prompt("Por favor, ingresa el nuevo Alias para el cliente:");
+            const nuevoAlias = prompt("Por favor, ingresa el nuevo Alias para el cliente:");
+
+            // 2. Validamos que el usuario no haya presionado "Cancelar" y que no esté vacío
+            if (nuevoAlias !== null && nuevoAlias.trim() !== "") {
+                
                 try {
                     // 3. Enviamos la petición al servidor usando fetch
-                    const response = await fetch(`/api/clientes/${idCliente}/telefono`, {
+                    const response = await fetch(`/api/clientes/${idCliente}/alias`, {
                         method: 'PUT', // Usamos PUT porque estamos modificando un dato existente
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         // Convertimos los datos a formato JSON para enviarlos
-                        body: JSON.stringify({ nuevoTelefono: nuevoTelefono.trim() }) 
+                        body: JSON.stringify({ nuevoAlias: nuevoAlias.trim() }) 
                     });
 
                     const data = await response.json();
 
                     // 4. Revisamos si el servidor respondió con éxito
                     if (response.ok) {
-                        alert("¡El teléfono se ha actualizado correctamente!");
                         if (bandera==1){
                             abrirDetallesCliente(idCliente); 
-                        }else if (bandera ==2){
-                            
-                            clienteSeleccionado.telefono = nuevoTelefono
+                        }else{
+                            clienteSeleccionado.alias_cliente = nuevoAlias
                             mostrarResumenPagoExitoso(detallePago);
                         }
-                        
-                        
                     } else {
                         // Si hubo un error (ej. el servidor falló), lo mostramos
                         alert("Hubo un problema: " + data.error);
@@ -2006,12 +2078,10 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     console.error("Error en la comunicación con el servidor:", error);
                     alert("Ocurrió un error al intentar comunicar con el servidor.");
                 }
-            /* } else if (nuevoTelefono === "") {
-                alert("El número de teléfono no puede estar vacío.");
-            }else if (nuevoTelefono.length !== 10){
-                alert("El Teléfono debe tener exactamente 10 dígitos.");
-            }
-            // Si es null, significa que el usuario presionó "Cancelar", así que no hacemos nada. */
+            } else if (nuevoAlias === "") {
+                alert("El nuevo Alias no puede estar vacío.");
+            } 
+            // Si es null, significa que el usuario presionó "Cancelar", así que no hacemos nada.
         } 
 
         function generarPDFEstadoCuenta() {
@@ -2174,7 +2244,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                         mostrarBoton = true;  // ACTIVO solo en pendiente
                         totalModal += parseFloat(pago.monto) || 0;
                     }
-                    console.log("clase: "+claseEstado +" nombre "+nombreEstado )
+                    //console.log("clase: "+claseEstado +" nombre "+nombreEstado )
                     // 3. Creamos el contenedor de la tarjeta/fila (reporte-item-pago)
                     const itemPago = document.createElement('div');
                     itemPago.className = 'reporte-item-pago'; // <-- Clase clave para el CSS Grid
@@ -2387,7 +2457,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         async function cancelarPago(idPago) {
         // Confirmación antes de borrar
         const confirmar = confirm("¿Estás seguro de que deseas cancelar este pago?");
-        console.log("is pago:"+ idPago)
+        //console.log("is pago:"+ idPago)
         if (confirmar) {
             try {
                 const response = await fetch(`/api/cancelar-pago/${idPago}`, {

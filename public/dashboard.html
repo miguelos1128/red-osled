@@ -1984,50 +1984,61 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         }
         async function modificaTelefonoCliente(idCliente,bandera) {
             // 1. Mostramos una ventana emergente nativa para pedir el nuevo número
-            const nuevoTelefono = prompt("Por favor, ingresa el nuevo número de teléfono (solo números):");
+            let nuevoTelefono = prompt("Por favor, ingresa el nuevo número de teléfono (solo números):");
 
-            // 2. Validamos que el usuario no haya presionado "Cancelar" y que no esté vacío
-            if (nuevoTelefono !== null && nuevoTelefono.trim() !== "") {
+            // 2. CICLO DE VALIDACIÓN: Se repite si se equivoca, se detiene si presiona Cancelar (null)
+            while (nuevoTelefono !== null) {
+                // Quitamos espacios en blanco al inicio o al final por si se le fue un espacio sin querer
+                nuevoTelefono = nuevoTelefono.trim();
                 
-                try {
-                    // 3. Enviamos la petición al servidor usando fetch
-                    const response = await fetch(`/api/clientes/${idCliente}/telefono`, {
-                        method: 'PUT', // Usamos PUT porque estamos modificando un dato existente
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        // Convertimos los datos a formato JSON para enviarlos
-                        body: JSON.stringify({ nuevoTelefono: nuevoTelefono.trim() }) 
-                    });
-
-                    const data = await response.json();
-
-                    // 4. Revisamos si el servidor respondió con éxito
-                    if (response.ok) {
-                        alert("¡El teléfono se ha actualizado correctamente!");
-                        if (bandera==1){
-                            abrirDetallesCliente(idCliente); 
-                        }else if (bandera ==2){
-                            
-                            clienteSeleccionado.telefono = nuevoTelefono
-                            mostrarResumenPagoExitoso(detallePago);
-                        }
-                        
-                        
-                    } else {
-                        // Si hubo un error (ej. el servidor falló), lo mostramos
-                        alert("Hubo un problema: " + data.error);
-                    }
-
-                } catch (error) {
-                    console.error("Error en la comunicación con el servidor:", error);
-                    alert("Ocurrió un error al intentar comunicar con el servidor.");
+                // EL CANDADO: Evaluamos si cumple exactamente con 10 números
+                if (/^\d{10}$/.test(nuevoTelefono)) {
+                    break; // El número es perfecto, rompemos el ciclo y continuamos
+                } else {
+                    // Si tiene letras, le faltan o le sobran números, volvemos a preguntar
+                    nuevoTelefono = prompt("⚠️ Número inválido.\n\nDebes ingresar EXACTAMENTE 10 dígitos, sin espacios ni letras.\n\nInténtalo de nuevo:");
                 }
-            } else if (nuevoTelefono === "") {
-                alert("El número de teléfono no puede estar vacío.");
             }
-            // Si es null, significa que el usuario presionó "Cancelar", así que no hacemos nada.
-        } 
+            
+            // 3. Si el usuario presionó "Cancelar", detenemos todo el proceso
+            if (nuevoTelefono === null) {
+                return; 
+            }
+            // 4. Validamos que el usuario no haya presionado "Cancelar" y que no esté vacío
+            try {
+                // 3. Enviamos la petición al servidor usando fetch
+                const response = await fetch(`/api/clientes/${idCliente}/telefono`, {
+                    method: 'PUT', // Usamos PUT porque estamos modificando un dato existente
+                    headers: {
+                        'Content-Type': 'application/json'
+                   },
+                    // Convertimos los datos a formato JSON para enviarlos
+                    body: JSON.stringify({ nuevoTelefono: nuevoTelefono.trim() }) 
+                });
+
+                const data = await response.json();
+
+                // 4. Revisamos si el servidor respondió con éxito
+                if (response.ok) {
+                    alert("¡El teléfono se ha actualizado correctamente!");
+                    if (bandera==1){
+                        abrirDetallesCliente(idCliente); 
+                    }else if (bandera ==2){
+                            
+                        clienteSeleccionado.telefono = nuevoTelefono
+                        mostrarResumenPagoExitoso(detallePago);
+                    }
+                        
+                } else {
+                    // Si hubo un error (ej. el servidor falló), lo mostramos
+                    alert("Hubo un problema: " + data.error);
+                }
+
+            } catch (error) {
+               console.error("Error en la comunicación con el servidor:", error);
+                alert("Ocurrió un error al intentar comunicar con el servidor.");
+            }
+        }
 
         async function modificaAliasCliente(idCliente,bandera) {
             // 1. Mostramos una ventana emergente nativa para pedir el nuevo número

@@ -425,10 +425,13 @@
         <div class="modal-content">
             
             <div class="modal-cabecera">
-                <h2 id="detalle-nombre-cliente">Cargando...</h2>
-                <div id="editar-box-alias-detalles">
+                <div>
+                    <h2 id="detalle-nombre-cliente">Cargando...</h2>
+                    <div id="editar-box-alias-detalles">
 
+                    </div>
                 </div>
+                
                 <div class="detalle-badges">
                     <span id="detalle-badge-estado" class="badge-estado">Activo</span>
                     <span id="detalle-badge-renta" class="badge-renta hidden">RENTA</span>
@@ -1572,9 +1575,9 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
             document.getElementById('resumen-pago-cliente').textContent = clienteSeleccionado.nombre_completo ;
             const EditarBoxAlias = document.getElementById('editar-box-alias')
                         EditarBoxAlias.innerHTML = `
-                                    <button class="button-alias-editar" onclick='modificaAliasCliente(${clienteSeleccionado.id},2)'>
+                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${clienteSeleccionado.id},2)'>
                                         <i class="fas fa-eye">Alias: ${clienteSeleccionado.alias_cliente} ✏️</i>
-                                    </button>
+                                    </p>
                         `;
             const totalFormateado = total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             
@@ -1833,9 +1836,9 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
                 const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
                         EditarBoxAlias.innerHTML = `
-                                    <button class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
+                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
                                         <i class="fas fa-eye">Alias: ${cliente.alias_cliente} ✏️</i>
-                                    </button>
+                                    </p>
                         `;
 
                 // 3. Inyectar datos en la FICHA TÉCNICA

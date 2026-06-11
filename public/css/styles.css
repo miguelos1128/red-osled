@@ -1297,14 +1297,10 @@ td {
     margin-bottom: 10px;
 }
 
-.editar-box-alias .button-alias-editar{
-    width: 100%;
-    padding: 0px;
-    background-color: #f0fff4;
+.button-alias-editar{
     color: #444;
     border: none;
-    border-radius: 6px;
-    font-weight: normal;
+    font-weight: lighter;
     cursor: pointer;
     transition: background 0.3s;
     text-align: left;

@@ -102,7 +102,7 @@
                 <span style="font-size: 1.2em; font-weight: bold; color: #1976d2;">💰 Efectivo en Caja: $<span id="lbl-caja-total">0.00</span></span>
                 <br><span style="color: #555; font-size: 0.9em;">Pagos por entregar: <span id="lbl-caja-cobros">0</span></span>
             </div>
-            <button class= "button" style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
+            <button id="btn-ver-desglose" onclick="abrirModalCorte()" class="button" style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
         </div>
 
         <div class="main-section">
@@ -827,8 +827,52 @@
             });
         });
 
-        // 1. Dibuja las tarjetas en la pantalla principal
+        // 1. Dibuja las tarjetas en la pantalla principal       
         async function cargarSupervisionCobradores() {
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
+                if (!usuarioActual || usuarioActual.rol !== 2) return; 
+
+                const response = await fetch(`/api/admin/supervision-cortes/${usuarioActual.id}`);
+                const cobradores = await response.json();
+
+                const contenedor = document.getElementById('lista-supervision-cobradores');
+                contenedor.innerHTML = ''; 
+
+                if (cobradores.length === 0) {
+                    contenedor.innerHTML = '<p style="color: #7f8c8d; font-size: 14px; font-style: italic;">No hay cobros pendientes de otros usuarios.</p>';
+                    return;
+                }
+
+               cobradores.forEach(cobrador => {
+                    const totalFormateado = parseFloat(cobrador.total_recaudado).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+                    
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = 'tarjeta-cobrador';
+                    
+                    // Al dar clic se llama a la función exacta sin alterar los estilos internos
+                    tarjeta.onclick = async () => {
+                        await cargarWidgetCorte(cobrador.cobrador_id, true, cobrador.cobrador_nombre);
+                        abrirModalCorte(); 
+                    };
+                    
+                    tarjeta.innerHTML = `
+                        <div class="tarjeta-cobrador-info">
+                            <h4>${cobrador.cobrador_nombre}</h4>
+                            <p>💳 ${cobrador.total_cobros} cobros realizados</p>
+                        </div>
+                        <div class="tarjeta-cobrador-monto">
+                            $${totalFormateado}
+                        </div>
+                    `;
+                    contenedor.appendChild(tarjeta);
+                });
+
+            } catch (error) {
+                console.error("Error al cargar supervisión de cobradores:", error);
+            }
+        }
+       /*  async function cargarSupervisionCobradores() {
             try {
                 const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
                 // Si no hay usuario o no es administrador (rol 2), no hacemos nada
@@ -870,9 +914,9 @@
             } catch (error) {
                 console.error("Error al cargar supervisión de cobradores:", error);
             }
-        }
+        } */
 
-        // 2. Abre el modal de corte en modo Solo Lectura
+        /* // 2. Abre el modal de corte en modo Solo Lectura
         async function abrirDetalleSupervision(idCobrador, nombreCobrador) {
             try {
                 // Usamos la ruta que YA tienes creada en tu Backend para traer el corte de un usuario
@@ -924,7 +968,7 @@
                 alert("Hubo un error al cargar los detalles del corte.");
             }
         }
-
+ */
         function aplicarFiltros(){
             // 1. Creamos la variable que llevará la cuenta
             
@@ -2285,7 +2329,197 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         function cerrarModalDetalles() {
             document.getElementById('modal-detalles-cliente').classList.add('hidden');
         }
-        async function cargarWidgetCorte() {
+
+        // La función ahora acepta parámetros. Si no se los pasas, usa los de por defecto.
+       async function cargarWidgetCorte(usuarioEvaluarId = idCobrador, esSupervision = false, nombreCobrador = '') {
+
+            if (!usuarioEvaluarId) return;
+
+            try {
+                // Adaptamos la URL para que use el ID pasado por parámetro
+                const response = await fetch(`${urlBase}/api/corte-caja/${usuarioEvaluarId}`);
+                const data = await response.json();
+
+                // Actualizamos los resúmenes del widget (Solo si NO es supervisión del admin)
+                if (!esSupervision) {
+                    document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
+                }
+
+                // --- NUEVA LÓGICA PARA LLENAR EL REPORTE CON DIVS RESPONSIVOS ---
+                
+                // Buscamos el nuevo contenedor del cuerpo del reporte
+                const reporteBody = document.getElementById('tabla-corte-body');
+                const lblTotalModal = document.getElementById('lbl-corte-total-modal');
+                const lblBrutoModal = document.getElementById('lbl-corte-bruto-modal');
+                const lblGastosModal = document.getElementById('lbl-corte-gastos-modal');
+                const listaGastosCorte = document.getElementById('lista-gastos-corte');
+                const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
+                const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
+                const lblBrutoPrint = document.getElementById('lbl-autorizado-bruto-print');
+                const lblGastosPrint = document.getElementById('lbl-autorizado-gastos-print');
+                const gastosBodyPrint = document.getElementById('tabla-gastos-body-print');
+                reporteAuthBodyPrint.innerHTML = '';
+                gastosBodyPrint.innerHTML = '';
+                listaGastosCorte.innerHTML = '';
+                let totalImpresion = 0;
+                
+                // Muestra el nombre del cobrador evaluado en el ticket de impresión
+                document.getElementById('print-cobrador').innerText = esSupervision ? nombreCobrador : usuario.nombre;
+                document.getElementById('print-fecha-larga').innerText = ObtenerFecha();
+                
+                reporteBody.innerHTML = ''; // Limpiamos tabla
+                let totalModal = 0;
+
+                // Usamos pagosReceived si ese es tu arreglo de datos
+                data.detalles.forEach(pago => { 
+                    // 1. Formateamos la fecha (respetando tu formato original)
+                    const fechaString = new Date(pago.fecha_pago).toLocaleString('es-MX', {
+                        year: 'numeric', month: 'numeric', day: 'numeric',
+                        hour: 'numeric', minute: 'numeric', second: 'numeric',
+                        hour12: false
+                    });
+                    // 2. Lógica de estados para diseño y suma
+                    let claseEstado = '';
+                    let nombreEstado = ''; // Por defecto Completado
+                    let mostrarBoton = false;
+
+                    // Convertimos a número por seguridad
+                    const estado = parseInt(pago.estado_corte);
+                    
+                    if (estado === 3) {
+                        claseEstado = 'estado-cancelado';
+                        nombreEstado = 'Cancelado'
+                        mostrarBoton = false; // No se muestra si ya está cancelado
+                    } else if (estado === 0) {
+                        claseEstado = 'estado-pendiente';
+                        nombreEstado = 'Pendiente'
+                        // OJO: Si es supervisión, forzamos a que NO se muestre el botón de cancelar pago
+                        mostrarBoton = !esSupervision;  
+                        totalModal += parseFloat(pago.monto) || 0;
+                    }
+                    
+                    // 3. Creamos el contenedor de la tarjeta/fila (reporte-item-pago)
+                    const itemPago = document.createElement('div');
+                    itemPago.className = 'reporte-item-pago'; // <-- Clase clave para el CSS Grid
+
+                    // Generamos el HTML del botón usando tu SVG nativo original
+                    const htmlBoton = mostrarBoton 
+                        ? `<button  class="btn-eliminar-pago" title="Cancelar Pago" onclick="cancelarPago(${pago.id})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3V2h11v1h-11Z"/>
+                            </svg>
+                        </button>`
+                        : '';
+                    
+                    // 4. Inyectamos la estructura responsiva original con las etiquetas para móvil
+                    itemPago.innerHTML = `
+                        <div class="col-fecha"><span class="label-movil">Fecha: </span>${fechaString}</div>
+                        <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
+                        <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
+                        <div class = "monto-estado">
+                            <div class="col-monto">$${parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div class="col-estado ${claseEstado}">${nombreEstado}</div>
+                        </div>
+                        <div class="col-accion">${htmlBoton}</div>
+                    `;
+                    
+                    reporteBody.appendChild(itemPago);
+
+                    const tr = document.createElement('tr');
+                    
+                    // Inyectamos <td> clásicos originales
+                    tr.innerHTML = `
+                        <td>${fechaString}</td>
+                        <td>${pago.cliente}</td>
+                        <td>${pago.mes_pagado}</td>
+                        <td>$${parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    `;
+                    
+                    reporteAuthBodyPrint.appendChild(tr);
+                });
+
+                let totalGastos = 0;
+                const gastos = data.gastos || [];
+                if (gastos.length === 0) {
+                    listaGastosCorte.innerHTML = '<div class="gasto-vacio">Sin gastos registrados.</div>';
+                    gastosBodyPrint.innerHTML = '<tr><td colspan="3">Sin gastos registrados.</td></tr>';
+                } else {
+                    gastos.forEach(gasto => {
+                        const estado = parseInt(gasto.estado_corte);
+                        const montoGasto = parseFloat(gasto.monto) || 0;
+                        const fechaGasto = new Date(gasto.fecha_gasto).toLocaleString('es-MX', {
+                            year: 'numeric', month: 'numeric', day: 'numeric',
+                            hour: 'numeric', minute: 'numeric',
+                            hour12: false
+                        });
+                        const claseGasto = estado === 3 ? ' gasto-cancelado' : '';
+                        
+                        // OJO: Si es supervisión, el botón de cancelar gasto tampoco se muestra
+                        const botonGasto = (estado === 0 && !esSupervision)
+                            ? `<button class="btn-eliminar-pago" title="Cancelar gasto" onclick="cancelarGasto(${gasto.id})">×</button>`
+                            : '';
+
+                        if (estado === 0) totalGastos += montoGasto;
+
+                        const itemGasto = document.createElement('div');
+                        itemGasto.className = `gasto-corte-item${claseGasto}`;
+                        itemGasto.innerHTML = `
+                            <div>
+                                <strong>${gasto.descripcion}</strong>
+                                <span>${fechaGasto}</span>
+                            </div>
+                            <div class="gasto-corte-monto">$${montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div>${botonGasto}</div>
+                        `;
+                        listaGastosCorte.appendChild(itemGasto);
+
+                        if (estado === 0) {
+                            const trGasto = document.createElement('tr');
+                            trGasto.innerHTML = `
+                                <td>${fechaGasto}</td>
+                                <td>${gasto.descripcion}</td>
+                                <td>$${montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            `;
+                            gastosBodyPrint.appendChild(trGasto);
+                        }
+                    });
+
+                    if (!gastos.some(gasto => parseInt(gasto.estado_corte) === 0)) {
+                        gastosBodyPrint.innerHTML = '<tr><td colspan="3">Sin gastos activos.</td></tr>';
+                    }
+                }
+
+                const totalNeto = totalModal - totalGastos;
+                actualizarCandadoGastos(totalNeto);
+
+                // 5. Actualizamos los totales en el modal con tus formatos originales locales
+                lblBrutoModal.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                lblTotalModal.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
+
+                // --- MANEJO DEL TÍTULO Y BOTÓN DE ACCIÓN EN MODO SUPERVISIÓN ---
+                const tituloModal = document.getElementById('area-imprimible-corte-titulo');
+                const btnSolicitarCierre = document.querySelector('.btn-solicitar-cierre');
+
+                if (esSupervision) {
+                    if (tituloModal) tituloModal.innerText = `Supervisión de Corte: ${nombreCobrador}`;
+                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'none'; // Se oculta para el Administrador
+                } else {
+                    if (tituloModal) tituloModal.innerText = `Reporte de Corte de Caja`;
+                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'block'; // Se restaura para el Cobrador normal
+                }
+
+            } catch (error) {
+                console.error('Error al cargar datos del corte:', error);
+            }
+    }
+
+       /*  async function cargarWidgetCorte() {
 
             if (!idCobrador) return;
 
@@ -2463,7 +2697,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 document.getElementById('tabla-corte-body').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error al cargar el reporte.</div>';
             }
         }
-
+ */
         function actualizarCandadoGastos(efectivoDisponible) {
             const montoInput = document.getElementById('gasto-monto');
             const descripcionInput = document.getElementById('gasto-descripcion');

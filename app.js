@@ -757,5 +757,24 @@ app.put('/api/clientes/:id/alias', async (req, res) => {
     }
 });
 
-
+// Ruta para obtener el resumen de cobradores (Supervisión Admin)
+app.get('/api/admin/supervision-cortes/:adminId', async (req, res) => {
+    const adminId = req.params.adminId;
+    try {
+        const query = `
+            SELECT u.id as cobrador_id, u.nombre as cobrador_nombre, 
+                   COUNT(p.id) as total_cobros, SUM(p.monto) as total_recaudado
+            FROM pagos p
+            JOIN usuarios u ON p.usuario_id = u.id
+            WHERE p.estado_corte = 0 AND u.id != ?
+            GROUP BY u.id
+            ORDER BY total_recaudado DESC
+        `;
+        const [cobradores] = await db.execute(query, [adminId]);
+        res.json(cobradores);
+    } catch (error) {
+        console.error("Error en supervisión de cortes:", error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
 

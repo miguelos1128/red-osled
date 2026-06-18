@@ -1591,7 +1591,6 @@ td {
     }
     /*eSTILOS PARA EL BOTON DE ELIMINAR */
     .col-accion {
-        position: absolute;
         top: 10px;
         right: 10px;
     }
@@ -1599,6 +1598,13 @@ td {
         position: relative; /* Para que el botón se posicione respecto a la tarjeta */
     }
 
+    /* Si estás en modo supervisión, redistribuye las columnas para ocupar el 100% del ancho */
+.sin-accion .reporte-grid-header{
+    grid-template-columns: 1fr 2fr 1fr 1fr ; /* Adapta estos valores a las proporciones originales de tus primeras 4 columnas */
+}
+.sin-accion .reporte-item-pago {
+    grid-template-columns: 1fr 2fr 1fr 1fr; /* Adapta estos valores a las proporciones originales de tus primeras 4 columnas */
+}
     /* =========================================================
    VISTA DE ESCRITORIO (Pantallas de 980px o más)
    Transforma las tarjetas en filas estilo tabla

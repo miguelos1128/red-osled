@@ -320,7 +320,7 @@
                         <div>Cliente</div>
                         <div>Mes Pagado</div>
                         <div>Monto</div>
-                        <div>Estado</div>
+                        <div class="estado-borrar">Estado</div>
                         <div>Acción</div>
                     </div>
 
@@ -853,7 +853,7 @@
                     // Al dar clic se llama a la función exacta sin alterar los estilos internos
                     tarjeta.onclick = async () => {
                         await cargarWidgetCorte(cobrador.cobrador_id, true, cobrador.cobrador_nombre);
-                        abrirModalCorte(); 
+                        document.getElementById('modal-corte').classList.remove('hidden');
                     };
                     
                     tarjeta.innerHTML = `
@@ -2336,7 +2336,6 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             if (!usuarioEvaluarId) return;
 
             try {
-                // Adaptamos la URL para que use el ID pasado por parámetro
                 const response = await fetch(`${urlBase}/api/corte-caja/${usuarioEvaluarId}`);
                 const data = await response.json();
 
@@ -2364,12 +2363,28 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 listaGastosCorte.innerHTML = '';
                 let totalImpresion = 0;
                 
-                // Muestra el nombre del cobrador evaluado en el ticket de impresión
                 document.getElementById('print-cobrador').innerText = esSupervision ? nombreCobrador : usuario.nombre;
                 document.getElementById('print-fecha-larga').innerText = ObtenerFecha();
                 
                 reporteBody.innerHTML = ''; // Limpiamos tabla
                 let totalModal = 0;
+
+                // ✂️ 1. OCULTAR ENCABEZADO DE ACCIÓN EN MODO SUPERVISIÓN
+                const headerAccion = document.querySelector('.reporte-grid-header div:last-child');
+                if (headerAccion) {
+                    headerAccion.style.display = esSupervision ? 'none' : '';
+                }
+                const headerEtado = document.querySelector('.reporte-grid-header .estado-borrar');
+                if (headerEtado) {
+                    headerEtado.style.display = esSupervision ? 'none' : '';
+                }
+                
+
+                // Agregamos una clase al contenedor padre por si necesitas reajustar los anchos de las columnas en tu CSS Grid
+                const gridContainer = document.querySelector('.reporte-grid-container');
+                if (gridContainer) {
+                    gridContainer.classList.toggle('sin-accion', esSupervision);
+                }
 
                 // Usamos pagosReceived si ese es tu arreglo de datos
                 data.detalles.forEach(pago => { 
@@ -2394,8 +2409,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     } else if (estado === 0) {
                         claseEstado = 'estado-pendiente';
                         nombreEstado = 'Pendiente'
-                        // OJO: Si es supervisión, forzamos a que NO se muestre el botón de cancelar pago
-                        mostrarBoton = !esSupervision;  
+                        mostrarBoton = !esSupervision;  // ACTIVO solo si no es supervisión
                         totalModal += parseFloat(pago.monto) || 0;
                     }
                     
@@ -2420,16 +2434,24 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                         <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
                         <div class = "monto-estado">
                             <div class="col-monto">$${parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                            <div class="col-estado ${claseEstado}">${nombreEstado}</div>
+                            <div class="col-estado ${claseEstado} estado-borrar">${nombreEstado}</div>
                         </div>
                         <div class="col-accion">${htmlBoton}</div>
                     `;
+                    
+                    // ✂️ 2. OCULTAR CELDA DE ACCIÓN EN MODO SUPERVISIÓN
+                    if (esSupervision) {
+                        const colAccion = itemPago.querySelector('.col-accion');
+                        if (colAccion) colAccion.style.display = 'none';
+                        const estadoBorrar = itemPago.querySelector('.estado-borrar');
+                        if (estadoBorrar) estadoBorrar.style.display = 'none';
+                    }
                     
                     reporteBody.appendChild(itemPago);
 
                     const tr = document.createElement('tr');
                     
-                    // Inyectamos <td> clásicos originales
+                    // Inyectamos <td> clásicos originales para impresión (no llevan acciones)
                     tr.innerHTML = `
                         <td>${fechaString}</td>
                         <td>${pago.cliente}</td>
@@ -2456,7 +2478,6 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                         });
                         const claseGasto = estado === 3 ? ' gasto-cancelado' : '';
                         
-                        // OJO: Si es supervisión, el botón de cancelar gasto tampoco se muestra
                         const botonGasto = (estado === 0 && !esSupervision)
                             ? `<button class="btn-eliminar-pago" title="Cancelar gasto" onclick="cancelarGasto(${gasto.id})">×</button>`
                             : '';
@@ -2494,7 +2515,6 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const totalNeto = totalModal - totalGastos;
                 actualizarCandadoGastos(totalNeto);
 
-                // 5. Actualizamos los totales en el modal con tus formatos originales locales
                 lblBrutoModal.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
                 lblTotalModal.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -2502,23 +2522,25 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
                 lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
 
-                // --- MANEJO DEL TÍTULO Y BOTÓN DE ACCIÓN EN MODO SUPERVISIÓN ---
+                // --- MANEJO DE VISTA (Normal vs Supervisión) ---
                 const tituloModal = document.getElementById('area-imprimible-corte-titulo');
                 const btnSolicitarCierre = document.querySelector('.btn-solicitar-cierre');
+                const formGastoCorte = document.querySelector('.form-gasto-corte');
 
                 if (esSupervision) {
                     if (tituloModal) tituloModal.innerText = `Supervisión de Corte: ${nombreCobrador}`;
-                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'none'; // Se oculta para el Administrador
+                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'none';
+                    if (formGastoCorte) formGastoCorte.style.display = 'none'; 
                 } else {
                     if (tituloModal) tituloModal.innerText = `Reporte de Corte de Caja`;
-                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'block'; // Se restaura para el Cobrador normal
+                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'block';
+                    if (formGastoCorte) formGastoCorte.style.display = ''; 
                 }
 
             } catch (error) {
                 console.error('Error al cargar datos del corte:', error);
             }
-    }
-
+}
        /*  async function cargarWidgetCorte() {
 
             if (!idCobrador) return;
@@ -2819,6 +2841,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
     }
         // 2. Control de ventanas
         function abrirModalCorte() {
+            cargarWidgetCorte();
             document.getElementById('modal-corte').classList.remove('hidden');
         }
 

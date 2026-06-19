@@ -1467,6 +1467,49 @@ td {
 .pago-cobrado { background-color: #27ae60; }
 .pago-pendiente { background-color: #f1c40f; color: #333; }
 
+/* Estilos para la lista del Historial de Cortes */
+.item-historial {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.item-historial:hover {
+    background: #e3f2fd;
+    border-color: #2196f3;
+}
+.item-historial-datos strong {
+    color: #2c3e50;
+    font-size: 15px;
+}
+.item-historial-datos span {
+    color: #7f8c8d;
+    font-size: 13px;
+    display: block;
+}
+.item-historial-monto {
+    color: #27ae60;
+    font-weight: bold;
+    font-size: 16px;
+}
+.btn-historial-mini {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: transform 0.2s;
+}
+.btn-historial-mini:hover {
+    transform: scale(1.2);
+}
+
 /* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */
 @media (min-width: 805px) {
     .modal-caja { 

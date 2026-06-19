@@ -623,40 +623,161 @@ app.post('/api/cancelar-gasto/:id', async (req, res) => {
 // 2. Ruta para AUTORIZAR y procesar el corte
 app.post('/api/procesar-corte', async (req, res) => {
     const { usuarioId, adminUser, adminPassword } = req.body;
+    
+    // Obtenemos una conexión dedicada exclusiva para esta Transacción
+    const connection = await db.getConnection();
+
     try {
-        // A) Validamos al administrador (Ajusta 'usuarios' según el nombre real de tu tabla de login)
-        const [admins] = await db.query(
+        // A) Validamos al administrador y obtenemos su ID
+        const [admins] = await connection.query(
             'SELECT id FROM usuarios WHERE correo = ? AND password = ? AND rol_id = "2"', 
             [adminUser, adminPassword]
         );
         
         if (admins.length === 0) {
+            connection.release();
             return res.status(401).json({ error: "Credenciales de administrador incorrectas." });
         }
 
-        // B) Si el admin es correcto, cambiamos el estado de 0 a 1 y de 3 a 4
-        await db.query(
-            'UPDATE pagos SET estado_corte = 1 WHERE usuario_id = ? AND estado_corte = 0',
+        const adminId = admins[0].id;
+
+        // B) INICIAMOS LA TRANSACCIÓN (Seguridad anti-fallos)
+        await connection.beginTransaction();
+
+        // C) Calculamos los totales EXACTOS de este turno ANTES de cerrarlo
+        const [resPagos] = await connection.query(
+            'SELECT SUM(monto) as total_cobrado FROM pagos WHERE usuario_id = ? AND estado_corte = 0',
             [usuarioId]
         );
+        const totalCobrado = parseFloat(resPagos[0].total_cobrado) || 0;
 
-        await db.query(
-            'UPDATE pagos SET estado_corte = 4 WHERE usuario_id = ? AND estado_corte = 3',
+        const [resGastos] = await connection.query(
+            'SELECT SUM(monto) as total_gastos FROM gastos WHERE usuario_id = ? AND estado_corte = 0',
             [usuarioId]
         );
+        const totalGastos = parseFloat(resGastos[0].total_gastos) || 0;
 
-        await db.query(
-            'UPDATE gastos SET estado_corte = 1 WHERE usuario_id = ? AND estado_corte = 0',
-            [usuarioId]
-        );
+        const totalEntregado = totalCobrado - totalGastos;
 
-        await db.query(
-            'UPDATE gastos SET estado_corte = 4 WHERE usuario_id = ? AND estado_corte = 3',
-            [usuarioId]
+        // D) Creamos el registro Maestro del Corte Histórico en la nueva tabla
+        const [insertCorte] = await connection.query(
+            `INSERT INTO cortes_caja (usuario_id, admin_autorizo_id, total_cobrado, total_gastos, total_entregado) 
+             VALUES (?, ?, ?, ?, ?)`,
+            [usuarioId, adminId, totalCobrado, totalGastos, totalEntregado]
         );
         
-        res.json({ success: true, message: "Corte autorizado y procesado con éxito." });
+        // Obtenemos el ID del corte que se acaba de crear (Este es el CANDADO)
+        const corteId = insertCorte.insertId;
+
+        // E) Aplicamos el candado a los pagos y gastos cambiando su estado y asignando el corte_id
+        
+        // Pagos Activos
+        await connection.query(
+            'UPDATE pagos SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0',
+            [corteId, usuarioId]
+        );
+        // Pagos Cancelados
+        await connection.query(
+            'UPDATE pagos SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3',
+            [corteId, usuarioId]
+        );
+
+        // Gastos Activos
+        await connection.query(
+            'UPDATE gastos SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0',
+            [corteId, usuarioId]
+        );
+        // Gastos Cancelados
+        await connection.query(
+            'UPDATE gastos SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3',
+            [corteId, usuarioId]
+        );
+
+        // F) Si llegamos aquí sin errores, CONFIRMAMOS los cambios en la base de datos
+        await connection.commit();
+        
+        res.json({ success: true, message: "Corte autorizado y guardado en el historial con éxito.", corte_id: corteId });
+
     } catch (error) {
+        // Si hay cualquier error, REVERTIMOS TODOS los cambios
+        await connection.rollback();
+        console.error("Error crítico al procesar corte:", error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        // Siempre soltamos la conexión para no saturar el servidor
+        connection.release();
+    }
+});
+
+
+// ==========================================
+// RUTAS PARA EL HISTORIAL DE CORTES (PASO 3)
+// ==========================================
+
+// 1. Obtener la lista de cortes anteriores de un cobrador específico
+app.get('/api/historico-cortes/:usuarioId', async (req, res) => {
+    const { usuarioId } = req.params;
+    try {
+        const [cortes] = await db.query(
+            `SELECT id, fecha_corte, total_cobrado, total_gastos, total_entregado 
+             FROM cortes_caja 
+             WHERE usuario_id = ? 
+             ORDER BY id DESC`,
+            [usuarioId]
+        );
+        res.json(cortes);
+    } catch (error) {
+        console.error("Error al obtener lista de histórico:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 2. La "Máquina del tiempo": Obtener los detalles exactos de un corte cerrado
+app.get('/api/corte-caja-historico/:corteId', async (req, res) => {
+    const { corteId } = req.params;
+    try {
+        // A) Rescatamos el resumen guardado en la bóveda
+        const [resumenCorte] = await db.query(
+            `SELECT total_cobrado as total_dinero, total_gastos, total_entregado as total_neto, fecha_corte 
+             FROM cortes_caja WHERE id = ?`,
+            [corteId]
+        );
+
+        if (resumenCorte.length === 0) {
+            return res.status(404).json({ error: "Corte histórico no encontrado" });
+        }
+
+        // B) Buscamos los pagos amarrados a este candado (corte_id)
+        const [detalles] = await db.query(
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+             FROM pagos p 
+             JOIN clientes c ON p.cliente_id = c.id 
+             WHERE p.corte_id = ? 
+             ORDER BY p.id DESC`,
+            [corteId]
+        );
+
+        // C) Buscamos los gastos amarrados a este candado (corte_id)
+        const [gastos] = await db.query(
+            `SELECT id, fecha_gasto, descripcion, monto, estado_corte
+             FROM gastos
+             WHERE corte_id = ?
+             ORDER BY id DESC`,
+            [corteId]
+        );
+
+        // Calculamos cuántos cobros activos (estado 1) hubo en este corte
+        resumenCorte[0].total_cobros = detalles.filter(d => parseInt(d.estado_corte) === 1).length;
+
+        // D) Respondemos con la MISMA estructura que usa tu Frontend actual
+        res.json({ 
+            resumen: resumenCorte[0], 
+            detalles: detalles, 
+            gastos: gastos 
+        });
+        
+    } catch (error) {
+        console.error("Error al obtener detalle histórico:", error);
         res.status(500).json({ error: error.message });
     }
 });

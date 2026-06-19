@@ -1643,10 +1643,10 @@ td {
 
     /* Si estás en modo supervisión, redistribuye las columnas para ocupar el 100% del ancho */
 .sin-accion .reporte-grid-header{
-    grid-template-columns: 1fr 2fr 1fr 1fr ; /* Adapta estos valores a las proporciones originales de tus primeras 4 columnas */
+    grid-template-columns: 1fr 2fr 1fr .5fr ; /* Adapta estos valores a las proporciones originales de tus primeras 4 columnas */
 }
 .sin-accion .reporte-item-pago {
-    grid-template-columns: 1fr 2fr 1fr 1fr; /* Adapta estos valores a las proporciones originales de tus primeras 4 columnas */
+    grid-template-columns: 1fr 2fr 1fr .5fr; /* Adapta estos valores a las proporciones originales de tus primeras 4 columnas */
 }
     /* =========================================================
    VISTA DE ESCRITORIO (Pantallas de 980px o más)

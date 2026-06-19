@@ -824,8 +824,6 @@
             cargarVistaAdminClientes();
 
             // LÓGICA DEL BUSCADOR EN TIEMPO REAL
-            
-
             inputBuscador.addEventListener('input', function(e) {
                 // Obtenemos el texto que escribió el usuario en minúsculas
                 const terminoBusqueda = e.target.value.toLowerCase();
@@ -876,16 +874,6 @@
                         document.getElementById('modal-corte').classList.remove('hidden');
                     };
                     
-                    /* tarjeta.innerHTML = `
-                        <div class="tarjeta-cobrador-info">
-                            <h4>${cobrador.cobrador_nombre}</h4>
-                            <p>💳 ${cobrador.total_cobros} cobros realizados</p>
-                        </div>
-                        <div class="tarjeta-cobrador-monto">
-                            $${totalFormateado}
-                        </div>
-                    `; */
-
                     tarjeta.innerHTML = `
                         <div class="tarjeta-cobrador-info">
                             <h4>${cobrador.cobrador_nombre}</h4>
@@ -902,103 +890,7 @@
                 console.error("Error al cargar supervisión de cobradores:", error);
             }
         }
-       /*  async function cargarSupervisionCobradores() {
-            try {
-                const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
-                // Si no hay usuario o no es administrador (rol 2), no hacemos nada
-                if (!usuarioActual || usuarioActual.rol !== 2) return; 
-
-                // Consumimos el nuevo endpoint enviando el ID del admin para excluirlo
-                const response = await fetch(`/api/admin/supervision-cortes/${usuarioActual.id}`);
-                const cobradores = await response.json();
-
-                const contenedor = document.getElementById('lista-supervision-cobradores');
-                contenedor.innerHTML = ''; // Limpiamos
-
-                if (cobradores.length === 0) {
-                    contenedor.innerHTML = '<p style="color: #7f8c8d; font-size: 14px; font-style: italic;">No hay cobros pendientes de otros usuarios.</p>';
-                    return;
-                }
-
-                // Iteramos y creamos el HTML de cada tarjeta
-                cobradores.forEach(cobrador => {
-                    const totalFormateado = parseFloat(cobrador.total_recaudado).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-                    
-                    const tarjeta = document.createElement('div');
-                    tarjeta.className = 'tarjeta-cobrador';
-                    // Al hacer clic, abrimos el modal de detalle
-                    tarjeta.onclick = () => abrirDetalleSupervision(cobrador.cobrador_id, cobrador.cobrador_nombre);
-                    
-                    tarjeta.innerHTML = `
-                        <div class="tarjeta-cobrador-info">
-                            <h4>${cobrador.cobrador_nombre}</h4>
-                            <p>💳 ${cobrador.total_cobros} cobros realizados</p>
-                        </div>
-                        <div class="tarjeta-cobrador-monto">
-                            $${totalFormateado}
-                        </div>
-                    `;
-                    contenedor.appendChild(tarjeta);
-                });
-
-            } catch (error) {
-                console.error("Error al cargar supervisión de cobradores:", error);
-            }
-        } */
-
-        /* // 2. Abre el modal de corte en modo Solo Lectura
-        async function abrirDetalleSupervision(idCobrador, nombreCobrador) {
-            try {
-                // Usamos la ruta que YA tienes creada en tu Backend para traer el corte de un usuario
-                const response = await fetch(`/api/corte-caja/${idCobrador}`);
-                const data = await response.json();
-
-                // Llenamos los totales del modal (usando los IDs que ya tienes en tu HTML)
-                document.getElementById('lbl-corte-bruto-modal').innerText = parseFloat(data.resumen.total_dinero || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-                document.getElementById('lbl-corte-gastos-modal').innerText = parseFloat(data.resumen.total_gastos || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-                document.getElementById('lbl-corte-total-modal').innerText = parseFloat(data.resumen.total_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-
-                // Llenamos la tabla de cobros
-                const reporteBody = document.getElementById('tabla-corte-body');
-                reporteBody.innerHTML = ''; 
-
-                data.detalles.forEach(pago => {
-                    const montoP = parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-                    // Reutilizamos tus clases CSS existentes para la fila
-                    reporteBody.innerHTML += `
-                        <div class="reporte-item-pago">
-                            
-                            <div class="col-fecha"><span class="label-movil">Fecha: </span>${new Date(pago.fecha_pago).toLocaleDateString()}</div>
-                            <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
-                            <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
-                            <div class = "monto-estado">
-                                <div class="col-monto">$${montoP}</div>
-                                <div class="col-estado"></div>
-                            </div>
-                            <div>${pago.estado_corte === 0 ? 'Pendiente' : 'Cerrado'}</div>
-                            
-                        </div>
-                    `;
-                });
-                                    
-
-                // 🔴 MODO SOLO LECTURA: Cambiamos el título y ocultamos los botones de acción
-                document.getElementById('area-imprimible-corte-titulo').innerText = `Supervisión de Corte: ${nombreCobrador}`;
-                
-                // Asumiendo que tu botón de cerrar turno/autorizar está dentro del modal, lo ocultamos
-                // Sustituye 'btn-abrir-modal-admin' por el ID real de tu botón de Autorizar
-                const btnAutorizar = document.getElementById('btn-abrir-modal-admin'); 
-                if (btnAutorizar) btnAutorizar.style.display = 'none';
-
-                // Mostramos el modal
-                document.getElementById('modal-corte').classList.remove('hidden');
-
-            } catch (error) {
-                console.error("Error al abrir detalle de supervisión:", error);
-                alert("Hubo un error al cargar los detalles del corte.");
-            }
-        }
- */
+    
         function aplicarFiltros(){
             // 1. Creamos la variable que llevará la cuenta
             
@@ -1705,9 +1597,6 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                                         <i class="fas fa-eye">✏️</i>
                                     </button>
                         `;
-                
-
-
 
                 mostrarResumenPagoExitoso(resultado.detalle);
                 detallePago = resultado.detalle

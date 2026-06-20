@@ -501,6 +501,138 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
     }
 });
 
+// =======================================================
+// RUTAS DE LECTURA DE CORTE (ACTUALIZADAS - PASO 3)
+// =======================================================
+
+// 1. Obtener el Corte Actual (El día a día del cobrador)
+app.get('/api/corte-caja/:usuarioId', async (req, res) => {
+    const { usuarioId } = req.params;
+    try {
+        // 1. Rescatamos el Saldo Inicial (Monto retenido del último corte cerrado)
+        const [ultimoCorte] = await db.query(
+            'SELECT monto_retenido FROM cortes_caja WHERE usuario_id = ? ORDER BY id DESC LIMIT 1',
+            [usuarioId]
+        );
+        const saldoInicial = ultimoCorte.length > 0 ? parseFloat(ultimoCorte[0].monto_retenido) : 0.00;
+
+        // 2. Obtener los pagos pendientes (Mensualidades exclusivas de clientes)
+        const [detalles] = await db.query(
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+             FROM pagos p 
+             JOIN clientes c ON p.cliente_id = c.id 
+             WHERE p.usuario_id = ? AND p.estado_corte IN (0, 3)
+             ORDER BY p.id DESC`,
+            [usuarioId]
+        );
+
+        // 3. Obtener los gastos pendientes
+        const [gastos] = await db.query(
+            `SELECT id, fecha_gasto, descripcion, monto, estado_corte 
+             FROM gastos 
+             WHERE usuario_id = ? AND estado_corte IN (0, 3) 
+             ORDER BY id DESC`,
+            [usuarioId]
+        );
+
+        // 4. NUEVO: Obtener los ingresos extra pendientes
+        const [ingresosExtra] = await db.query(
+            `SELECT id, fecha_ingreso, descripcion, monto, estado_corte 
+             FROM ingresos_extra 
+             WHERE usuario_id = ? AND estado_corte IN (0, 3) 
+             ORDER BY id DESC`,
+            [usuarioId]
+        );
+
+        // Sumatorias para la caja
+        let totalPagos = detalles.filter(d => parseInt(d.estado_corte) === 0).reduce((sum, d) => sum + parseFloat(d.monto), 0);
+        let totalGastos = gastos.filter(g => parseInt(g.estado_corte) === 0).reduce((sum, g) => sum + parseFloat(g.monto), 0);
+        let totalIngresos = ingresosExtra.filter(i => parseInt(i.estado_corte) === 0).reduce((sum, i) => sum + parseFloat(i.monto), 0);
+        
+        // FÓRMULA MAESTRA DE CAJA FÍSICA
+        let totalCajaFisica = saldoInicial + totalPagos + totalIngresos - totalGastos;
+        let totalCobrosNum = detalles.filter(d => parseInt(d.estado_corte) === 0).length;
+
+        // Armamos el JSON final para mandarlo a la pantalla
+        res.json({
+            resumen: {
+                saldo_inicial: saldoInicial,
+                total_dinero: totalPagos, 
+                total_ingresos_extra: totalIngresos,
+                total_gastos: totalGastos,
+                total_neto: totalCajaFisica, // Total en billetes y monedas que debe haber
+                total_cobros: totalCobrosNum
+            },
+            detalles: detalles,
+            gastos: gastos,
+            ingresos_extra: ingresosExtra // Inyectamos la nueva lista
+        });
+    } catch (error) {
+        console.error("Error al obtener corte actual:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 2. La Máquina del Tiempo (Cortes Históricos)
+app.get('/api/corte-caja-historico/:corteId', async (req, res) => {
+    const { corteId } = req.params;
+    try {
+        // A) Rescatamos el resumen guardado, incluyendo todos los campos nuevos de tu esquema
+        const [resumenCorte] = await db.query(
+            `SELECT saldo_inicial, total_cobrado as total_dinero, total_ingresos_extra, total_gastos, 
+                    total_entregado as total_neto, monto_entregado, monto_retenido, fecha_corte 
+             FROM cortes_caja WHERE id = ?`,
+            [corteId]
+        );
+
+        if (resumenCorte.length === 0) {
+            return res.status(404).json({ error: "Corte histórico no encontrado" });
+        }
+
+        // B) Buscamos los pagos amarrados a este candado
+        const [detalles] = await db.query(
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+             FROM pagos p 
+             JOIN clientes c ON p.cliente_id = c.id 
+             WHERE p.corte_id = ? 
+             ORDER BY p.id DESC`,
+            [corteId]
+        );
+
+        // C) Buscamos los gastos amarrados
+        const [gastos] = await db.query(
+            `SELECT id, fecha_gasto, descripcion, monto, estado_corte
+             FROM gastos
+             WHERE corte_id = ?
+             ORDER BY id DESC`,
+            [corteId]
+        );
+
+        // D) NUEVO: Buscamos los ingresos extra amarrados a este candado
+        const [ingresosExtra] = await db.query(
+            `SELECT id, fecha_ingreso, descripcion, monto, estado_corte
+             FROM ingresos_extra
+             WHERE corte_id = ?
+             ORDER BY id DESC`,
+            [corteId]
+        );
+
+        resumenCorte[0].total_cobros = detalles.filter(d => parseInt(d.estado_corte) === 1).length;
+
+        // E) Respondemos con la estructura idéntica a la ruta del día a día
+        res.json({ 
+            resumen: resumenCorte[0], 
+            detalles: detalles, 
+            gastos: gastos,
+            ingresos_extra: ingresosExtra
+        });
+        
+    } catch (error) {
+        console.error("Error al obtener detalle histórico:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+/* 
 // 1. Ruta para obtener el total y la lista de pagos sin entregar (estado_corte = 0)
 app.get('/api/corte-caja/:usuarioId', async (req, res) => {
     const { usuarioId } = req.params;
@@ -538,7 +670,7 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
+ */
 app.post('/api/gastos', async (req, res) => {
     const { usuarioId, monto, descripcion } = req.body;
 
@@ -822,7 +954,7 @@ app.get('/api/historico-cortes/:usuarioId', async (req, res) => {
 });
 
 // 2. La "Máquina del tiempo": Obtener los detalles exactos de un corte cerrado
-app.get('/api/corte-caja-historico/:corteId', async (req, res) => {
+/* app.get('/api/corte-caja-historico/:corteId', async (req, res) => {
     const { corteId } = req.params;
     try {
         // A) Rescatamos el resumen guardado en la bóveda
@@ -869,7 +1001,7 @@ app.get('/api/corte-caja-historico/:corteId', async (req, res) => {
         console.error("Error al obtener detalle histórico:", error);
         res.status(500).json({ error: error.message });
     }
-});
+}); */
 
 // Ruta para obtener todas las localidades (para el selector del formulario)
 app.get('/api/localidades', async (req, res) => {

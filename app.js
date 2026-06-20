@@ -622,6 +622,95 @@ app.post('/api/cancelar-gasto/:id', async (req, res) => {
 
 // 2. Ruta para AUTORIZAR y procesar el corte
 app.post('/api/procesar-corte', async (req, res) => {
+    // AHORA RECIBIMOS EL MONTO ENTREGADO DESDE EL FRONTEND
+    const { usuarioId, adminUser, adminPassword, montoEntregado } = req.body;
+    
+    const connection = await db.getConnection();
+
+    try {
+        // A) Validamos al administrador
+        const [admins] = await connection.query(
+            'SELECT id FROM usuarios WHERE correo = ? AND password = ? AND rol_id = "2"', 
+            [adminUser, adminPassword]
+        );
+        
+        if (admins.length === 0) {
+            connection.release();
+            return res.status(401).json({ error: "Credenciales de administrador incorrectas." });
+        }
+        const adminId = admins[0].id;
+
+        // B) INICIAMOS LA TRANSACCIÓN
+        await connection.beginTransaction();
+
+        // C) 1. Rescatamos el Saldo Inicial (Lo que quedó en la caja en el último corte)
+        const [resSaldo] = await connection.query(
+            'SELECT monto_retenido FROM cortes_caja WHERE usuario_id = ? ORDER BY id DESC LIMIT 1',
+            [usuarioId]
+        );
+        const saldoInicial = resSaldo.length > 0 ? parseFloat(resSaldo[0].monto_retenido) : 0.00;
+
+        // C) 2. Sumamos todos los rubros activos
+        const [resPagos] = await connection.query('SELECT SUM(monto) as total FROM pagos WHERE usuario_id = ? AND estado_corte = 0', [usuarioId]);
+        const totalCobrado = parseFloat(resPagos[0].total) || 0;
+
+        const [resGastos] = await connection.query('SELECT SUM(monto) as total FROM gastos WHERE usuario_id = ? AND estado_corte = 0', [usuarioId]);
+        const totalGastos = parseFloat(resGastos[0].total) || 0;
+
+        const [resIngresos] = await connection.query('SELECT SUM(monto) as total FROM ingresos_extra WHERE usuario_id = ? AND estado_corte = 0', [usuarioId]);
+        const totalIngresos = parseFloat(resIngresos[0].total) || 0;
+
+        // D) LA FÓRMULA MATEMÁTICA MAESTRA
+        const totalCajaFisica = saldoInicial + totalCobrado + totalIngresos - totalGastos;
+        const entregado = parseFloat(montoEntregado) || 0;
+        const retenido = totalCajaFisica - entregado; // Lo que se queda en el cajón
+
+        // E) Creamos el registro Maestro del Corte con los nuevos campos
+        const [insertCorte] = await connection.query(
+            `INSERT INTO cortes_caja 
+            (usuario_id, admin_autorizo_id, total_cobrado, total_gastos, total_entregado, saldo_inicial, total_ingresos_extra, monto_entregado, monto_retenido) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [usuarioId, adminId, totalCobrado, totalGastos, totalCajaFisica, saldoInicial, totalIngresos, entregado, retenido]
+        );
+        const corteId = insertCorte.insertId;
+
+        // F) Aplicamos el candado a TODO (Pagos, Gastos e Ingresos Extra)
+        // (Activos)
+        await connection.query('UPDATE pagos SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0', [corteId, usuarioId]);
+        await connection.query('UPDATE gastos SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0', [corteId, usuarioId]);
+        await connection.query('UPDATE ingresos_extra SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0', [corteId, usuarioId]);
+        // (Cancelados)
+        await connection.query('UPDATE pagos SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3', [corteId, usuarioId]);
+        await connection.query('UPDATE gastos SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3', [corteId, usuarioId]);
+        await connection.query('UPDATE ingresos_extra SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3', [corteId, usuarioId]);
+
+        // G) TRANSFERENCIA AUTOMÁTICA AL ADMINISTRADOR (Nivel ERP)
+        if (entregado > 0) {
+            // Obtenemos el nombre del cobrador para el concepto
+            const [userRows] = await connection.query('SELECT nombre FROM usuarios WHERE id = ?', [usuarioId]);
+            const nombreUser = userRows[0]?.nombre || 'Cobrador';
+            
+            // Inyectamos el dinero entregado directamente como un ingreso extra en tu cuenta de Admin
+            await connection.query(
+                'INSERT INTO ingresos_extra (usuario_id, descripcion, monto, estado_corte) VALUES (?, ?, ?, 0)',
+                [adminId, `Recepción de corte de caja Folio #${corteId} (${nombreUser})`, entregado]
+            );
+        }
+
+        // H) Confirmamos y cerramos Transacción
+        await connection.commit();
+        res.json({ success: true, message: "Corte procesado. Fondos transferidos con éxito.", corte_id: corteId });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error("Error crítico al procesar corte:", error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        connection.release();
+    }
+});
+
+/* app.post('/api/procesar-corte', async (req, res) => {
     const { usuarioId, adminUser, adminPassword } = req.body;
     
     // Obtenemos una conexión dedicada exclusiva para esta Transacción
@@ -708,7 +797,7 @@ app.post('/api/procesar-corte', async (req, res) => {
         connection.release();
     }
 });
-
+ */
 
 // ==========================================
 // RUTAS PARA EL HISTORIAL DE CORTES (PASO 3)
@@ -896,6 +985,36 @@ app.get('/api/admin/supervision-cortes/:adminId', async (req, res) => {
     } catch (error) {
         console.error("Error en supervisión de cortes:", error);
         res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ==========================================
+// MÓDULO DE CAJA CHICA: INGRESOS EXTRA
+// ==========================================
+
+// Registrar un ingreso extra
+app.post('/api/ingreso-extra', async (req, res) => {
+    const { usuarioId, descripcion, monto } = req.body;
+    try {
+        await db.query(
+            'INSERT INTO ingresos_extra (usuario_id, descripcion, monto) VALUES (?, ?, ?)',
+            [usuarioId, descripcion, monto]
+        );
+        res.json({ success: true, message: "Ingreso extra registrado correctamente" });
+    } catch (error) {
+        console.error("Error al registrar ingreso extra:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Cancelar un ingreso extra (estado 3)
+app.post('/api/cancelar-ingreso-extra/:id', async (req, res) => {
+    const idIngreso = req.params.id;
+    try {
+        await db.query('UPDATE ingresos_extra SET estado_corte = 3 WHERE id = ?', [idIngreso]);
+        res.json({ success: true, message: "Ingreso extra cancelado" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

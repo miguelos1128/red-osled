@@ -445,17 +445,29 @@
                     <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
                 </div>
 
-                <div class="resumen-caja-chica" style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 16px;">
-                    <div style="display: flex; justify-content: space-between;"><span>Saldo Inicial:</span> <strong id="lbl-saldo-inicial-print">$0.00</strong></div>
-                    <div style="display: flex; justify-content: space-between;"><span>+ Mensualidades:</span> <strong id="lbl-mensualidades-print">$0.00</strong></div>
-                    <div style="display: flex; justify-content: space-between;"><span>+ Ingresos Extra:</span> <strong id="lbl-ingresos-extra-print">$0.00</strong></div>
-                    <div style="display: flex; justify-content: space-between; color: #e74c3c;"><span>- Gastos:</span> <strong id="lbl-gastos-totales-print">$0.00</strong></div>
-                    <hr style="margin: 10px 0;">
-                    <div style="display: flex; justify-content: space-between; font-size: 18px; color: #2c3e50;">
-                        <span><strong>Total en Caja Física:</strong></span> 
-                        <strong id="lbl-caja-fisica">$0.00</strong>
+                <div class="resumen-caja-chica">
+                    <div class="resumen-fila">
+                        <span>Saldo Inicial:</span> 
+                        <strong id="lbl-saldo-inicial-print">$0.00</strong>
                     </div>
+                    <div class="resumen-fila">
+                        <span>+ Mensualidades:</span> 
+                        <strong id="lbl-mensualidades-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila">
+                        <span>+ Ingresos Extra:</span> 
+                        <strong id="lbl-ingresos-extra-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila resumen-gasto">
+                        <span>- Gastos:</span> 
+                        <strong id="lbl-gastos-totales-print">$0.00</strong>
+                    </div>
+                    <hr class="resumen-separador">
+                    <div class="resumen-fila resumen-total">
+                        <span><strong>Total en Caja Física:</strong></span> 
+                        <strong id="lbl-caja-fisica-print">$0.00</strong> </div>
                 </div>
+                
             </div>
             
             <div class="modal-acciones-corte">
@@ -465,24 +477,27 @@
         </div>
     </div>
 
-    <div id="modal-admin" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000;">
-        <div style="background: white; padding: 25px; border-radius: 8px; width: 300px; text-align: center;">
-            <h3 style="color: #d32f2f;">🔒 Autorización Requerida</h3>
-            <p>El administrador debe validar la entrega del efectivo para liberar el corte.</p>
+    <div id="modal-admin" class="hidden modal-fondo-admin">
+        <div class="modal-caja-admin">
+            <h3 class="modal-admin-titulo">🔒 Autorización Requerida</h3>
+            <p class="modal-admin-texto">El administrador debe validar la entrega del efectivo para liberar el corte.</p>
 
-            <div style="margin-bottom: 15px; background: #e8f8f5; padding: 10px; border-radius: 5px; border-left: 4px solid #1abc9c;">
-                <label style="font-weight: bold; color: #16a085;">¿Cuánto dinero en efectivo se entrega al administrador?</label>
-                <input type="number" id="input-monto-entregar" placeholder="Monto a entregar" class="input-base" style="width: 100%; margin-top: 5px; font-size: 18px; font-weight: bold;">
-                <small style="color: #7f8c8d;">La diferencia se quedará como Saldo Inicial para el siguiente mes.</small>
+            <div class="caja-entrega-efectivo">
+                <label class="caja-entrega-label">¿Cuánto dinero en efectivo se entrega al administrador?</label>
+                <input type="number" id="input-monto-entregar" placeholder="Monto a entregar" class="input-base caja-entrega-input">
+                <small class="caja-entrega-nota">La diferencia se quedará como Saldo Inicial para el siguiente mes.</small>
             </div>
 
-            <input type="text" id="admin-user" placeholder="Usuario Admin" style="width: 100%; margin-bottom: 10px; padding: 8px;"><br>
-            <input type="password" id="admin-pass" placeholder="Contraseña Admin" style="width: 100%; margin-bottom: 15px; padding: 8px;"><br>
-            <button class="button" onclick="document.getElementById('modal-admin').classList.add('hidden')" style="padding: 10px; margin-right: 10px;">Cancelar</button>
-            <button class="button" onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
+            <input type="text" id="admin-user" placeholder="Usuario Admin" class="input-admin mb-10">
+            <input type="password" id="admin-pass" placeholder="Contraseña Admin" class="input-admin mb-15">
+            
+            <div class="modal-admin-botones">
+                <button class="button btn-canccelar-admin" onclick="document.getElementById('modal-admin').classList.add('hidden')">Cancelar</button>
+                <button class="button btn-autorizar-admin" onclick="ejecutarCorteFinal()">Autorizar y Generar PDF</button>
+            </div>
         </div>
     </div>
-
+    
     <div id="modal-detalles-cliente" class="modal-overlay hidden" onclick="cerrarModalPorFondo(event, 'modal-detalles-cliente', cerrarModalDetalles)">
         <div class="modal-content">
             

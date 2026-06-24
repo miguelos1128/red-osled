@@ -97,15 +97,17 @@
             
         </div>
 
-        <div id="widget-corte" style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #1976d2; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <span style="font-size: 1.2em; font-weight: bold; color: #1976d2;">💰 Efectivo en Caja: $<span id="lbl-caja-total">0.00</span></span>
-                <br><span style="color: #555; font-size: 0.9em;">Pagos por entregar: <span id="lbl-caja-cobros">0</span></span>
+        <div id="widget-corte" class="widget-corte">
+            <div class="widget-corte-info">
+                <span class="widget-corte-total">💰 Efectivo en Caja: $<span id="lbl-caja-total">0.00</span></span>
+                <br>
+                <span class="widget-corte-contador">Pagos por entregar: <span id="lbl-caja-cobros">0</span></span>
             </div>
-            <button id="btn-ver-desglose" onclick="cargarWidgetCorte()" class="button" style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
-
-            <button id="btn-ver-historial" class="button" style="background-color: #7f8c8d; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin-left: 10px;">Ver Historial</button>
-
+            
+            <div class="widget-corte-acciones">
+                <button id="btn-ver-desglose" onclick="cargarWidgetCorte()" class="button btn-widget-desglose">Ver Desglose</button>
+                <button id="btn-ver-historial" class="button btn-widget-historial">Ver Historial</button>
+            </div>
         </div>
 
         <div class="main-section">
@@ -497,7 +499,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="modal-detalles-cliente" class="modal-overlay hidden" onclick="cerrarModalPorFondo(event, 'modal-detalles-cliente', cerrarModalDetalles)">
         <div class="modal-content">
             

@@ -1029,6 +1029,64 @@ td {
     background: #1565c0;
 }
 
+/* =========================================
+   WIDGET RESUMEN DE CORTE (PANEL PRINCIPAL)
+   ========================================= */
+.widget-corte {
+    background-color: #e3f2fd;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #1976d2;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Textos informativos */
+.widget-corte-total {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #1976d2;
+}
+
+.widget-corte-contador {
+    color: #555;
+    font-size: 0.9em;
+}
+
+/* Contenedor y botones de acción */
+.widget-corte-acciones {
+    display: flex;
+    gap: 10px; /* Separa los botones de forma limpia sin usar márgenes fijos */
+}
+
+.btn-widget-desglose {
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btn-widget-desglose:hover {
+    background-color: #1565c0; /* Azul un poco más oscuro al pasar el cursor */
+}
+
+.btn-widget-historial {
+    background-color: #7f8c8d;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btn-widget-historial:hover {
+    background-color: #6c7a7d; /* Gris más oscuro al pasar el cursor */
+}
+
 @media (max-width: 640px) {
     .form-gasto-corte {
         grid-template-columns: 1fr;

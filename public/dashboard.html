@@ -343,20 +343,34 @@
                     <h3>Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
                 </div>
 
-                <div class="resumen-caja-chica" style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 16px;">
-                    <div style="display: flex; justify-content: space-between;"><span>Saldo Inicial:</span> <strong id="lbl-saldo-inicial">$0.00</strong></div>
-                    <div style="display: flex; justify-content: space-between;"><span>+ Mensualidades:</span> <strong id="lbl-mensualidades">$0.00</strong></div>
-                    <div style="display: flex; justify-content: space-between;"><span>+ Ingresos Extra:</span> <strong id="lbl-ingresos-extra">$0.00</strong></div>
-                    <div style="display: flex; justify-content: space-between; color: #e74c3c;"><span>- Gastos:</span> <strong id="lbl-gastos-totales">$0.00</strong></div>
-                    <hr style="margin: 10px 0;">
-                    <div style="display: flex; justify-content: space-between; font-size: 18px; color: #2c3e50;">
+                <div class="resumen-caja-chica">
+                    <div class="resumen-fila">
+                        <span>Saldo Inicial:</span> 
+                        <strong id="lbl-saldo-inicial">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila">
+                        <span>+ Mensualidades:</span> 
+                        <strong id="lbl-mensualidades">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila">
+                        <span>+ Ingresos Extra:</span> 
+                        <strong id="lbl-ingresos-extra">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila resumen-gasto">
+                        <span>- Gastos:</span> 
+                        <strong id="lbl-gastos-totales">$0.00</strong>
+                    </div>
+                    
+                    <hr class="resumen-separador">
+                    
+                    <div class="resumen-fila resumen-total">
                         <span><strong>Total en Caja Física:</strong></span> 
                         <strong id="lbl-caja-fisica">$0.00</strong>
                     </div>
                 </div>
 
                 <div id="seccion-gastos-corte" class="seccion-gastos-corte hidden">
-                    <h3>Registrar gasto</h3>
+                    <h4>Gastos</h4>
                     <div class="form-gasto-corte">
                         <input type="number" id="gasto-monto" min="0.01" step="0.01" placeholder="Monto ($)">
                         <input type="text" id="gasto-descripcion" maxlength="255" placeholder="Descripción">
@@ -373,14 +387,14 @@
                     </div>
                 </div>
 
-                <div class="seccion-ingresos-extra" style="margin-bottom: 20px; border: 1px solid #27ae60; padding: 10px; border-radius: 5px;">
-                    <h4 style="color: #27ae60; margin-top: 0;">Ingresos Extra</h4>
-                    <div id="lista-ingresos-extra" style="margin-bottom: 10px;">
+                <div class="seccion-ingresos-extra">
+                    <h4 class="ingresos-titulo">Ingresos Extra</h4>
+                    <div id="lista-ingresos-extra" class="ingresos-lista">
                         </div>
-                    <div class="form-ingreso-extra" style="display: flex; gap: 5px;">
-                        <input type="text" id="desc-ingreso" placeholder="Concepto (Ej. Anticipo)" class="input-base" style="flex: 2;">
-                        <input type="number" id="monto-ingreso" placeholder="$ Monto" class="input-base" style="flex: 1;">
-                        <button onclick="agregarIngresoExtra()" class="button" style="background-color: #27ae60; color: white;">Añadir</button>
+                    <div class="form-ingreso-extra">
+                        <input type="text" id="desc-ingreso" placeholder="Concepto (Ej. Anticipo)" class="input-base ingreso-input-desc">
+                        <input type="number" id="monto-ingreso" placeholder="$ Monto" class="input-base ingreso-input-monto">
+                        <button onclick="agregarIngresoExtra()" class="button btn-agregar-ingreso">Añadir</button>
                     </div>
                 </div>
             </div>

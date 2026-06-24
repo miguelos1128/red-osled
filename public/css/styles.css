@@ -839,6 +839,83 @@ td {
     text-align: center;
 }
 
+/* =========================================
+   RESUMEN DE CAJA CHICA
+   ========================================= */
+.resumen-caja-chica {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.resumen-fila {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.resumen-gasto {
+    color: #e74c3c; /* Rojo para salidas de dinero */
+}
+
+.resumen-separador {
+    margin: 10px 0;
+    border: 0;
+    border-top: 1px solid #ddd;
+}
+
+.resumen-total {
+    font-size: 18px;
+    color: #2c3e50;
+    margin-top: 10px;
+}
+
+/* =========================================
+   SECCIÓN DE INGRESOS EXTRA
+   ========================================= */
+.seccion-ingresos-extra {
+    margin-bottom: 20px;
+    border: 1px solid #27ae60;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.ingresos-titulo {
+    color: #27ae60;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.ingresos-lista {
+    margin-bottom: 10px;
+}
+
+.form-ingreso-extra {
+    display: flex;
+    gap: 5px;
+}
+
+.ingreso-input-desc {
+    flex: 2; /* Toma el doble de espacio que el monto */
+}
+
+.ingreso-input-monto {
+    flex: 1; /* Toma la mitad de espacio que la descripción */
+}
+
+.btn-agregar-ingreso {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-agregar-ingreso:hover {
+    background-color: #219653; /* Un tono más oscuro al pasar el mouse */
+}
+
 @media (max-width: 640px) {
     .form-gasto-corte {
         grid-template-columns: 1fr;

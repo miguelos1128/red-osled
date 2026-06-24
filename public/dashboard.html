@@ -2564,15 +2564,18 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const tituloModal = document.getElementById('area-imprimible-corte-titulo');
                 const btnSolicitarCierre = document.querySelector('.btn-solicitar-cierre');
                 const formGastoCorte = document.querySelector('.form-gasto-corte');
+                const formIngresoExtra = document.querySelector('.form-ingreso-extra');
 
                 if (esSupervision) {
                     if (tituloModal) tituloModal.innerText = corteHistoricoId ? `Histórico de Corte #${corteHistoricoId}: ${nombreCobrador}` : `Supervisión de Corte: ${nombreCobrador}`;
                     if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'none';
                     if (formGastoCorte) formGastoCorte.style.display = 'none'; 
+                    if (formIngresoExtra) formIngresoExtra.style.display = 'none';
                 } else {
                     if (tituloModal) tituloModal.innerText = `Reporte de Corte de Caja`;
                     if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'block';
                     if (formGastoCorte) formGastoCorte.style.display = ''; 
+                    if (formIngresoExtra) formIngresoExtra.style.display = ''; 
                 }
 
             } catch (error) {

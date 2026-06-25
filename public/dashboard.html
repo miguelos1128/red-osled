@@ -333,17 +333,6 @@
                         
                     </div>
                 </div>
-                <div class="reporte-pie-total">
-                    <div class="resumen-corte-linea">
-                        <span>Total cobrado:</span>
-                        <strong>$<span id="lbl-corte-bruto-modal">0.00</span></strong>
-                    </div>
-                    <div id="resumen-gastos-corte" class="resumen-corte-linea gasto hidden">
-                        <span>Gastos:</span>
-                        <strong>-$<span id="lbl-corte-gastos-modal">0.00</span></strong>
-                    </div>
-                    <h3>Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
-                </div>
 
                 <div class="resumen-caja-chica">
                     <div class="resumen-fila">
@@ -703,7 +692,7 @@
         let idCobrador = usuario.id
         const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3;
         document.getElementById('seccion-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
-        document.getElementById('resumen-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
+        //document.getElementById('resumen-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
 
         function renderizarHistorial(pagosCliente) {
             return meses.map((mes, index) => {
@@ -2396,9 +2385,6 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 }
 
                 const reporteBody = document.getElementById('tabla-corte-body');
-                const lblTotalModal = document.getElementById('lbl-corte-total-modal');
-                const lblBrutoModal = document.getElementById('lbl-corte-bruto-modal');
-                const lblGastosModal = document.getElementById('lbl-corte-gastos-modal');
                 const listaGastosCorte = document.getElementById('lista-gastos-corte');
                 const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
                 const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
@@ -2584,9 +2570,6 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const totalNeto = totalModal - totalGastos;
                 if (typeof actualizarCandadoGastos === "function") actualizarCandadoGastos(totalNeto);
 
-                lblBrutoModal.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
-                lblTotalModal.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
                 lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
                 lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
@@ -2632,8 +2615,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const descripcionInput = document.getElementById('gasto-descripcion');
             const monto = parseFloat(montoInput.value);
             const descripcion = descripcionInput.value.trim();
-            const totalCajaLabel = document.getElementById('lbl-corte-total-modal');
-            const totalCaja = parseFloat(totalCajaLabel.textContent.replace(/,/g, '')) || 0;
+            const totalCajaLabel = document.getElementById('lbl-caja-fisica');
+            const totalCaja = parseFloat(totalCajaLabel.textContent.replace("$", '')) || 0;
             
             if (!(usuario.rol === 2 || usuario.rol === 3)) {
                 alert("Tu rol no tiene permisos para registrar gastos.");

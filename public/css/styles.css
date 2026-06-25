@@ -223,7 +223,7 @@ td {
     border: 1px solid #e0e0e0;
     border-left: 5px solid #2980b9; /* Línea azul decorativa a la izquierda */
     border-radius: 8px;
-    padding: 15px 20px;
+    padding: 10px 20px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
@@ -260,6 +260,24 @@ td {
     .fila-localidad-renta {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    #modalPagoExitoso {
+        align-items: flex-end;
+    }
+
+    .modal-pago-exitoso {
+        max-width: none;
+        width: 100%;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .acciones-pago-exitoso {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-whatsapp-pago {
+        grid-column: auto;
     }
 }
 
@@ -836,6 +854,123 @@ td {
     color: #6b7280;
     text-align: center;
 }
+/* =========================================
+   WIDGET DEL DASHBOARD (DISEÑO PREMIUM ENRIQUECIDO)
+   ========================================= */
+.widget-corte {
+    background-color: #e3f2fd;
+    padding: 18px 22px;
+    border-radius: 10px;
+    border: 1px solid #1976d2;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    flex-wrap: wrap; /* Responsivo si la pantalla se achica */
+}
+
+/* Columna 1: Balance Principal */
+.widget-corte-principal {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.widget-corte-badge {
+    display: flex;
+    flex-direction: column;
+}
+
+.widget-lbl {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #1565c0;
+    letter-spacing: 0.8px;
+}
+
+.widget-monto-principal {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0d47a1;
+    line-height: 1.2;
+}
+
+.badge-contador {
+    background: #1976d2;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Columna 2: Micro KPI Grid (El corazón de la nueva visualización) */
+.widget-corte-desglose-rapido {
+    display: flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.65);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(25, 118, 210, 0.15);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.widget-corte-desglose-rapido:hover {
+    transform: scale(1.2);
+}
+
+.mini-kpi {
+    display: flex;
+    flex-direction: column;
+    padding: 0 14px;
+    border-right: 1px solid #cbd5e1;
+}
+
+.mini-kpi:last-child {
+    border-right: none; /* Quita la última línea divisoria */
+}
+
+.kpi-titulo {
+    font-size: 0.7rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.kpi-valor {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.kpi-positivo { color: #27ae60; }
+.kpi-negativo { color: #e74c3c; }
+
+/* Columna 3: Botones de Acción */
+.widget-corte-acciones {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-widget-desglose {
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-widget-desglose:hover { background-color: #1565c0; }
+
+
+
+
+
 
 /* =========================================
    RESUMEN DE CAJA CHICA
@@ -1030,16 +1165,7 @@ td {
 /* =========================================
    WIDGET RESUMEN DE CORTE (PANEL PRINCIPAL)
    ========================================= */
-.widget-corte {
-    background-color: #e3f2fd;
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid #1976d2;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+
 
 /* Textos informativos */
 .widget-corte-total {
@@ -1072,18 +1198,6 @@ td {
     background-color: #1565c0; /* Azul un poco más oscuro al pasar el cursor */
 }
 
-.btn-widget-historial {
-    background-color: #7f8c8d;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.btn-widget-historial:hover {
-    background-color: #6c7a7d; /* Gris más oscuro al pasar el cursor */
-}
 
 @media (max-width: 640px) {
     .form-gasto-corte {
@@ -1097,6 +1211,55 @@ td {
     .gasto-corte-item {
         grid-template-columns: 1fr auto;
     }
+
+    /* =========================================
+    RESPONSIVO PARA PANTALLAS MÓVILES (CELULARES)
+    ========================================= */
+
+    /* 1. Apilar los 3 bloques principales del widget verticalmente */
+   
+
+    .widget-corte-principal {
+        text-align: center;
+        align-items: center;
+    }
+
+    /* 2. Transformar los 4 KPIs en una cuadrícula limpia de 2x2 */
+    .widget-corte-desglose-rapido {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* Crea 2 columnas iguales */
+        gap: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.8);
+    }
+
+    /* 3. Limpiar los bordes laterales viejos y añadir división por filas */
+    .mini-kpi {
+        padding: 8px 5px;
+        border-right: none !important; /* Eliminamos la línea vertical que rompía el diseño */
+        text-align: center;
+    }
+
+    /* Opcional: Agregar una ligera separación interna entre filas */
+    .mini-kpi:nth-child(1), 
+    .mini-kpi:nth-child(2) {
+        border-bottom: 1px dashed #cbd5e1;
+        padding-bottom: 12px;
+    }
+
+    /* 4. Ajustar los botones para que abarquen el ancho completo del móvil */
+    .widget-corte-acciones {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .btn-widget-desglose,
+    .btn-widget-historial {
+        flex: 1; /* Hace que ambos botones midan exactamente lo mismo */
+        text-align: center;
+        padding: 12px 10px; /* Un poco más grandes para que sea fácil tocarlos con el dedo */
+    }
+    
 }
 
 /* Labels para móvil (Fecha:, Mes:, etc.) */
@@ -1401,25 +1564,7 @@ td {
     background-color: #c0392b; /* Un rojo más oscuro al hacer hover */
 }
 
-@media (max-width: 520px) {
-    #modalPagoExitoso {
-        align-items: flex-end;
-    }
 
-    .modal-pago-exitoso {
-        max-width: none;
-        width: 100%;
-        border-radius: 16px 16px 0 0;
-    }
-
-    .acciones-pago-exitoso {
-        grid-template-columns: 1fr;
-    }
-
-    .btn-whatsapp-pago {
-        grid-column: auto;
-    }
-}
 
 
 /* Fondo oscuro que cubre toda la pantalla */
@@ -1747,13 +1892,17 @@ td {
 .btn-historial-mini {
     background: none;
     border: none;
-    font-size: 20px;
+    font-size: 35px;
     cursor: pointer;
     margin-left: 10px;
     transition: transform 0.2s;
 }
 .btn-historial-mini:hover {
     transform: scale(1.2);
+}
+.widget-corte-desglose-rapido:hover {
+    transform: scale(1.2);
+    cursor: pointer;
 }
 
 /* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */

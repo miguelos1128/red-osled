@@ -18,6 +18,44 @@
             <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
         </div>
 
+
+        <div id="widget-corte" class="widget-corte">
+            <div class="widget-corte-principal">
+                <div class="widget-corte-badge">
+                    <span class="widget-lbl">EFECTIVO REAL EN CAJA</span>
+                    <span class="widget-monto-principal">💰 $<span id="lbl-caja-total">0.00</span></span>
+                </div>
+                <div class="widget-corte-contador">
+                    <span class="badge-contador"><span id="lbl-caja-cobros">0</span> cobros pendientes</span>
+                </div>
+            </div>
+
+            <div class="widget-corte-desglose-rapido" onclick="cargarWidgetCorte()" >
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Saldo Inicial</span>
+                    <span class="kpi-valor" id="lbl-widget-inicial">$0.00</span>
+                </div>
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Mensualidades</span>
+                    <span class="kpi-valor" id="lbl-widget-mensualidades">$0.00</span>
+                </div>
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Ingresos Extra</span>
+                    <span class="kpi-valor kpi-positivo" id="lbl-widget-extras">+$0.00</span>
+                </div>
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Gastos</span>
+                    <span class="kpi-valor kpi-negativo" id="lbl-widget-gastos">-$0.00</span>
+                </div>
+            </div>
+            
+            <div class="widget-corte-acciones">
+                <div class="tarjeta-cobrador-monto" style="display: flex; align-items: center;">
+                    <button id="btn-ver-historial" class="btn-historial-mini btn-widget-historial" title="Ver cortes anteriores">🕒</button>
+                </div>
+            </div>
+        </div>
+
         <div id="admin-section" class="admin-only">
             
             <div id="modal-actions-admin" class="actions">
@@ -97,18 +135,7 @@
             
         </div>
 
-        <div id="widget-corte" class="widget-corte">
-            <div class="widget-corte-info">
-                <span class="widget-corte-total">💰 Efectivo en Caja: $<span id="lbl-caja-total">0.00</span></span>
-                <br>
-                <span class="widget-corte-contador">Pagos por entregar: <span id="lbl-caja-cobros">0</span></span>
-            </div>
-            
-            <div class="widget-corte-acciones">
-                <button id="btn-ver-desglose" onclick="cargarWidgetCorte()" class="button btn-widget-desglose">Ver Desglose</button>
-                <button id="btn-ver-historial" class="button btn-widget-historial">Ver Historial</button>
-            </div>
-        </div>
+        
 
         <div class="main-section">
             <h3>Cobro de Mensualidad</h3>
@@ -1093,6 +1120,7 @@
             cargarVistaAdminClientes();
             //cargarClientes(); // Tu función existente
             cargarSupervisionCobradores();
+            CargarWidgetCorteDashboard();
         };
 
         async function cargarLocalidades() {
@@ -2358,6 +2386,46 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             }
         }
 
+        // ========================================================
+        // PRECARGA DE CONTENEDOR DE CORTE EN EL DASHBOARD
+        // ========================================================
+        async function CargarWidgetCorteDashboard() {
+            // Verificamos que tengamos el ID del cobrador logueado en tu variable global
+            if (typeof idCobrador === 'undefined' || !idCobrador) {
+                console.warn("CargarWidgetCorteDashboard: idCobrador no definido aún.");
+                return;
+            }
+
+            try {
+                // Consultamos la API optimizada en el Paso 3
+                const response = await fetch(`/api/corte-caja/${idCobrador}`);
+                if (!response.ok) throw new Error("Error en la respuesta del servidor");
+                
+                const data = await response.json();
+                
+                if (data && data.resumen) {
+                    const r = data.resumen;
+                    
+                    // Función interna para dar formato de moneda limpio
+                    const fmt = (num) => parseFloat(num || 0).toLocaleString('es-MX', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                    });
+
+                    // 1. Inyectamos los datos del Bloque Principal
+                    document.getElementById('lbl-caja-total').innerText = fmt(r.total_neto);
+                    document.getElementById('lbl-caja-cobros').innerText = r.total_cobros;
+                    
+                    // 2. Inyectamos los datos del Micro Desglose Rápido
+                    document.getElementById('lbl-widget-inicial').innerText = `$${fmt(r.saldo_inicial)}`;
+                    document.getElementById('lbl-widget-mensualidades').innerText = `$${fmt(r.total_dinero)}`;
+                    document.getElementById('lbl-widget-extras').innerText = `+$${fmt(r.total_ingresos_extra)}`;
+                    document.getElementById('lbl-widget-gastos').innerText = `-$${fmt(r.total_gastos)}`;
+                }
+            } catch (error) {
+                console.error("Error al inicializar la vista previa del widget:", error);
+            }
+        }
 
         // 2. FUNCIÓN ACTUALIZADA: cargarWidgetCorte (Añadido soporte Histórico)
         async function cargarWidgetCorte(usuarioEvaluarId = idCobrador, esSupervision = false, nombreCobrador = '', corteHistoricoId = null) {
@@ -2767,6 +2835,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
         function cerrarModalCorte() {
             document.getElementById('modal-corte').classList.add('hidden');
+            CargarWidgetCorteDashboard();
         }
 
         function abrirModalAdmin() {

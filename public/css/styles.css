@@ -756,14 +756,18 @@ td {
 
 
 .seccion-gastos-corte {
-    border-top: 1px solid #e5e7eb;
-    margin-top: 18px;
-    padding-top: 16px;
+    margin-bottom: 20px;
+    border: 1px solid #e74c3c;
+    padding: 10px;
+    border-radius: 5px;
 }
 
-.seccion-gastos-corte h3 {
-    margin: 0 0 10px;
-    color: #333;
+
+
+.seccion-gastos-corte h4 {
+    color: #e74c3c;
+    margin-top: 0;
+    margin-bottom: 15px;
 }
 
 .form-gasto-corte {
@@ -773,7 +777,8 @@ td {
     margin-bottom: 14px;
 }
 
-.form-gasto-corte input {
+.input-base {
+    margin: 0;
     border: 1px solid #d8dee4;
     border-radius: 6px;
     padding: 10px;
@@ -781,6 +786,7 @@ td {
 }
 
 .btn-agregar-gasto {
+    width: 150px;
     background: #1a73e8;
     color: white;
     border: none;
@@ -1021,28 +1027,25 @@ td {
     margin-bottom: 15px;
 }
 
-.ingresos-lista {
-    margin-bottom: 10px;
-}
+
 
 .form-ingreso-extra {
-    display: flex;
-    gap: 5px;
+    display: grid;
+    grid-template-columns: 120px 1fr auto;
+    gap: 10px;
+    margin-bottom: 14px;
 }
 
-.ingreso-input-desc {
-    flex: 2; /* Toma el doble de espacio que el monto */
-}
 
-.ingreso-input-monto {
-    flex: 1; /* Toma la mitad de espacio que la descripción */
-}
 
 .btn-agregar-ingreso {
+    width:150px;
     background-color: #27ae60;
     color: white;
     border: none;
-    cursor: pointer;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-weight: bold;
 }
 
 .btn-agregar-ingreso:hover {
@@ -1202,6 +1205,16 @@ td {
 @media (max-width: 640px) {
     .form-gasto-corte {
         grid-template-columns: 1fr;
+    }
+    .form-ingreso-extra{
+        grid-template-columns: 1fr;
+    
+    }
+    .btn-agregar-ingreso {
+        width:100%;
+    }
+    .btn-agregar-gasto{
+        width: 100%;
     }
 
     .gastos-corte-header {

@@ -18,7 +18,6 @@
             <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
         </div>
 
-
         <div id="widget-corte" class="widget-corte">
             <div class="widget-corte-principal">
                 <div class="widget-corte-badge">
@@ -390,30 +389,40 @@
                 <div id="seccion-gastos-corte" class="seccion-gastos-corte hidden">
                     <h4>Gastos</h4>
                     <div class="form-gasto-corte">
-                        <input type="number" id="gasto-monto" min="0.01" step="0.01" placeholder="Monto ($)">
-                        <input type="text" id="gasto-descripcion" maxlength="255" placeholder="Descripción">
+                        <input type="number" id="gasto-monto" class="input-base" min="1" step="1" placeholder="Monto ($)">
+                        <input type="text" id="gasto-descripcion" class="input-base" maxlength="255" placeholder="Descripción">
                         <button class="button btn-agregar-gasto" onclick="registrarGastoCorte()">Agregar gasto</button>
                     </div>
-
                     <div class="gastos-corte-lista">
                         <div class="gastos-corte-header">
                             <span>Gasto</span>
                             <span>Monto</span>
                             <span>Acción</span>
                         </div>
-                        <div id="lista-gastos-corte"></div>
+                        <div id="lista-gastos-corte">
+
+                        </div>
                     </div>
                 </div>
 
                 <div class="seccion-ingresos-extra">
                     <h4 class="ingresos-titulo">Ingresos Extra</h4>
-                    <div id="lista-ingresos-extra" class="ingresos-lista">
-                        </div>
                     <div class="form-ingreso-extra">
-                        <input type="text" id="desc-ingreso" placeholder="Concepto (Ej. Anticipo)" class="input-base ingreso-input-desc">
-                        <input type="number" id="monto-ingreso" placeholder="$ Monto" class="input-base ingreso-input-monto">
+                        <input type="number" id="monto-ingreso"  class="input-base"  min="1" step="1" placeholder="Monto ($)">
+                        <input type="text" id="desc-ingreso"  class="input-base" maxlength="255" placeholder="Concepto (Ej. Anticipo)" >
                         <button onclick="agregarIngresoExtra()" class="button btn-agregar-ingreso">Añadir</button>
                     </div>
+                    <div class="gastos-corte-lista">
+                        <div class="gastos-corte-header">
+                            <span>Ingreso</span>
+                            <span>Monto</span>
+                            <span>Acción</span>
+                        </div>
+                        <div id="lista-ingresos-extra">
+
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
 

@@ -358,7 +358,7 @@
                         <span>+ Ingresos Extra:</span> 
                         <strong id="lbl-ingresos-extra">$0.00</strong>
                     </div>
-                    <div class="resumen-fila resumen-gasto">
+                    <div class="resumen-fila resumen-gasto ">
                         <span>- Gastos:</span> 
                         <strong id="lbl-gastos-totales">$0.00</strong>
                     </div>
@@ -2787,10 +2787,12 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         }
 
         function abrirModalAdmin() {
-            const lblBrutoModal = document.getElementById('lbl-corte-bruto-modal');
+            const lblSaldoInicial = document.getElementById('lbl-saldo-inicial');
+            const lblIngresesosExtra = document.getElementById('lbl-ingresos-extra');
+            const lblMensualidades = document.getElementById('lbl-mensualidades');
     
-            if (parseFloat(lblBrutoModal.textContent.replace(/,/g, '')) <= 0) {
-                alert("⚠️ No se puede realizar el corte: No hay pagos pendientes para autorizar.");
+            if (parseFloat(lblSaldoInicial.textContent.replace("$", '')) <= 0 && parseFloat(lblIngresesosExtra.textContent.replace("$", '')) <= 0  && parseFloat(lblMensualidades.textContent.replace("$", '')) <= 0) {
+                alert("⚠️ No se puede realizar el corte: No hay movimientos.");
                 return; // Detiene la ejecución aquí mismo
             }
             document.getElementById('modal-admin').classList.remove('hidden');

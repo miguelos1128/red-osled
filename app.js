@@ -699,19 +699,33 @@ app.post('/api/gastos', async (req, res) => {
             return res.status(403).json({ success: false, error: 'Tu rol no tiene permisos para registrar gastos.' });
         }
 
+        // 3. Consulta de Resumen de Caja (¡Aquí está la mejora!)
+        // Se añaden los ingresos_extra a la consulta SQL. 
+        // Nota: Asegúrate de que tu tabla se llame 'ingresos_extra'. Si tiene otro nombre, cámbialo en la línea 40.
         const [resumenCaja] = await db.query(
             `SELECT
                 IFNULL((SELECT SUM(monto) FROM pagos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_pagos,
+                IFNULL((SELECT SUM(monto) FROM ingresos_extra WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_ingresos,
                 IFNULL((SELECT SUM(monto) FROM gastos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_gastos`,
-            [usuarioId, usuarioId]
+            [usuarioId, usuarioId, usuarioId] // Pasamos el usuarioId tres veces para las tres subconsultas
         );
+        
+        // 4. Extracción de valores individuales
+        const totalPagos = parseFloat(resumenCaja[0].total_pagos) || 0;
+        const totalIngresos = parseFloat(resumenCaja[0].total_ingresos) || 0;
+        const totalGastos = parseFloat(resumenCaja[0].total_gastos) || 0;
 
-        const efectivoDisponible = (parseFloat(resumenCaja[0].total_pagos) || 0) - (parseFloat(resumenCaja[0].total_gastos) || 0);
+        // Opcional: Si tienes un "Saldo Inicial" guardado en base de datos para este corte, 
+        // deberías consultarlo arriba y sumarlo aquí. Por ejemplo: const saldoInicial = 2000;
+        const saldoInicial = 0; // Cambia esto si lo obtienes de la BD para que coincida con tus $5,200 exactos.
 
+        // 5. Cálculo real del efectivo disponible
+        const efectivoDisponible = (totalPagos + totalIngresos + saldoInicial) - totalGastos;
+
+        // 6. Candado de seguridad: Verificar si hay dinero suficiente
         if (efectivoDisponible <= 0) {
-            return res.status(400).json({ success: false, error: 'No hay efectivo disponible para registrar gastos.' });
+            return res.status(400).json({ success: false, error: 'No hay efectivo disponible en caja para registrar gastos.' });
         }
-
         if (montoNumero > efectivoDisponible) {
             return res.status(400).json({
                 success: false,

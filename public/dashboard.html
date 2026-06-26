@@ -2665,13 +2665,77 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
                 // (Haz lo mismo para los IDs terminados en '-print' para que salga en el PDF)
 
-                const totalNeto = totalModal - totalGastos;
+                const totalNeto = r.total_neto || 0;
                 if (typeof actualizarCandadoGastos === "function") actualizarCandadoGastos(totalNeto);
 
                 lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
                 lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
                 lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
 
+
+
+                // ==============================================================
+                // 🌟 NUEVO: INYECTAR BANNER HISTÓRICO DE RESUMEN Y REIMPRESIÓN
+                // ==============================================================
+                let bannerHistorico = document.getElementById('banner-info-historica');
+                if (!bannerHistorico) {
+                    // Si no existe, lo creamos dinámicamente y lo ponemos abajo del título del modal
+                    bannerHistorico = document.createElement('div');
+                    bannerHistorico.id = 'banner-info-historica';
+                    const tituloModalElement = document.getElementById('area-imprimible-corte-titulo');
+                    if (tituloModalElement && tituloModalElement.parentNode) {
+                        tituloModalElement.parentNode.insertBefore(bannerHistorico, tituloModalElement.nextSibling);
+                    }
+                }
+
+                if (corteHistoricoId !== null) {
+                    // Cálculos
+                    const fechaFormat = new Date(r.fecha_corte).toLocaleString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                    const entregado = parseFloat(r.monto_entregado) || 0;
+                    const fondoCaja = totalNeto - entregado; // Lo que quedó de fondo para el día siguiente
+
+                    // Diseñamos el banner (HTML y estilos inyectados directamente)
+                    bannerHistorico.innerHTML = `
+                        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 5px solid #10b981; padding: 15px; border-radius: 8px; margin-top: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap; flex: 1;">
+                                <div>
+                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">📅 Fecha del corte</div>
+                                    <div style="color: #334155; font-size: 15px; font-weight: 600;">${fechaFormat}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">🧾 Cobros</div>
+                                    <div style="color: #334155; font-size: 15px; font-weight: 600;">${r.total_cobros} pagos</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">💵 Entregado Admin</div>
+                                    <div style="color: #10b981; font-size: 15px; font-weight: 800;">$${entregado.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">🏦 Quedó en Caja</div>
+                                    <div style="color: #f59e0b; font-size: 15px; font-weight: 800;">$${fondoCaja.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <button onclick="imprimirReporte()" style="background-color: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);">
+                                    🖨️ Reimprimir
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    bannerHistorico.style.display = 'block';
+
+                    // 🚨 IMPORTANTÍSIMO: Rellenamos el autorizador para que al imprimir el PDF,
+                    // aparezca el nombre de quien autorizó originalmente y no un espacio en blanco.
+                    const printAdmin = document.getElementById('print-admin');
+                    if (printAdmin) printAdmin.innerText = (r.autorizador || 'ADMINISTRADOR').toUpperCase();
+
+                } else {
+                    // Si es un corte actual/en vivo, ocultamos el banner
+                    bannerHistorico.style.display = 'none';
+                }
+                // ==============================================================
+
+                
                 // TÍTULOS Y CONTROLES VISUALES
                 const tituloModal = document.getElementById('area-imprimible-corte-titulo');
                 const btnSolicitarCierre = document.querySelector('.btn-solicitar-cierre');

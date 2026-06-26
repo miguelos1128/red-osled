@@ -390,8 +390,8 @@
                     <h4>Gastos</h4>
                     <div class="form-gasto-corte">
                         <input type="number" id="gasto-monto" class="input-base" min="1" step="1" placeholder="Monto ($)">
-                        <input type="text" id="gasto-descripcion" class="input-base" maxlength="255" placeholder="Descripción">
-                        <button class="button btn-agregar-gasto" onclick="registrarGastoCorte()">Agregar gasto</button>
+                        <input type="text" id="gasto-descripcion" class="input-base" maxlength="255" placeholder="Concepto (Ej. Compra de Materiales)" >
+                        <button class="button btn-agregar-gasto" onclick="registrarGastoCorte()">Añadir</button>
                     </div>
                     <div class="gastos-corte-lista">
                         <div class="gastos-corte-header">
@@ -458,7 +458,7 @@
                     <thead>
                         <tr>
                             <th>Fecha</th>
-                            <th>Descripción</th>
+                            <th>Concepto</th>
                             <th>Monto</th>
                         </tr>
                     </thead>
@@ -2580,6 +2580,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                         const montoGasto = parseFloat(gasto.monto) || 0;
                         const fechaGasto = new Date(gasto.fecha_gasto).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false });
                         
+                        
                         const claseGasto = estado === estadoCancelado ? ' gasto-cancelado' : '';
                         const botonGasto = (estado === estadoActivo && !esSupervision)
                             ? `<button class="btn-eliminar-pago" title="Cancelar gasto" onclick="cancelarGasto(${gasto.id})">×</button>` : '';
@@ -2587,9 +2588,12 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                         if (estado === estadoActivo) totalGastos += montoGasto;
 
                         const itemGasto = document.createElement('div');
-                        itemGasto.className = `gasto-corte-item${claseGasto}`;
+                        itemGasto.className = `corte-item${claseGasto}`;
                         itemGasto.innerHTML = `
-                            <div><strong>${gasto.descripcion}</strong><span>${fechaGasto}</span></div>
+                            <div>
+                                <strong>${gasto.descripcion}</strong>
+                                <span>${fechaGasto}</span>
+                            </div>
                             <div class="gasto-corte-monto">$${montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                             <div>${botonGasto}</div>
                         `;
@@ -2611,23 +2615,40 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     if (ingresos.length === 0) {
                         listaIngresosUI.innerHTML = '<div style="color: #7f8c8d; font-size: 12px;">Sin ingresos extra registrados.</div>';
                     } else {
+                        // Definimos los estados igual que en gastos para mantener consistencia
+                        const esHistorico = corteHistoricoId !== null;
+                        const estadoActivo = esHistorico ? 1 : 0;
+                        const estadoCancelado = esHistorico ? 4 : 3;
+
                         ingresos.forEach(ing => {
                             const estado = parseInt(ing.estado_corte);
-                            if (estado === 0 || estado === 1) { // Mostrar pendientes y cerrados
-                                const div = document.createElement('div');
-                                div.className = 'item-historial'; // Reusamos el estilo bonito que ya tenías
-                                div.innerHTML = `
-                                    <div class="item-historial-datos">
-                                        <strong>${ing.descripcion}</strong>
-                                        <span>${new Date(ing.fecha_ingreso).toLocaleDateString()}</span>
-                                    </div>
-                                    <div class="item-historial-monto" style="color: #27ae60;">
-                                        +$${parseFloat(ing.monto).toLocaleString('es-MX', {minimumFractionDigits:2})}
-                                    </div>
-                                    ${(estado === 0 && !esSupervision) ? `<button onclick="cancelarIngresoExtra(${ing.id})" class="btn-eliminar-pago" style="margin-left:10px;">×</button>` : ''}
-                                `;
-                                listaIngresosUI.appendChild(div);
-                            }
+                            const montoIngreso = parseFloat(ing.monto) || 0;
+                            const fechaIngreso = new Date(ing.fecha_ingreso).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false });
+                            
+                            // Asignamos la clase de cancelado si corresponde (asumiendo que 'gasto-cancelado' aplica estilos como line-through y opacidad)
+                            const claseIngreso = estado === estadoCancelado ? ' gasto-cancelado' : '';
+                            
+                            // El botón solo se muestra si el estado es activo (0 si es corte actual) y no es supervisión
+                            const botonIngreso = (estado === estadoActivo && !esSupervision)
+                                ? `<button onclick="cancelarIngresoExtra(${ing.id})" class="btn-eliminar-pago" title="Cancelar ingreso extra">×</button>` 
+                                : '';
+
+                            // Si tienes una variable totalIngresosExtra que se sume aquí, asegúrate de hacerlo solo si está activo.
+                            // if (estado === estadoActivo) totalIngresosExtra += montoIngreso; 
+
+                            const div = document.createElement('div');
+                            div.className = `corte-item${claseIngreso}`; // Aplicamos la clase base y la de cancelado si es el caso
+                            div.innerHTML = `
+                                <div>
+                                    <strong>${ing.descripcion}</strong>
+                                    <span>${fechaIngreso}</span>
+                                </div>
+                                <div class="item-historial-monto">
+                                    $${montoIngreso.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </div>
+                                <div>${botonIngreso}</div>
+                            `;
+                            listaIngresosUI.appendChild(div);
                         });
                     }
                 }
@@ -2717,7 +2738,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             }
 
             if (!descripcion) {
-                alert("Ingresa una descripción para el gasto.");
+                alert("Ingresa un Concepto para el gasto.");
                 return;
             }
 

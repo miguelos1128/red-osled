@@ -2705,7 +2705,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             montoInput.disabled = bloquear;
             descripcionInput.disabled = bloquear;
             btnAgregar.disabled = bloquear;
-            btnAgregar.textContent = bloquear ? 'Sin efectivo' : 'Agregar gasto';
+            btnAgregar.textContent = bloquear ? 'Sin efectivo' : 'Añadir';
         }
 
         async function registrarGastoCorte() {
@@ -2714,7 +2714,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const monto = parseFloat(montoInput.value);
             const descripcion = descripcionInput.value.trim();
             const totalCajaLabel = document.getElementById('lbl-caja-fisica');
-            const totalCaja = parseFloat(totalCajaLabel.textContent.replace("$", '')) || 0;
+            const totalCaja = parseFloat(totalCajaLabel.textContent.replace("$", '').replace(/,/g, "")) || 0;
             
             if (!(usuario.rol === 2 || usuario.rol === 3)) {
                 alert("Tu rol no tiene permisos para registrar gastos.");
@@ -2885,16 +2885,33 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const user = document.getElementById('admin-user').value;
             const pass = document.getElementById('admin-pass').value;
             
+            // 2. Obtener el monto total disponible (deberías tener una variable global o extraerla del DOM)
+            // Supongamos que tienes una variable 'totalCajaDisponible' calculada previamente
+            const totalCajaDisponible = parseFloat(document.getElementById('lbl-caja-total').innerText.replace(/[^0-9.-]+/g,"")) || 0;
+            
             // NUEVO: Capturar cuánto dinero entrega
             const montoEntregarInput = document.getElementById('input-monto-entregar').value;
             const montoEntregado = parseFloat(montoEntregarInput) || 0;
 
-            if(!user || !pass) {
-                alert("El administrador debe ingresar sus datos.");
+            // --- VALIDACIONES DE SEGURIDAD ---
+            if (!user || !pass) {
+                alert("⚠️ El administrador debe ingresar sus datos.");
                 return;
             }
-            
 
+            // Validación: Obligar a ingresar un monto
+            if (isNaN(montoEntregado) || montoEntregado <= 0) {
+                alert("⚠️ Por favor, ingresa un monto válido a entregar.");
+                return;
+            }
+
+            // Validación: No puede entregar más de lo que hay en caja
+            if (montoEntregado > totalCajaDisponible) {
+                alert(`❌ Error: El monto a entregar ($${montoEntregado.toFixed(2)}) excede el total disponible en caja ($${totalCajaDisponible.toFixed(2)}).`);
+                return;
+            }
+            // ---------------------------------
+            
             try {
                 const response = await fetch(`${urlBase}/api/procesar-corte`, {
                     method: 'POST',
@@ -2912,10 +2929,9 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const data = await response.json();
 
                 if (response.ok) {
-                    // ¡El admin autorizó! Primero imprimimos el PDF
-                    alert("✅ Corte autorizado. \nFolio: #${data.corte_id}\nEl dinero se transfirió al sistema.");
+                    alert("✅ Corte autorizado. \nFolio: #" + data.corte_id + "\nEl dinero se transfirió al sistema.");
                     document.getElementById('print-admin').innerText = user.toUpperCase();
-                   
+                    
                     imprimirReporte();
                 } else {
                     alert("❌ Error: " + data.error);

@@ -511,11 +511,11 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
     try {
         // 1. Rescatamos el Saldo Inicial (Monto retenido del último corte cerrado)
         const [ultimoCorte] = await db.query(
-            'SELECT monto_retenido FROM cortes_caja WHERE usuario_id = ? ORDER BY id DESC LIMIT 1',
+            'SELECT monto_retenido, monto_entregado FROM cortes_caja WHERE usuario_id = ? ORDER BY id DESC LIMIT 1',
             [usuarioId]
         );
         const saldoInicial = ultimoCorte.length > 0 ? parseFloat(ultimoCorte[0].monto_retenido) : 0.00;
-
+        const montoEntregado = ultimoCorte.length > 0 ? parseFloat(ultimoCorte[0].monto_entregado) : 0.00;
         // 2. Obtener los pagos pendientes (Mensualidades exclusivas de clientes)
         const [detalles] = await db.query(
             `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
@@ -561,7 +561,8 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
                 total_ingresos_extra: totalIngresos,
                 total_gastos: totalGastos,
                 total_neto: totalCajaFisica, // Total en billetes y monedas que debe haber
-                total_cobros: totalCobrosNum
+                total_cobros: totalCobrosNum,
+                monto_entregado: montoEntregado
             },
             detalles: detalles,
             gastos: gastos,

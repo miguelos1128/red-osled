@@ -1246,8 +1246,6 @@ td {
 /* =========================================
    WIDGET RESUMEN DE CORTE (PANEL PRINCIPAL)
    ========================================= */
-
-
 /* Textos informativos */
 .widget-corte-total {
     font-size: 1.2em;
@@ -1277,6 +1275,59 @@ td {
 
 .btn-widget-desglose:hover {
     background-color: #1565c0; /* Azul un poco más oscuro al pasar el cursor */
+}
+
+
+/* =========================================
+    Estilos para el PDF / Zona de Impresión
+   ========================================= */
+.tabla-impresion tfoot td {
+    background-color: #f8fafc;
+    border-top: 2px solid #cbd5e1;
+}
+
+.resumen-caja-chica-print {
+    width: 320px;
+    margin-left: auto; /* Alinea a la derecha */
+    border: 2px solid #334155;
+    padding: 15px;
+    border-radius: 6px;
+    font-size: 13px;
+    background-color: #fff;
+    page-break-inside: avoid; /* Evita que el resumen se corte entre páginas */
+}
+
+.resumen-caja-chica-print h3 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 8px;
+    font-size: 15px;
+    color: #0f172a;
+}
+
+.resumen-fila-print {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    color: #334155;
+}
+
+.resumen-fila-print.negativo { color: #dc2626; } /* Rojo para gastos */
+.resumen-fila-print.positivo { color: #16a34a; } /* Verde para Admin */
+.resumen-fila-print.neutro { color: #d97706; }   /* Naranja para Saldo */
+
+.resumen-fila-print.total {
+    font-size: 15px;
+    font-weight: bold;
+    color: #0f172a;
+}
+
+.resumen-separador-print {
+    border: none;
+    border-top: 1px dashed #94a3b8;
+    margin: 10px 0;
 }
 
 

@@ -431,19 +431,20 @@
             </div>
 
             <div id="zona-impresion-oculta" class="oculto-en-pantalla">
-                
                 <h2 class="titulo-print">Reporte de Corte de Caja Autorizado</h2>
                     
-                    <div class="encabezado-info-print">
-                        <div class="info-usuarios">
-                            <div class="info-fecha">
-                                <p id="print-fecha-larga">Jueves, 2 de abril del 2026 - 6:24 p.m.</p>
-                            </div>
-                            <p><strong>Corte de:</strong> <span id="print-cobrador">Nombre del Usuario</span></p>
-                            <p><strong>Autorizado por:</strong> <span id="print-admin">Nombre del Administrador</span></p>
+                <div class="encabezado-info-print">
+                    <div class="info-usuarios">
+                        <div class="info-fecha">
+                            <p id="print-fecha-larga">Jueves, 2 de abril del 2026 - 6:24 p.m.</p>
                         </div>
-                        
+                        <p><strong>Corte de:</strong> <span id="print-cobrador">Nombre del Usuario</span></p>
+                        <p><strong>Autorizado por:</strong> <span id="print-admin">Nombre del Administrador</span></p>
                     </div>
+                        
+                </div>
+
+                <h3 class="titulo-print-seccion">Mensualidades Cobradas</h3>    
                 <table class="tabla-impresion">
                     <thead>
                         <tr>
@@ -453,8 +454,31 @@
                             <th>Monto</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-autorizado-body-print">
-                        </tbody>
+                    <tbody id="tabla-autorizado-body-print"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align: right; font-weight: bold;">Total Mensualidades:</td>
+                            <td style="font-weight: bold;">$<span id="lbl-suma-mensualidades-print">0.00</span></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <h3 class="titulo-print-seccion">Ingresos Extra</h3>
+                <table class="tabla-impresion">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-ingresos-extra-body-print"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="text-align: right; font-weight: bold;">Total Ingresos Extra:</td>
+                            <td style="font-weight: bold;">$<span id="lbl-suma-ingresos-extra-print">0.00</span></td>
+                        </tr>
+                    </tfoot>
                 </table>
 
                 <h3 class="titulo-print-seccion">Gastos descontados</h3>
@@ -466,8 +490,13 @@
                             <th>Monto</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-gastos-body-print">
-                        </tbody>
+                    <tbody id="tabla-gastos-body-print"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="text-align: right; font-weight: bold;">Total Gastos:</td>
+                            <td style="font-weight: bold;">$<span id="lbl-suma-gastos-print">0.00</span></td>
+                        </tr>
+                    </tfoot>
                 </table>
                 
                 <div class="pie-impresion">
@@ -476,27 +505,37 @@
                     <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
                 </div>
 
-                <div class="resumen-caja-chica">
-                    <div class="resumen-fila">
+                <div class="resumen-caja-chica-print">
+                    <h3>Resumen Final de Caja</h3>
+                    <div class="resumen-fila-print">
                         <span>Saldo Inicial:</span> 
                         <strong id="lbl-saldo-inicial-print">$0.00</strong>
                     </div>
-                    <div class="resumen-fila">
+                    <div class="resumen-fila-print">
                         <span>+ Mensualidades:</span> 
                         <strong id="lbl-mensualidades-print">$0.00</strong>
                     </div>
-                    <div class="resumen-fila">
+                    <div class="resumen-fila-print">
                         <span>+ Ingresos Extra:</span> 
                         <strong id="lbl-ingresos-extra-print">$0.00</strong>
                     </div>
-                    <div class="resumen-fila resumen-gasto">
+                    <div class="resumen-fila-print negativo">
                         <span>- Gastos:</span> 
                         <strong id="lbl-gastos-totales-print">$0.00</strong>
                     </div>
-                    <hr class="resumen-separador">
-                    <div class="resumen-fila resumen-total">
-                        <span><strong>Total en Caja Física:</strong></span> 
-                        <strong id="lbl-caja-fisica-print">$0.00</strong> </div>
+                    <hr class="resumen-separador-print">
+                    <div class="resumen-fila-print total">
+                        <span>Total en Caja Física:</span> 
+                        <strong id="lbl-caja-fisica-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print positivo" style="margin-top: 15px;">
+                        <span>Entregado al Admin:</span> 
+                        <strong id="lbl-entregado-admin-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print neutro total">
+                        <span>Saldo en Caja (Fondo):</span> 
+                        <strong id="lbl-saldo-en-caja-print">$0.00</strong>
+                    </div>
                 </div>
                 
             </div>
@@ -2467,14 +2506,17 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
                 const reporteBody = document.getElementById('tabla-corte-body');
                 const listaGastosCorte = document.getElementById('lista-gastos-corte');
-                const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
                 const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
                 const lblBrutoPrint = document.getElementById('lbl-autorizado-bruto-print');
                 const lblGastosPrint = document.getElementById('lbl-autorizado-gastos-print');
-                const gastosBodyPrint = document.getElementById('tabla-gastos-body-print');
                 
+               const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
+                const gastosBodyPrint = document.getElementById('tabla-gastos-body-print');
+                const ingresosExtraBodyPrint = document.getElementById('tabla-ingresos-extra-body-print'); // NUEVO
+
                 reporteAuthBodyPrint.innerHTML = '';
                 gastosBodyPrint.innerHTML = '';
+                ingresosExtraBodyPrint.innerHTML = ''; // NUEVO
                 listaGastosCorte.innerHTML = '';
                 
                 document.getElementById('print-cobrador').innerText = esSupervision ? nombreCobrador : usuario.nombre;
@@ -2640,6 +2682,13 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                             // Si tienes una variable totalIngresosExtra que se sume aquí, asegúrate de hacerlo solo si está activo.
                             // if (estado === estadoActivo) totalIngresosExtra += montoIngreso; 
 
+                            if (estado === estadoActivo) {
+                                // ESTA ES LA LÍNEA NUEVA PARA INYECTAR EN LA TABLA DEL PDF
+                                const trIngreso = document.createElement('tr');
+                                trIngreso.innerHTML = `<td>${fechaIngreso}</td><td>${ing.descripcion}</td><td>$${montoIngreso.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
+                                ingresosExtraBodyPrint.appendChild(trIngreso);
+                            }
+
                             const div = document.createElement('div');
                             div.className = `corte-item${claseIngreso}`; // Aplicamos la clase base y la de cancelado si es el caso
                             div.innerHTML = `
@@ -2657,7 +2706,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     }
                 }
 
-                // 2. ACTUALIZAR TODOS LOS TOTALES DEL RESUMEN
+                /* // 2. ACTUALIZAR TODOS LOS TOTALES DEL RESUMEN
                 const r = data.resumen;
                 const formatear = (num) => parseFloat(num || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
@@ -2666,10 +2715,44 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 document.getElementById('lbl-ingresos-extra').innerText = `$${formatear(r.total_ingresos_extra)}`;
                 document.getElementById('lbl-gastos-totales').innerText = `-$${formatear(r.total_gastos)}`;
                 document.getElementById('lbl-caja-fisica').innerText = `$${formatear(r.total_neto)}`;
+ */
 
+                // 2. ACTUALIZAR TODOS LOS TOTALES DEL RESUMEN
+                const r = data.resumen;
+                const formatear = (num) => parseFloat(num || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                const entregado = parseFloat(r.monto_entregado) || 0;
+                const totalNeto = parseFloat(r.total_neto) || 0;
+                const fondoCaja = totalNeto - entregado; // Lo que quedó de fondo para el día siguiente
+
+                console.log("Total Neto:", totalNeto, "Entregado:", entregado, "Fondo Caja:", fondoCaja);
+                console.log("Resumen:", r);
+
+                // === ACTUALIZA EL MODAL EN PANTALLA ===
+                document.getElementById('lbl-saldo-inicial').innerText = `$${formatear(r.saldo_inicial)}`;
+                document.getElementById('lbl-mensualidades').innerText = `$${formatear(r.total_dinero)}`;
+                document.getElementById('lbl-ingresos-extra').innerText = `$${formatear(r.total_ingresos_extra)}`;
+                document.getElementById('lbl-gastos-totales').innerText = `-$${formatear(r.total_gastos)}`;
+                document.getElementById('lbl-caja-fisica').innerText = `$${formatear(totalNeto)}`;
+                if (typeof actualizarCandadoGastos === "function") actualizarCandadoGastos(totalNeto);
+
+                // === ACTUALIZA LOS PIES DE TABLA DEL PDF ===
+                document.getElementById('lbl-suma-mensualidades-print').innerText = formatear(r.total_dinero);
+                document.getElementById('lbl-suma-ingresos-extra-print').innerText = formatear(r.total_ingresos_extra);
+                document.getElementById('lbl-suma-gastos-print').innerText = formatear(r.total_gastos);
+
+                // === ACTUALIZA EL RESUMEN FINAL DEL PDF ===
+                document.getElementById('lbl-saldo-inicial-print').innerText = `$${formatear(r.saldo_inicial)}`;
+                document.getElementById('lbl-mensualidades-print').innerText = `$${formatear(r.total_dinero)}`;
+                document.getElementById('lbl-ingresos-extra-print').innerText = `$${formatear(r.total_ingresos_extra)}`;
+                document.getElementById('lbl-gastos-totales-print').innerText = `-$${formatear(r.total_gastos)}`;
+                document.getElementById('lbl-caja-fisica-print').innerText = `$${formatear(totalNeto)}`;
+                document.getElementById('lbl-entregado-admin-print').innerText = `$${formatear(r.monto_entregado)}`;
+                document.getElementById('lbl-saldo-en-caja-print').innerText = `$${formatear(fondoCaja)}`;
+
+                // NOTA: Si tenías código viejo apuntando a lbl-autorizado-bruto-print o lbl-autorizado-gastos-print, elimínalo, ya que esos IDs ya no existen en el nuevo HTML.
                 // (Haz lo mismo para los IDs terminados en '-print' para que salga en el PDF)
 
-                const totalNeto = r.total_neto || 0;
                 if (typeof actualizarCandadoGastos === "function") actualizarCandadoGastos(totalNeto);
 
                 lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
@@ -2960,7 +3043,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             // NUEVO: Capturar cuánto dinero entrega
             const montoEntregarInput = document.getElementById('input-monto-entregar').value;
             const montoEntregado = parseFloat(montoEntregarInput) || 0;
-
+            
             // --- VALIDACIONES DE SEGURIDAD ---
             if (!user || !pass) {
                 alert("⚠️ El administrador debe ingresar sus datos.");

@@ -620,18 +620,6 @@ td {
 }
 
 
-/* 
-.btn-detalles {
-    width: 100%;
-    padding: 10px;
-    border: none;
-    border-radius: 6px;
-    background: #34495e;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-}
- */
 /* =======================================================
    ESTILOS COMPLETOS PARA EL REPORTE DE CORTE (RESPONSIVO)
    Diseño: Mobile First (Tarjetas) -> PC (Tabla)
@@ -680,9 +668,6 @@ td {
     font-size: 1.4rem;
     color: #333;
 }
-
-/* El botón de la X */
-
 .cerrar-x-modal {
     font-size: 35px;
     font-weight: bold;
@@ -752,18 +737,12 @@ td {
     color: #34495e;
     margin: 4px 0;
 }
-
-
-
 .seccion-gastos-corte {
     margin-bottom: 20px;
     border: 1px solid #e74c3c;
     padding: 10px;
     border-radius: 5px;
 }
-
-
-
 .seccion-gastos-corte h4 {
     color: #e74c3c;
     margin-top: 0;
@@ -890,6 +869,77 @@ td {
     padding: 14px;
     color: #6b7280;
     text-align: center;
+}
+/* =========================================
+   Banner Histórico de Corte
+========================================= */
+.banner-historico-container {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 5px solid #10b981;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.banner-historico-info {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.banner-item-label {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.banner-item-value {
+    color: #334155;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.banner-item-value.success {
+    color: #10b981;
+    font-weight: 800;
+}
+
+.banner-item-value.warning {
+    color: #f59e0b;
+    font-weight: 800;
+}
+
+.btn-reimprimir-historico {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-reimprimir-historico:hover {
+    background-color: #2563eb;
+}
+
+.btn-reimprimir-historico:active {
+    transform: scale(0.98);
 }
 /* =========================================
    WIDGET DEL DASHBOARD (DISEÑO PREMIUM ENRIQUECIDO)
@@ -1057,9 +1107,6 @@ td {
     margin-top: 0;
     margin-bottom: 15px;
 }
-
-
-
 .form-ingreso-extra {
     display: grid;
     grid-template-columns: 120px 1fr auto;
@@ -1302,6 +1349,10 @@ td {
         flex: 1; /* Hace que ambos botones midan exactamente lo mismo */
         text-align: center;
         padding: 12px 10px; /* Un poco más grandes para que sea fácil tocarlos con el dedo */
+    }
+
+    .banner-historico-container{
+        flex-direction: column;
     }
     
 }

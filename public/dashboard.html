@@ -341,6 +341,10 @@
                 <h2 id="area-imprimible-corte-titulo">Reporte de Corte de Caja</h2>
                 <span class="cerrar-x-modal" onclick="cerrarModalCorte()">&times;</span>
             </div>
+            
+            <div id="banner-info-historica">
+
+            </div>
 
             <div id="area-imprimible-corte">
                 
@@ -2695,29 +2699,29 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     const fondoCaja = totalNeto - entregado; // Lo que quedó de fondo para el día siguiente
 
                     // Diseñamos el banner (HTML y estilos inyectados directamente)
-                    bannerHistorico.innerHTML = `
-                        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 5px solid #10b981; padding: 15px; border-radius: 8px; margin-top: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                            <div style="display: flex; gap: 20px; flex-wrap: wrap; flex: 1;">
+                   bannerHistorico.innerHTML = `
+                        <div class="banner-historico-container">
+                            <div class="banner-historico-info">
                                 <div>
-                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">📅 Fecha del corte</div>
-                                    <div style="color: #334155; font-size: 15px; font-weight: 600;">${fechaFormat}</div>
+                                    <div class="banner-item-label">📅 Fecha del corte</div>
+                                    <div class="banner-item-value">${fechaFormat}</div>
                                 </div>
                                 <div>
-                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">🧾 Cobros</div>
-                                    <div style="color: #334155; font-size: 15px; font-weight: 600;">${r.total_cobros} pagos</div>
+                                    <div class="banner-item-label">🧾 Cobros</div>
+                                    <div class="banner-item-value">${r.total_cobros} pagos</div>
                                 </div>
                                 <div>
-                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">💵 Entregado Admin</div>
-                                    <div style="color: #10b981; font-size: 15px; font-weight: 800;">$${entregado.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
+                                    <div class="banner-item-label">💵 Entregado Admin</div>
+                                    <div class="banner-item-value success">$${entregado.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
                                 </div>
                                 <div>
-                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">🏦 Quedó en Caja</div>
-                                    <div style="color: #f59e0b; font-size: 15px; font-weight: 800;">$${fondoCaja.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
+                                    <div class="banner-item-label">🏦 Quedó en Caja</div>
+                                    <div class="banner-item-value warning">$${fondoCaja.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
                                 </div>
                             </div>
                             <div>
-                                <button onclick="imprimirReporte()" style="background-color: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);">
-                                    🖨️ Reimprimir
+                                <button onclick="imprimirReporte()" class="btn-reimprimir-historico" title="Reimprimir este corte">
+                                    🖨️
                                 </button>
                             </div>
                         </div>
@@ -2735,7 +2739,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 }
                 // ==============================================================
 
-                
+
                 // TÍTULOS Y CONTROLES VISUALES
                 const tituloModal = document.getElementById('area-imprimible-corte-titulo');
                 const btnSolicitarCierre = document.querySelector('.btn-solicitar-cierre');

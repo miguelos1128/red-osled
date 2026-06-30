@@ -2867,7 +2867,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const totalCajaLabel = document.getElementById('lbl-caja-fisica');
             const totalCaja = parseFloat(totalCajaLabel.textContent.replace("$", '').replace(/,/g, "")) || 0;
             
-            if (!(usuario.rol === 2 || usuario.rol === 3)) {
+            if (!(usuario.rol === 2 || usuario.rol === 3 || usuario.rol === 1)) {
                 alert("Tu rol no tiene permisos para registrar gastos.");
                 return;
             }

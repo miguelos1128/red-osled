@@ -692,7 +692,7 @@ app.post('/api/gastos', async (req, res) => {
         }
 
         const [usuarios] = await db.query(
-            'SELECT rol_id FROM usuarios WHERE id = ? AND rol_id IN (2, 3)',
+            'SELECT rol_id FROM usuarios WHERE id = ? AND rol_id IN (1, 2, 3)',
             [usuarioId]
         );
 

@@ -769,7 +769,7 @@
             window.location.href = 'index.html';
         }
         let idCobrador = usuario.id
-        const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3;
+        const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3 || usuario.rol === 1; // Solo administradores y supervisores pueden gestionar gastos
         document.getElementById('seccion-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
         //document.getElementById('resumen-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
 
@@ -2851,7 +2851,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const montoInput = document.getElementById('gasto-monto');
             const descripcionInput = document.getElementById('gasto-descripcion');
             const btnAgregar = document.querySelector('.btn-agregar-gasto');
-            const bloquear = efectivoDisponible <= 0 || !(usuario.rol === 2 || usuario.rol === 3);
+            const bloquear = efectivoDisponible <= 0 || !(usuario.rol === 2 || usuario.rol === 3 || usuario.rol === 1);
 
             montoInput.disabled = bloquear;
             descripcionInput.disabled = bloquear;

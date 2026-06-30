@@ -499,11 +499,11 @@
                     </tfoot>
                 </table>
                 
-                <div class="pie-impresion">
+              <!--   <div class="pie-impresion">
                     <p>Total cobrado: $<span id="lbl-autorizado-bruto-print">0.00</span></p>
                     <p>Gastos descontados: -$<span id="lbl-autorizado-gastos-print">0.00</span></p>
                     <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
-                </div>
+                </div> -->
 
                 <div class="resumen-caja-chica-print">
                     <h3>Resumen Final de Caja</h3>
@@ -2506,9 +2506,9 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
                 const reporteBody = document.getElementById('tabla-corte-body');
                 const listaGastosCorte = document.getElementById('lista-gastos-corte');
-                const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
-                const lblBrutoPrint = document.getElementById('lbl-autorizado-bruto-print');
-                const lblGastosPrint = document.getElementById('lbl-autorizado-gastos-print');
+                //const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
+                //const lblBrutoPrint = document.getElementById('lbl-autorizado-bruto-print');
+                //const lblGastosPrint = document.getElementById('lbl-autorizado-gastos-print');
                 
                const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
                 const gastosBodyPrint = document.getElementById('tabla-gastos-body-print');
@@ -2747,7 +2747,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 document.getElementById('lbl-ingresos-extra-print').innerText = `$${formatear(r.total_ingresos_extra)}`;
                 document.getElementById('lbl-gastos-totales-print').innerText = `-$${formatear(r.total_gastos)}`;
                 document.getElementById('lbl-caja-fisica-print').innerText = `$${formatear(totalNeto)}`;
-                document.getElementById('lbl-entregado-admin-print').innerText = `$${formatear(r.monto_entregado)}`;
+                document.getElementById('lbl-entregado-admin-print').innerText = `$${formatear(entregado)}`;
                 document.getElementById('lbl-saldo-en-caja-print').innerText = `$${formatear(fondoCaja)}`;
 
                 // NOTA: Si tenías código viejo apuntando a lbl-autorizado-bruto-print o lbl-autorizado-gastos-print, elimínalo, ya que esos IDs ya no existen en el nuevo HTML.
@@ -2755,9 +2755,9 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
                 if (typeof actualizarCandadoGastos === "function") actualizarCandadoGastos(totalNeto);
 
-                lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
-                lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
-                lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                //lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                //lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                //lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
 
 
 
@@ -3043,6 +3043,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             // NUEVO: Capturar cuánto dinero entrega
             const montoEntregarInput = document.getElementById('input-monto-entregar').value;
             const montoEntregado = parseFloat(montoEntregarInput) || 0;
+            const lblSaldoEnCajaPrint = document.getElementById('lbl-saldo-en-caja-print');
+            const lblEntregadoAdminPrint = document.getElementById('lbl-entregado-admin-print');
             
             // --- VALIDACIONES DE SEGURIDAD ---
             if (!user || !pass) {
@@ -3061,7 +3063,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 alert(`❌ Error: El monto a entregar ($${montoEntregado.toFixed(2)}) excede el total disponible en caja ($${totalCajaDisponible.toFixed(2)}).`);
                 return;
             }
-            // ---------------------------------
+            // ---------------------------------lbl-saldo-en-caja-print , lbl-entregado-admin-print
             
             try {
                 const response = await fetch(`${urlBase}/api/procesar-corte`, {
@@ -3080,9 +3082,12 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const data = await response.json();
 
                 if (response.ok) {
+                    lblSaldoEnCajaPrint.innerText = `$${(totalCajaDisponible - montoEntregado).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    lblEntregadoAdminPrint.innerText = `$${montoEntregado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    
                     alert("✅ Corte autorizado. \nFolio: #" + data.corte_id + "\nEl dinero se transfirió al sistema.");
                     document.getElementById('print-admin').innerText = user.toUpperCase();
-                    
+                    //usuarioId, true, nombreUsuario, corte.id
                     imprimirReporte();
                 } else {
                     alert("❌ Error: " + data.error);

@@ -672,7 +672,7 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
     }
 });
  */
-app.post('/api/gastos', async (req, res) => {
+/* app.post('/api/gastos', async (req, res) => {
     const { usuarioId, monto, descripcion } = req.body;
 
     try {
@@ -744,8 +744,89 @@ app.post('/api/gastos', async (req, res) => {
         console.error('Error al registrar gasto:', error);
         res.status(500).json({ success: false, error: error.message });
     }
-});
+}); */
 
+
+app.post('/api/gastos', async (req, res) => {
+    const { usuarioId, monto, descripcion } = req.body;
+
+    try {
+        const montoNumero = parseFloat(monto);
+        const descripcionLimpia = (descripcion || '').trim();
+
+        if (!usuarioId) {
+            return res.status(400).json({ success: false, error: 'Usuario no válido.' });
+        }
+
+        if (!montoNumero || montoNumero <= 0) {
+            return res.status(400).json({ success: false, error: 'El monto del gasto debe ser mayor a cero.' });
+        }
+
+        if (!descripcionLimpia) {
+            return res.status(400).json({ success: false, error: 'La descripción del gasto es obligatoria.' });
+        }
+
+        // 1. Verificamos permisos
+        const [usuarios] = await db.query(
+            'SELECT rol_id FROM usuarios WHERE id = ? AND rol_id IN (1, 2, 3)',
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            return res.status(403).json({ success: false, error: 'Tu rol no tiene permisos para registrar gastos.' });
+        }
+
+        // 2. NUEVO: Obtenemos el Saldo Inicial consultando el último corte cerrado/aprobado
+        // Buscamos el último registro en la tabla cortes_caja para este usuario que esté aprobado (estado = 1)
+        const [ultimoCorteCerrado] = await db.query(
+            'SELECT monto_retenido FROM cortes_caja WHERE usuario_id = ? ORDER BY id DESC LIMIT 1',
+            [usuarioId]
+        );
+        
+        // Si existe un corte previo, extraemos el monto_retenido. Si no, arranca en 0.
+        const saldoInicial = ultimoCorteCerrado.length > 0 ? parseFloat(ultimoCorteCerrado[0].monto_retenido) : 0.00;
+
+        // 3. Consulta de Resumen de Caja del turno actual (estado_corte = 0)
+        const [resumenCaja] = await db.query(
+            `SELECT
+                IFNULL((SELECT SUM(monto) FROM pagos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_pagos,
+                IFNULL((SELECT SUM(monto) FROM ingresos_extra WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_ingresos,
+                IFNULL((SELECT SUM(monto) FROM gastos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_gastos`,
+            [usuarioId, usuarioId, usuarioId]
+        );
+        
+        // 4. Extracción de valores individuales
+        const totalPagos = parseFloat(resumenCaja[0].total_pagos) || 0;
+        const totalIngresos = parseFloat(resumenCaja[0].total_ingresos) || 0;
+        const totalGastos = parseFloat(resumenCaja[0].total_gastos) || 0;
+
+        // 5. Cálculo real del efectivo disponible (AHORA SÍ TOMA EN CUENTA EL SALDO INICIAL)
+        const efectivoDisponible = (totalPagos + totalIngresos + saldoInicial) - totalGastos;
+
+        // 6. Candado de seguridad: Verificar si hay dinero suficiente
+        if (efectivoDisponible <= 0) {
+            return res.status(400).json({ success: false, error: 'No hay efectivo disponible en caja para registrar gastos.' });
+        }
+        
+        if (montoNumero > efectivoDisponible) {
+            return res.status(400).json({
+                success: false,
+                error: `El gasto excede el efectivo disponible ($${efectivoDisponible.toFixed(2)}).`
+            });
+        }
+
+        // 7. Si pasa todas las validaciones, se inserta el gasto
+        const [result] = await db.query(
+            'INSERT INTO gastos (usuario_id, monto, descripcion) VALUES (?, ?, ?)',
+            [usuarioId, montoNumero, descripcionLimpia]
+        );
+
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error('Error al registrar gasto:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 app.post('/api/cancelar-gasto/:id', async (req, res) => {
     const idGasto = req.params.id;
     const { usuarioId } = req.body;

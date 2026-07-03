@@ -18,10 +18,50 @@
             <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
         </div>
 
+        <div id="widget-corte" class="widget-corte">
+            <div class="widget-corte-principal">
+                <div class="widget-corte-badge">
+                    <span class="widget-lbl">EFECTIVO REAL EN CAJA</span>
+                    <span class="widget-monto-principal">💰 $<span id="lbl-caja-total">0.00</span></span>
+                </div>
+                <div class="widget-corte-contador">
+                    <span class="badge-contador"><span id="lbl-caja-cobros">0</span> cobros pendientes</span>
+                </div>
+            </div>
+
+            <div class="widget-corte-desglose-rapido" onclick="cargarWidgetCorte()" >
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Saldo Inicial</span>
+                    <span class="kpi-valor" id="lbl-widget-inicial">$0.00</span>
+                </div>
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Mensualidades</span>
+                    <span class="kpi-valor" id="lbl-widget-mensualidades">$0.00</span>
+                </div>
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Ingresos Extra</span>
+                    <span class="kpi-valor kpi-positivo" id="lbl-widget-extras">+$0.00</span>
+                </div>
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Gastos</span>
+                    <span class="kpi-valor kpi-negativo" id="lbl-widget-gastos">-$0.00</span>
+                </div>
+            </div>
+            
+            <div class="widget-corte-acciones">
+                <div class="tarjeta-cobrador-monto" style="display: flex; align-items: center;">
+                    <button id="btn-ver-historial" class="btn-historial-mini btn-widget-historial" title="Ver cortes anteriores">🕒</button>
+                </div>
+            </div>
+        </div>
+
         <div id="admin-section" class="admin-only">
             
-            <div class="actions">
+            <div id="modal-actions-admin" class="actions">
                 <button id="btn-nuevo-cliente" class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
+                <div id="lista-supervision-cobradores" class="supervision-container">
+                
+                </div>
             </div>
 
             <div class="main-section">
@@ -94,13 +134,7 @@
             
         </div>
 
-        <div id="widget-corte" style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #1976d2; cursor: pointer; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;" onclick="abrirModalCorte()">
-            <div>
-                <span style="font-size: 1.2em; font-weight: bold; color: #1976d2;">💰 Efectivo en Caja: $<span id="lbl-caja-total">0.00</span></span>
-                <br><span style="color: #555; font-size: 0.9em;">Pagos por entregar: <span id="lbl-caja-cobros">0</span></span>
-            </div>
-            <button class= "button" style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
-        </div>
+        
 
         <div class="main-section">
             <h3>Cobro de Mensualidad</h3>
@@ -307,6 +341,10 @@
                 <h2 id="area-imprimible-corte-titulo">Reporte de Corte de Caja</h2>
                 <span class="cerrar-x-modal" onclick="cerrarModalCorte()">&times;</span>
             </div>
+            
+            <div id="banner-info-historica">
+
+            </div>
 
             <div id="area-imprimible-corte">
                 
@@ -317,7 +355,7 @@
                         <div>Cliente</div>
                         <div>Mes Pagado</div>
                         <div>Monto</div>
-                        <div>Estado</div>
+                        <div class="estado-borrar">Estado</div>
                         <div>Acción</div>
                     </div>
 
@@ -325,51 +363,88 @@
                         
                     </div>
                 </div>
-                <div class="reporte-pie-total">
-                    <div class="resumen-corte-linea">
-                        <span>Total cobrado:</span>
-                        <strong>$<span id="lbl-corte-bruto-modal">0.00</span></strong>
+
+                <div class="resumen-caja-chica">
+                    <div class="resumen-fila">
+                        <span>Saldo Inicial:</span> 
+                        <strong id="lbl-saldo-inicial">$0.00</strong>
                     </div>
-                    <div id="resumen-gastos-corte" class="resumen-corte-linea gasto hidden">
-                        <span>Gastos:</span>
-                        <strong>-$<span id="lbl-corte-gastos-modal">0.00</span></strong>
+                    <div class="resumen-fila">
+                        <span>+ Mensualidades:</span> 
+                        <strong id="lbl-mensualidades">$0.00</strong>
                     </div>
-                    <h3>Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
+                    <div class="resumen-fila">
+                        <span>+ Ingresos Extra:</span> 
+                        <strong id="lbl-ingresos-extra">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila resumen-gasto ">
+                        <span>- Gastos:</span> 
+                        <strong id="lbl-gastos-totales">$0.00</strong>
+                    </div>
+                    
+                    <hr class="resumen-separador">
+                    
+                    <div class="resumen-fila resumen-total">
+                        <span><strong>Total en Caja Física:</strong></span> 
+                        <strong id="lbl-caja-fisica">$0.00</strong>
+                    </div>
                 </div>
 
                 <div id="seccion-gastos-corte" class="seccion-gastos-corte hidden">
-                    <h3>Registrar gasto</h3>
+                    <h4>Gastos</h4>
                     <div class="form-gasto-corte">
-                        <input type="number" id="gasto-monto" min="0.01" step="0.01" placeholder="Monto ($)">
-                        <input type="text" id="gasto-descripcion" maxlength="255" placeholder="Descripción">
-                        <button class="button btn-agregar-gasto" onclick="registrarGastoCorte()">Agregar gasto</button>
+                        <input type="number" id="gasto-monto" class="input-base" min="1" step="1" placeholder="Monto ($)">
+                        <input type="text" id="gasto-descripcion" class="input-base" maxlength="255" placeholder="Concepto (Ej. Compra de Materiales)" >
+                        <button class="button btn-agregar-gasto" onclick="registrarGastoCorte()">Añadir</button>
                     </div>
-
                     <div class="gastos-corte-lista">
                         <div class="gastos-corte-header">
                             <span>Gasto</span>
                             <span>Monto</span>
                             <span>Acción</span>
                         </div>
-                        <div id="lista-gastos-corte"></div>
+                        <div id="lista-gastos-corte">
+
+                        </div>
                     </div>
+                </div>
+
+                <div class="seccion-ingresos-extra">
+                    <h4 class="ingresos-titulo">Ingresos Extra</h4>
+                    <div class="form-ingreso-extra">
+                        <input type="number" id="monto-ingreso"  class="input-base"  min="1" step="1" placeholder="Monto ($)">
+                        <input type="text" id="desc-ingreso"  class="input-base" maxlength="255" placeholder="Concepto (Ej. Anticipo)" >
+                        <button onclick="agregarIngresoExtra()" class="button btn-agregar-ingreso">Añadir</button>
+                    </div>
+                    <div class="gastos-corte-lista">
+                        <div class="gastos-corte-header">
+                            <span>Ingreso</span>
+                            <span>Monto</span>
+                            <span>Acción</span>
+                        </div>
+                        <div id="lista-ingresos-extra">
+
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
 
             <div id="zona-impresion-oculta" class="oculto-en-pantalla">
-                
                 <h2 class="titulo-print">Reporte de Corte de Caja Autorizado</h2>
                     
-                    <div class="encabezado-info-print">
-                        <div class="info-usuarios">
-                            <div class="info-fecha">
-                                <p id="print-fecha-larga">Jueves, 2 de abril del 2026 - 6:24 p.m.</p>
-                            </div>
-                            <p><strong>Corte de:</strong> <span id="print-cobrador">Nombre del Usuario</span></p>
-                            <p><strong>Autorizado por:</strong> <span id="print-admin">Nombre del Administrador</span></p>
+                <div class="encabezado-info-print">
+                    <div class="info-usuarios">
+                        <div class="info-fecha">
+                            <p id="print-fecha-larga">Jueves, 2 de abril del 2026 - 6:24 p.m.</p>
                         </div>
-                        
+                        <p><strong>Corte de:</strong> <span id="print-cobrador">Nombre del Usuario</span></p>
+                        <p><strong>Autorizado por:</strong> <span id="print-admin">Nombre del Administrador</span></p>
                     </div>
+                        
+                </div>
+
+                <h3 class="titulo-print-seccion">Mensualidades Cobradas</h3>    
                 <table class="tabla-impresion">
                     <thead>
                         <tr>
@@ -379,8 +454,31 @@
                             <th>Monto</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-autorizado-body-print">
-                        </tbody>
+                    <tbody id="tabla-autorizado-body-print"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align: right; font-weight: bold;">Total Mensualidades:</td>
+                            <td style="font-weight: bold;">$<span id="lbl-suma-mensualidades-print">0.00</span></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <h3 class="titulo-print-seccion">Ingresos Extra</h3>
+                <table class="tabla-impresion">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-ingresos-extra-body-print"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="text-align: right; font-weight: bold;">Total Ingresos Extra:</td>
+                            <td style="font-weight: bold;">$<span id="lbl-suma-ingresos-extra-print">0.00</span></td>
+                        </tr>
+                    </tfoot>
                 </table>
 
                 <h3 class="titulo-print-seccion">Gastos descontados</h3>
@@ -388,36 +486,85 @@
                     <thead>
                         <tr>
                             <th>Fecha</th>
-                            <th>Descripción</th>
+                            <th>Concepto</th>
                             <th>Monto</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-gastos-body-print">
-                        </tbody>
+                    <tbody id="tabla-gastos-body-print"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="text-align: right; font-weight: bold;">Total Gastos:</td>
+                            <td style="font-weight: bold;">$<span id="lbl-suma-gastos-print">0.00</span></td>
+                        </tr>
+                    </tfoot>
                 </table>
                 
-                <div class="pie-impresion">
+              <!--   <div class="pie-impresion">
                     <p>Total cobrado: $<span id="lbl-autorizado-bruto-print">0.00</span></p>
                     <p>Gastos descontados: -$<span id="lbl-autorizado-gastos-print">0.00</span></p>
                     <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
+                </div> -->
+
+                <div class="resumen-caja-chica-print">
+                    <h3>Resumen Final de Caja</h3>
+                    <div class="resumen-fila-print">
+                        <span>Saldo Inicial:</span> 
+                        <strong id="lbl-saldo-inicial-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print">
+                        <span>+ Mensualidades:</span> 
+                        <strong id="lbl-mensualidades-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print">
+                        <span>+ Ingresos Extra:</span> 
+                        <strong id="lbl-ingresos-extra-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print negativo">
+                        <span>- Gastos:</span> 
+                        <strong id="lbl-gastos-totales-print">$0.00</strong>
+                    </div>
+                    <hr class="resumen-separador-print">
+                    <div class="resumen-fila-print total">
+                        <span>Total en Caja Física:</span> 
+                        <strong id="lbl-caja-fisica-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print positivo" style="margin-top: 15px;">
+                        <span>Entregado al Admin:</span> 
+                        <strong id="lbl-entregado-admin-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print neutro total">
+                        <span>Saldo en Caja (Fondo):</span> 
+                        <strong id="lbl-saldo-en-caja-print">$0.00</strong>
+                    </div>
                 </div>
+                
             </div>
             
             <div class="modal-acciones-corte">
-                <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre button">Solicitar Cierre al Administrador</button>
+                <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre button">Entregar Corte al Administrador</button>
             </div>
 
         </div>
     </div>
 
-    <div id="modal-admin" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000;">
-        <div style="background: white; padding: 25px; border-radius: 8px; width: 300px; text-align: center;">
-            <h3 style="color: #d32f2f;">🔒 Autorización Requerida</h3>
-            <p>El administrador debe validar la entrega del efectivo para liberar el corte.</p>
-            <input type="text" id="admin-user" placeholder="Usuario Admin" style="width: 100%; margin-bottom: 10px; padding: 8px;"><br>
-            <input type="password" id="admin-pass" placeholder="Contraseña Admin" style="width: 100%; margin-bottom: 15px; padding: 8px;"><br>
-            <button class="button" onclick="document.getElementById('modal-admin').classList.add('hidden')" style="padding: 10px; margin-right: 10px;">Cancelar</button>
-            <button class="button" onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
+    <div id="modal-admin" class="hidden modal-fondo-admin">
+        <div class="modal-caja-admin">
+            <h3 class="modal-admin-titulo">🔒 Autorización Requerida</h3>
+            <p class="modal-admin-texto">El administrador debe validar la entrega del efectivo para liberar el corte.</p>
+
+            <div class="caja-entrega-efectivo">
+                <label class="caja-entrega-label">¿Cuánto dinero en efectivo se entrega al administrador?</label>
+                <input type="number" id="input-monto-entregar" placeholder="Monto a entregar" class="input-base caja-entrega-input">
+                <small class="caja-entrega-nota">La diferencia se quedará como Saldo Inicial para el siguiente mes.</small>
+            </div>
+
+            <input type="text" id="admin-user" placeholder="Usuario Admin" class="input-admin mb-10">
+            <input type="password" id="admin-pass" placeholder="Contraseña Admin" class="input-admin mb-15">
+            
+            <div class="modal-admin-botones">
+                <button class="button btn-canccelar-admin" onclick="document.getElementById('modal-admin').classList.add('hidden')">Cancelar</button>
+                <button class="button btn-autorizar-admin" onclick="ejecutarCorteFinal()">Autorizar y Generar PDF</button>
+            </div>
         </div>
     </div>
 
@@ -544,6 +691,17 @@
             </div>
         </div>
     </div>
+
+    <div id="modal-historial" class="hidden modal-fondo-corte" style="align-items: center;">
+        <div class="modal-caja-corte" style="max-width: 500px; margin: auto;">
+            <div class="cabecera-modal-corte">
+                <h2 id="titulo-modal-historial">Mis Cortes Anteriores</h2>
+                <span class="cerrar-x-modal" onclick="document.getElementById('modal-historial').classList.add('hidden')">&times;</span>
+            </div>
+            <div id="lista-historial-contenedor" style="max-height: 400px; overflow-y: auto; padding: 10px 0;">
+            </div>
+        </div>
+    </div>
    
     <script>
         const host = window.location.hostname; 
@@ -575,6 +733,12 @@
         }
         const usuario = JSON.parse(usuarioJson);
         document.getElementById('user-name').innerText = usuario.nombre;
+
+        const btnHistorial = document.getElementById('btn-ver-historial');
+
+        btnHistorial.addEventListener('click', () => {
+            abrirModalHistorial(usuario.id, usuario.nombre);
+        });
         
 
         // 2. Lógica de Roles: Mostrar sección de admin si rol_id es 2
@@ -583,9 +747,12 @@
             // Verificamos si es el nuevo rol de Supervisor (ID: 3)
             if (usuario.rol === 3) {
                 const btnNuevo = document.getElementById('btn-nuevo-cliente');
+                const modalActionsAdmin = document.getElementById('modal-actions-admin');
+
                 if (btnNuevo) {
                     // Eliminamos el botón para que no exista en el DOM del Supervisor
                     btnNuevo.remove(); 
+                    modalActionsAdmin.remove();
                 }
                 perfilUsuario = "Administrador Local";
             }else if (usuario.rol === 2){
@@ -602,10 +769,9 @@
             window.location.href = 'index.html';
         }
         let idCobrador = usuario.id
-        cargarWidgetCorte();
-        const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3;
+        const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3 || usuario.rol === 1; // Solo administradores y supervisores pueden gestionar gastos
         document.getElementById('seccion-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
-        document.getElementById('resumen-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
+        //document.getElementById('resumen-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
 
         function renderizarHistorial(pagosCliente) {
             return meses.map((mes, index) => {
@@ -652,7 +818,7 @@
                 const clientes = await response.json();
 
                 let clientesVisibles = 0;
-                console.log("Datos recibidos en el Frontend:", clientes); // Confirmación
+                //console.log("Datos recibidos en el Frontend:", clientes); // Confirmación
                 
                 contenedor.innerHTML = ''; // Limpiamos
 
@@ -798,8 +964,6 @@
             cargarVistaAdminClientes();
 
             // LÓGICA DEL BUSCADOR EN TIEMPO REAL
-            
-
             inputBuscador.addEventListener('input', function(e) {
                 // Obtenemos el texto que escribió el usuario en minúsculas
                 const terminoBusqueda = e.target.value.toLowerCase();
@@ -821,8 +985,123 @@
             });
         });
 
-        
+        // 1. Dibuja las tarjetas en la pantalla principal  
+        // 1. Dibuja las tarjetas en la pantalla principal       
+        async function cargarSupervisionCobradores() {
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
+                if (!usuarioActual || usuarioActual.rol !== 2) return; 
 
+                const response = await fetch(`/api/admin/supervision-cortes/${usuarioActual.id}`);
+                const cobradores = await response.json();
+
+                const contenedor = document.getElementById('lista-supervision-cobradores');
+                contenedor.innerHTML = ''; 
+
+                if (cobradores.length === 0) {
+                    contenedor.innerHTML = '<p style="color: #7f8c8d; font-size: 14px; font-style: italic;">No hay usuarios para supervisar.</p>';
+                    return;
+                }
+
+                const formatear = (num) => parseFloat(num || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                cobradores.forEach(cobrador => {
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = 'tarjeta-cobrador';
+                    
+                    // Al dar clic se abre el modal de corte
+                    tarjeta.onclick = async () => {
+                        await cargarWidgetCorte(cobrador.cobrador_id, true, cobrador.cobrador_nombre);
+                        document.getElementById('modal-corte').classList.remove('hidden');
+                    };
+                    
+                    tarjeta.innerHTML = `
+                        <div class="tarjeta-header">
+                            <div>
+                                <h4>${cobrador.cobrador_nombre}</h4>
+                                <span style="font-size: 12px; color: #64748b;">💳 ${cobrador.total_cobros} cobros realizados</span>
+                            </div>
+                            <button onclick="event.stopPropagation(); abrirModalHistorial(${cobrador.cobrador_id}, '${cobrador.cobrador_nombre}')" class="btn-historial-mini" title="Ver cortes anteriores">🕒</button>
+                        </div>
+
+                        <div class="tarjeta-desglose">
+                            <div class="desglose-item">
+                                <span>Saldo Inicial:</span>
+                                <strong>$${formatear(cobrador.saldo_inicial)}</strong>
+                            </div>
+                            <div class="desglose-item positivo">
+                                <span>+ Mensualidades:</span>
+                                <strong>$${formatear(cobrador.total_recaudado)}</strong>
+                            </div>
+                            <div class="desglose-item positivo">
+                                <span>+ Ingresos Extra:</span>
+                                <strong>$${formatear(cobrador.total_ingresos_extra)}</strong>
+                            </div>
+                            <div class="desglose-item negativo">
+                                <span>- Gastos:</span>
+                                <strong>-$${formatear(cobrador.total_gastos)}</strong>
+                            </div>
+                        </div>
+
+                        <div class="tarjeta-footer">
+                            <span>Total en Caja Física:</span>
+                            <span style="color: #2563eb;">$${formatear(cobrador.caja_fisica)}</span>
+                        </div>
+                    `;
+                    
+                    contenedor.appendChild(tarjeta);
+                });
+
+            } catch (error) {
+                console.error("Error al cargar supervisión de cobradores:", error);
+            }
+        }
+        
+/*         async function cargarSupervisionCobradores() {
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
+                if (!usuarioActual || usuarioActual.rol !== 2) return; 
+
+                const response = await fetch(`/api/admin/supervision-cortes/${usuarioActual.id}`);
+                const cobradores = await response.json();
+
+                const contenedor = document.getElementById('lista-supervision-cobradores');
+                contenedor.innerHTML = ''; 
+
+                if (cobradores.length === 0) {
+                    contenedor.innerHTML = '<p style="color: #7f8c8d; font-size: 14px; font-style: italic;">No hay cobros pendientes de otros usuarios.</p>';
+                    return;
+                }
+
+               cobradores.forEach(cobrador => {
+                    const totalFormateado = parseFloat(cobrador.total_recaudado).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+                    
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = 'tarjeta-cobrador';
+                    
+                    // Al dar clic se llama a la función exacta sin alterar los estilos internos
+                    tarjeta.onclick = async () => {
+                        await cargarWidgetCorte(cobrador.cobrador_id, true, cobrador.cobrador_nombre);
+                        document.getElementById('modal-corte').classList.remove('hidden');
+                    };
+                    
+                    tarjeta.innerHTML = `
+                        <div class="tarjeta-cobrador-info">
+                            <h4>${cobrador.cobrador_nombre}</h4>
+                            <p>💳 ${cobrador.total_cobros} cobros pendientes</p>
+                        </div>
+                        <div class="tarjeta-cobrador-monto" style="display: flex; align-items: center;">
+                            $${totalFormateado}
+                            <button onclick="event.stopPropagation(); abrirModalHistorial(${cobrador.cobrador_id}, '${cobrador.cobrador_nombre}')" class="btn-historial-mini" title="Ver cortes anteriores">🕒</button>
+                        </div>
+                    `;                    contenedor.appendChild(tarjeta);
+                });
+
+            } catch (error) {
+                console.error("Error al cargar supervisión de cobradores:", error);
+            }
+        } */
+    
         function aplicarFiltros(){
             // 1. Creamos la variable que llevará la cuenta
             
@@ -963,6 +1242,8 @@
             document.getElementById('fecha_ins').setAttribute('max', hoy);
             cargarVistaAdminClientes();
             //cargarClientes(); // Tu función existente
+            cargarSupervisionCobradores();
+            CargarWidgetCorteDashboard();
         };
 
         async function cargarLocalidades() {
@@ -1528,9 +1809,6 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                                         <i class="fas fa-eye">✏️</i>
                                     </button>
                         `;
-                
-
-
 
                 mostrarResumenPagoExitoso(resultado.detalle);
                 detallePago = resultado.detalle
@@ -2182,135 +2460,252 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         function cerrarModalDetalles() {
             document.getElementById('modal-detalles-cliente').classList.add('hidden');
         }
-        async function cargarWidgetCorte() {
 
-            if (!idCobrador) return;
+
+        // 1. NUEVA FUNCIÓN: Abre el modal y dibuja la lista de cortes pasados
+        async function abrirModalHistorial(usuarioId, nombreUsuario) {
+            document.getElementById('titulo-modal-historial').innerText = `Historial de: ${nombreUsuario}`;
+            const contenedor = document.getElementById('lista-historial-contenedor');
+            contenedor.innerHTML = '<p style="text-align:center;">Cargando historial...</p>';
+            
+            document.getElementById('modal-historial').classList.remove('hidden');
 
             try {
-                const response = await fetch(`${urlBase}/api/corte-caja/${idCobrador}`);
+                const response = await fetch(`/api/historico-cortes/${usuarioId}`);
+                const cortes = await response.json();
+
+                if (cortes.length === 0) {
+                    contenedor.innerHTML = '<p style="text-align:center; color: #7f8c8d;">No hay cortes autorizados en el historial.</p>';
+                    return;
+                }
+
+                contenedor.innerHTML = '';
+                cortes.forEach(corte => {
+                    const fecha = new Date(corte.fecha_corte).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+                    
+                    const div = document.createElement('div');
+                    div.className = 'item-historial';
+                    // Al hacer clic en un corte histórico, llamamos a la Máquina del Tiempo
+                    div.onclick = () => {
+                        document.getElementById('modal-historial').classList.add('hidden'); // Cerramos la lista
+                        cargarWidgetCorte(usuarioId, true, nombreUsuario, corte.id); // ¡Magia!
+                        abrirModalCorte(); // Abrimos tu modal de siempre
+                    };
+
+                    div.innerHTML = `
+                        <div class="item-historial-datos">
+                            <strong>Folio #${corte.id}</strong>
+                            <span>${fecha}</span>
+                        </div>
+                        <div class="item-historial-monto">
+                            $${parseFloat(corte.total_entregado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        </div>
+                    `;
+                    contenedor.appendChild(div);
+                });
+            } catch (error) {
+                console.error("Error al cargar historial:", error);
+                contenedor.innerHTML = '<p style="text-align:center; color: red;">Error al cargar el historial.</p>';
+            }
+        }
+
+        // ========================================================
+        // PRECARGA DE CONTENEDOR DE CORTE EN EL DASHBOARD
+        // ========================================================
+        async function CargarWidgetCorteDashboard() {
+            // Verificamos que tengamos el ID del cobrador logueado en tu variable global
+            if (typeof idCobrador === 'undefined' || !idCobrador) {
+                console.warn("CargarWidgetCorteDashboard: idCobrador no definido aún.");
+                return;
+            }
+
+            try {
+                // Consultamos la API optimizada en el Paso 3
+                const response = await fetch(`/api/corte-caja/${idCobrador}`);
+                if (!response.ok) throw new Error("Error en la respuesta del servidor");
+                
+                const data = await response.json();
+                
+                if (data && data.resumen) {
+                    const r = data.resumen;
+                    
+                    // Función interna para dar formato de moneda limpio
+                    const fmt = (num) => parseFloat(num || 0).toLocaleString('es-MX', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                    });
+
+                    // 1. Inyectamos los datos del Bloque Principal
+                    document.getElementById('lbl-caja-total').innerText = fmt(r.total_neto);
+                    document.getElementById('lbl-caja-cobros').innerText = r.total_cobros;
+                    
+                    // 2. Inyectamos los datos del Micro Desglose Rápido
+                    document.getElementById('lbl-widget-inicial').innerText = `$${fmt(r.saldo_inicial)}`;
+                    document.getElementById('lbl-widget-mensualidades').innerText = `$${fmt(r.total_dinero)}`;
+                    document.getElementById('lbl-widget-extras').innerText = `+$${fmt(r.total_ingresos_extra)}`;
+                    document.getElementById('lbl-widget-gastos').innerText = `-$${fmt(r.total_gastos)}`;
+                }
+            } catch (error) {
+                console.error("Error al inicializar la vista previa del widget:", error);
+            }
+        }
+
+        // 2. FUNCIÓN ACTUALIZADA: cargarWidgetCorte (Añadido soporte Histórico)
+        async function cargarWidgetCorte(usuarioEvaluarId = idCobrador, esSupervision = false, nombreCobrador = '', corteHistoricoId = null) {
+            if (!usuarioEvaluarId) return;
+
+            // Si pasamos un ID histórico, forzamos la vista a Modo Solo Lectura (Supervisión)
+            if (corteHistoricoId !== null) esSupervision = true;
+
+            try {
+                // DECISIÓN DE URL: ¿Leemos del día de hoy o leemos de la máquina del tiempo?
+                const urlFetch = corteHistoricoId 
+                    ? `${urlBase}/api/corte-caja-historico/${corteHistoricoId}` 
+                    : `${urlBase}/api/corte-caja/${usuarioEvaluarId}`;
+
+                const response = await fetch(urlFetch);
                 const data = await response.json();
 
-                // Actualizamos los resúmenes del widget (esto lo mantengo igual)
-                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
+                console.log("Datos del corte:", data);
+                console.log("URL?", urlFetch);
+                console.log("Es supervisión?", esSupervision);
 
-                // --- NUEVA LÓGICA PARA LLENAR EL REPORTE CON DIVS RESPONSIVOS ---
-                
-                // Buscamos el nuevo contenedor del cuerpo del reporte
+                if (!esSupervision) {
+                    document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
+                }
+
                 const reporteBody = document.getElementById('tabla-corte-body');
-                const lblTotalModal = document.getElementById('lbl-corte-total-modal');
-                const lblBrutoModal = document.getElementById('lbl-corte-bruto-modal');
-                const lblGastosModal = document.getElementById('lbl-corte-gastos-modal');
                 const listaGastosCorte = document.getElementById('lista-gastos-corte');
-                const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
-                const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
-                const lblBrutoPrint = document.getElementById('lbl-autorizado-bruto-print');
-                const lblGastosPrint = document.getElementById('lbl-autorizado-gastos-print');
+                //const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
+                //const lblBrutoPrint = document.getElementById('lbl-autorizado-bruto-print');
+                //const lblGastosPrint = document.getElementById('lbl-autorizado-gastos-print');
+                
+               const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
                 const gastosBodyPrint = document.getElementById('tabla-gastos-body-print');
+                const ingresosExtraBodyPrint = document.getElementById('tabla-ingresos-extra-body-print'); // NUEVO
+
                 reporteAuthBodyPrint.innerHTML = '';
                 gastosBodyPrint.innerHTML = '';
+                ingresosExtraBodyPrint.innerHTML = ''; // NUEVO
                 listaGastosCorte.innerHTML = '';
-                let totalImpresion = 0;
-                document.getElementById('print-cobrador').innerText = usuario.nombre;
-                document.getElementById('print-fecha-larga').innerText = ObtenerFecha();
                 
-                reporteBody.innerHTML = ''; // Limpiamos tabla
+                document.getElementById('print-cobrador').innerText = esSupervision ? nombreCobrador : usuario.nombre;
+                
+                // Si es histórico, imprimimos la fecha en que se cerró, si no, la fecha actual.
+                document.getElementById('print-fecha-larga').innerText = corteHistoricoId 
+                    ? new Date(data.resumen.fecha_corte).toLocaleString('es-MX') 
+                    : ObtenerFecha();
+                
+                reporteBody.innerHTML = ''; 
                 let totalModal = 0;
 
-                // Usamos pagosReceived si ese es tu arreglo de datos
-                // data.detalles.forEach(pago => { 
-                data.detalles.forEach(pago => { 
-                    // 1. Formateamos la fecha (respetando tu formato original)
-                    const fechaString = new Date(pago.fecha_pago).toLocaleString('es-MX', {
-                        year: 'numeric', month: 'numeric', day: 'numeric',
-                        hour: 'numeric', minute: 'numeric', second: 'numeric',
-                        hour12: false
-                    });
-                    // 2. Lógica de estados para diseño y suma
-                    let claseEstado = '';
-                    let nombreEstado = ''; // Por defecto Completado
-                    let mostrarBoton = false;
+                 // ✂️ 1. OCULTAR ENCABEZADO DE ACCIÓN EN MODO SUPERVISIÓN
+                const headerAccion = document.querySelector('.reporte-grid-header div:last-child');
+                if (headerAccion) {
+                    headerAccion.style.display = esSupervision ? 'none' : '';
+                }
+                const headerEtado = document.querySelector('.reporte-grid-header .estado-borrar');
+                if (headerEtado) {
+                    headerEtado.style.display = esSupervision ? 'none' : '';
+                }
 
-                    // Convertimos a número por seguridad
+                const gridContainer = document.querySelector('.reporte-grid-container');
+                if (gridContainer) {
+                    gridContainer.classList.toggle('sin-accion', esSupervision);
+                }
+
+                // LÓGICA DE DETALLES
+                data.detalles.forEach(pago => { 
+                    const fechaString = new Date(pago.fecha_pago).toLocaleString('es-MX', {
+                        year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false
+                    });
+
+                    // Lógica de estados dinámica (Entiende estados del pasado y del presente)
                     const estado = parseInt(pago.estado_corte);
+                    const esHistorico = corteHistoricoId !== null;
+                    const estadoActivo = esHistorico ? 1 : 0;
+                    const estadoCancelado = esHistorico ? 4 : 3;
+
+                    let claseEstado = '';
+                    let nombreEstado = ''; 
+                    let mostrarBoton = false;
                     
-                    if (estado === 3) {
+                    if (estado === estadoCancelado) {
                         claseEstado = 'estado-cancelado';
                         nombreEstado = 'Cancelado'
-                        mostrarBoton = false; // No se muestra si ya está cancelado
-                    } else if (estado === 0) {
-                        claseEstado = 'estado-pendiente';
-                        nombreEstado = 'Pendiente'
-                        mostrarBoton = true;  // ACTIVO solo en pendiente
+                        mostrarBoton = false;
+                    } else if (estado === estadoActivo) {
+                        claseEstado = esHistorico ? 'estado-cerrado' : 'estado-pendiente';
+                        nombreEstado = esHistorico ? 'Cerrado' : 'Pendiente';
+                        mostrarBoton = !esSupervision; 
                         totalModal += parseFloat(pago.monto) || 0;
                     }
-                    //console.log("clase: "+claseEstado +" nombre "+nombreEstado )
-                    // 3. Creamos el contenedor de la tarjeta/fila (reporte-item-pago)
-                    const itemPago = document.createElement('div');
-                    itemPago.className = 'reporte-item-pago'; // <-- Clase clave para el CSS Grid
-
-                    // Generamos el HTML del botón de basura
-                    // Usamos FontAwesome (fa-trash-alt). Si no lo tienes, puedes usar el texto "❌"
-                    // Generamos el HTML del botón usando un SVG nativo
-                    const htmlBoton = mostrarBoton 
-                        ? `<button  class="btn-eliminar-pago" title="Cancelar Pago" onclick="cancelarPago(${pago.id})">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>
-                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3V2h11v1h-11Z"/>
-                            </svg>
-                        </button>`
-                        : '';
                     
-                    // 4. Inyectamos la estructura responsiva con las etiquetas para móvil
+                    const itemPago = document.createElement('div');
+                    itemPago.className = 'reporte-item-pago';
+
+                    const htmlBoton = mostrarBoton 
+                        ? `<button class="btn-eliminar-pago" title="Cancelar Pago" onclick="cancelarPago(${pago.id})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3V2h11v1h-11Z"/></svg>
+                        </button>` : '';
+                    
                     itemPago.innerHTML = `
                         <div class="col-fecha"><span class="label-movil">Fecha: </span>${fechaString}</div>
                         <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
                         <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
-                        <div class = "monto-estado">
+                        <div class="monto-estado">
                             <div class="col-monto">$${parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                            <div class="col-estado ${claseEstado}">${nombreEstado}</div>
+                            <div class="col-estado ${claseEstado} estado-borrar">${nombreEstado}</div>
                         </div>
                         <div class="col-accion">${htmlBoton}</div>
                     `;
                     
+                    // ✂️ 2. OCULTAR CELDA DE ACCIÓN EN MODO SUPERVISIÓN
+                    if (esSupervision) {
+                        const colAccion = itemPago.querySelector('.col-accion');
+                        if (colAccion) colAccion.style.display = 'none';
+                        const estadoBorrar = itemPago.querySelector('.estado-borrar');
+                        if (estadoBorrar) estadoBorrar.style.display = 'none';
+                    }
+                    
                     reporteBody.appendChild(itemPago);
 
                     const tr = document.createElement('tr');
-                    
-                    // Inyectamos <td> clásicos en lugar de los divs responsivos
                     tr.innerHTML = `
                         <td>${fechaString}</td>
                         <td>${pago.cliente}</td>
                         <td>${pago.mes_pagado}</td>
                         <td>$${parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     `;
-                    
                     reporteAuthBodyPrint.appendChild(tr);
                 });
 
+                // LÓGICA DE GASTOS
                 let totalGastos = 0;
                 const gastos = data.gastos || [];
                 if (gastos.length === 0) {
                     listaGastosCorte.innerHTML = '<div class="gasto-vacio">Sin gastos registrados.</div>';
                     gastosBodyPrint.innerHTML = '<tr><td colspan="3">Sin gastos registrados.</td></tr>';
                 } else {
+                    const esHistorico = corteHistoricoId !== null;
+                    const estadoActivo = esHistorico ? 1 : 0;
+                    const estadoCancelado = esHistorico ? 4 : 3;
+
                     gastos.forEach(gasto => {
                         const estado = parseInt(gasto.estado_corte);
                         const montoGasto = parseFloat(gasto.monto) || 0;
-                        const fechaGasto = new Date(gasto.fecha_gasto).toLocaleString('es-MX', {
-                            year: 'numeric', month: 'numeric', day: 'numeric',
-                            hour: 'numeric', minute: 'numeric',
-                            hour12: false
-                        });
-                        const claseGasto = estado === 3 ? ' gasto-cancelado' : '';
-                        const botonGasto = estado === 0
-                            ? `<button class="btn-eliminar-pago" title="Cancelar gasto" onclick="cancelarGasto(${gasto.id})">×</button>`
-                            : '';
+                        const fechaGasto = new Date(gasto.fecha_gasto).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false });
+                        
+                        
+                        const claseGasto = estado === estadoCancelado ? ' gasto-cancelado' : '';
+                        const botonGasto = (estado === estadoActivo && !esSupervision)
+                            ? `<button class="btn-eliminar-pago" title="Cancelar gasto" onclick="cancelarGasto(${gasto.id})">×</button>` : '';
 
-                        if (estado === 0) totalGastos += montoGasto;
+                        if (estado === estadoActivo) totalGastos += montoGasto;
 
                         const itemGasto = document.createElement('div');
-                        itemGasto.className = `gasto-corte-item${claseGasto}`;
+                        itemGasto.className = `corte-item${claseGasto}`;
                         itemGasto.innerHTML = `
                             <div>
                                 <strong>${gasto.descripcion}</strong>
@@ -2321,56 +2716,218 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                         `;
                         listaGastosCorte.appendChild(itemGasto);
 
-                        if (estado === 0) {
+                        if (estado === estadoActivo) {
                             const trGasto = document.createElement('tr');
-                            trGasto.innerHTML = `
-                                <td>${fechaGasto}</td>
-                                <td>${gasto.descripcion}</td>
-                                <td>$${montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            `;
+                            trGasto.innerHTML = `<td>${fechaGasto}</td><td>${gasto.descripcion}</td><td>$${montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
                             gastosBodyPrint.appendChild(trGasto);
                         }
                     });
+                }
+                // 1. INYECTAR LA LISTA DE INGRESOS EXTRAS AL DOM
+                const listaIngresosUI = document.getElementById('lista-ingresos-extra');
+                if (listaIngresosUI) {
+                    listaIngresosUI.innerHTML = '';
+                    const ingresos = data.ingresos_extra || [];
+                    
+                    if (ingresos.length === 0) {
+                        listaIngresosUI.innerHTML = '<div style="color: #7f8c8d; font-size: 12px;">Sin ingresos extra registrados.</div>';
+                    } else {
+                        // Definimos los estados igual que en gastos para mantener consistencia
+                        const esHistorico = corteHistoricoId !== null;
+                        const estadoActivo = esHistorico ? 1 : 0;
+                        const estadoCancelado = esHistorico ? 4 : 3;
 
-                    if (!gastos.some(gasto => parseInt(gasto.estado_corte) === 0)) {
-                        gastosBodyPrint.innerHTML = '<tr><td colspan="3">Sin gastos activos.</td></tr>';
+                        ingresos.forEach(ing => {
+                            const estado = parseInt(ing.estado_corte);
+                            const montoIngreso = parseFloat(ing.monto) || 0;
+                            const fechaIngreso = new Date(ing.fecha_ingreso).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false });
+                            
+                            // Asignamos la clase de cancelado si corresponde (asumiendo que 'gasto-cancelado' aplica estilos como line-through y opacidad)
+                            const claseIngreso = estado === estadoCancelado ? ' gasto-cancelado' : '';
+                            
+                            // El botón solo se muestra si el estado es activo (0 si es corte actual) y no es supervisión
+                            const botonIngreso = (estado === estadoActivo && !esSupervision)
+                                ? `<button onclick="cancelarIngresoExtra(${ing.id})" class="btn-eliminar-pago" title="Cancelar ingreso extra">×</button>` 
+                                : '';
+
+                            // Si tienes una variable totalIngresosExtra que se sume aquí, asegúrate de hacerlo solo si está activo.
+                            // if (estado === estadoActivo) totalIngresosExtra += montoIngreso; 
+
+                            if (estado === estadoActivo) {
+                                // ESTA ES LA LÍNEA NUEVA PARA INYECTAR EN LA TABLA DEL PDF
+                                const trIngreso = document.createElement('tr');
+                                trIngreso.innerHTML = `<td>${fechaIngreso}</td><td>${ing.descripcion}</td><td>$${montoIngreso.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
+                                ingresosExtraBodyPrint.appendChild(trIngreso);
+                            }
+
+                            const div = document.createElement('div');
+                            div.className = `corte-item${claseIngreso}`; // Aplicamos la clase base y la de cancelado si es el caso
+                            div.innerHTML = `
+                                <div>
+                                    <strong>${ing.descripcion}</strong>
+                                    <span>${fechaIngreso}</span>
+                                </div>
+                                <div class="item-historial-monto">
+                                    $${montoIngreso.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </div>
+                                <div>${botonIngreso}</div>
+                            `;
+                            listaIngresosUI.appendChild(div);
+                        });
                     }
                 }
 
-                const totalNeto = totalModal - totalGastos;
-                actualizarCandadoGastos(totalNeto);
+                /* // 2. ACTUALIZAR TODOS LOS TOTALES DEL RESUMEN
+                const r = data.resumen;
+                const formatear = (num) => parseFloat(num || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-                // 5. Actualizamos el total en el modal con la suma corregida
-                lblBrutoModal.textContent = totalModal.toLocaleString('en-US', { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
-                });
-                lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
-                lblTotalModal.textContent = totalNeto.toLocaleString('en-US', { 
-                    minimumFractionDigits: 0, 
-                    maximumFractionDigits: 0 
-                });
-                lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
-                lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
-                lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                document.getElementById('lbl-saldo-inicial').innerText = `$${formatear(r.saldo_inicial)}`;
+                document.getElementById('lbl-mensualidades').innerText = `$${formatear(r.total_dinero)}`;
+                document.getElementById('lbl-ingresos-extra').innerText = `$${formatear(r.total_ingresos_extra)}`;
+                document.getElementById('lbl-gastos-totales').innerText = `-$${formatear(r.total_gastos)}`;
+                document.getElementById('lbl-caja-fisica').innerText = `$${formatear(r.total_neto)}`;
+ */
+
+                // 2. ACTUALIZAR TODOS LOS TOTALES DEL RESUMEN
+                const r = data.resumen;
+                const formatear = (num) => parseFloat(num || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                const entregado = parseFloat(r.monto_entregado) || 0;
+                const totalNeto = parseFloat(r.total_neto) || 0;
+                const fondoCaja = totalNeto - entregado; // Lo que quedó de fondo para el día siguiente
+
+                console.log("Total Neto:", totalNeto, "Entregado:", entregado, "Fondo Caja:", fondoCaja);
+                console.log("Resumen:", r);
+
+                // === ACTUALIZA EL MODAL EN PANTALLA ===
+                document.getElementById('lbl-saldo-inicial').innerText = `$${formatear(r.saldo_inicial)}`;
+                document.getElementById('lbl-mensualidades').innerText = `$${formatear(r.total_dinero)}`;
+                document.getElementById('lbl-ingresos-extra').innerText = `$${formatear(r.total_ingresos_extra)}`;
+                document.getElementById('lbl-gastos-totales').innerText = `-$${formatear(r.total_gastos)}`;
+                document.getElementById('lbl-caja-fisica').innerText = `$${formatear(totalNeto)}`;
+                if (typeof actualizarCandadoGastos === "function") actualizarCandadoGastos(totalNeto);
+
+                // === ACTUALIZA LOS PIES DE TABLA DEL PDF ===
+                document.getElementById('lbl-suma-mensualidades-print').innerText = formatear(r.total_dinero);
+                document.getElementById('lbl-suma-ingresos-extra-print').innerText = formatear(r.total_ingresos_extra);
+                document.getElementById('lbl-suma-gastos-print').innerText = formatear(r.total_gastos);
+
+                // === ACTUALIZA EL RESUMEN FINAL DEL PDF ===
+                document.getElementById('lbl-saldo-inicial-print').innerText = `$${formatear(r.saldo_inicial)}`;
+                document.getElementById('lbl-mensualidades-print').innerText = `$${formatear(r.total_dinero)}`;
+                document.getElementById('lbl-ingresos-extra-print').innerText = `$${formatear(r.total_ingresos_extra)}`;
+                document.getElementById('lbl-gastos-totales-print').innerText = `-$${formatear(r.total_gastos)}`;
+                document.getElementById('lbl-caja-fisica-print').innerText = `$${formatear(totalNeto)}`;
+                document.getElementById('lbl-entregado-admin-print').innerText = `$${formatear(entregado)}`;
+                document.getElementById('lbl-saldo-en-caja-print').innerText = `$${formatear(fondoCaja)}`;
+
+                // NOTA: Si tenías código viejo apuntando a lbl-autorizado-bruto-print o lbl-autorizado-gastos-print, elimínalo, ya que esos IDs ya no existen en el nuevo HTML.
+                // (Haz lo mismo para los IDs terminados en '-print' para que salga en el PDF)
+
+                if (typeof actualizarCandadoGastos === "function") actualizarCandadoGastos(totalNeto);
+
+                //lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                //lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                //lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
+
+
+
+                // ==============================================================
+                // 🌟 NUEVO: INYECTAR BANNER HISTÓRICO DE RESUMEN Y REIMPRESIÓN
+                // ==============================================================
+                let bannerHistorico = document.getElementById('banner-info-historica');
+                if (!bannerHistorico) {
+                    // Si no existe, lo creamos dinámicamente y lo ponemos abajo del título del modal
+                    bannerHistorico = document.createElement('div');
+                    bannerHistorico.id = 'banner-info-historica';
+                    const tituloModalElement = document.getElementById('area-imprimible-corte-titulo');
+                    if (tituloModalElement && tituloModalElement.parentNode) {
+                        tituloModalElement.parentNode.insertBefore(bannerHistorico, tituloModalElement.nextSibling);
+                    }
+                }
+
+                if (corteHistoricoId !== null) {
+                    // Cálculos
+                    const fechaFormat = new Date(r.fecha_corte).toLocaleString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                    const entregado = parseFloat(r.monto_entregado) || 0;
+                    const fondoCaja = totalNeto - entregado; // Lo que quedó de fondo para el día siguiente
+
+                    // Diseñamos el banner (HTML y estilos inyectados directamente)
+                   bannerHistorico.innerHTML = `
+                        <div class="banner-historico-container">
+                            <div class="banner-historico-info">
+                                <div>
+                                    <div class="banner-item-label">📅 Fecha del corte</div>
+                                    <div class="banner-item-value">${fechaFormat}</div>
+                                </div>
+                                <div>
+                                    <div class="banner-item-label">🧾 Cobros</div>
+                                    <div class="banner-item-value">${r.total_cobros} pagos</div>
+                                </div>
+                                <div>
+                                    <div class="banner-item-label">💵 Entregado Admin</div>
+                                    <div class="banner-item-value success">$${entregado.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
+                                </div>
+                                <div>
+                                    <div class="banner-item-label">🏦 Quedó en Caja</div>
+                                    <div class="banner-item-value warning">$${fondoCaja.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <button onclick="imprimirReporte()" class="btn-reimprimir-historico" title="Reimprimir este corte">
+                                    🖨️
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    bannerHistorico.style.display = 'block';
+
+                    // 🚨 IMPORTANTÍSIMO: Rellenamos el autorizador para que al imprimir el PDF,
+                    // aparezca el nombre de quien autorizó originalmente y no un espacio en blanco.
+                    const printAdmin = document.getElementById('print-admin');
+                    if (printAdmin) printAdmin.innerText = (r.autorizador || 'ADMINISTRADOR').toUpperCase();
+
+                } else {
+                    // Si es un corte actual/en vivo, ocultamos el banner
+                    bannerHistorico.style.display = 'none';
+                }
+                // ==============================================================
+
+
+                // TÍTULOS Y CONTROLES VISUALES
+                const tituloModal = document.getElementById('area-imprimible-corte-titulo');
+                const btnSolicitarCierre = document.querySelector('.btn-solicitar-cierre');
+                const formGastoCorte = document.querySelector('.form-gasto-corte');
+                const formIngresoExtra = document.querySelector('.form-ingreso-extra');
+
+                if (esSupervision) {
+                    if (tituloModal) tituloModal.innerText = corteHistoricoId ? `Histórico de Corte #${corteHistoricoId}: ${nombreCobrador}` : `Supervisión de Corte: ${nombreCobrador}`;
+                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'none';
+                    if (formGastoCorte) formGastoCorte.style.display = 'none'; 
+                    if (formIngresoExtra) formIngresoExtra.style.display = 'none';
+                } else {
+                    if (tituloModal) tituloModal.innerText = `Reporte de Corte de Caja`;
+                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'block';
+                    if (formGastoCorte) formGastoCorte.style.display = ''; 
+                    if (formIngresoExtra) formIngresoExtra.style.display = ''; 
+                }
 
             } catch (error) {
-                console.error('Error en cargarWidgetCorte:', error);
-                // Opcional: mostrar un mensaje de error en la tabla
-                document.getElementById('tabla-corte-body').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error al cargar el reporte.</div>';
+                console.error('Error al cargar datos del corte:', error);
             }
+            abrirModalCorte();
         }
-
+        
         function actualizarCandadoGastos(efectivoDisponible) {
             const montoInput = document.getElementById('gasto-monto');
             const descripcionInput = document.getElementById('gasto-descripcion');
             const btnAgregar = document.querySelector('.btn-agregar-gasto');
-            const bloquear = efectivoDisponible <= 0 || !(usuario.rol === 2 || usuario.rol === 3);
+            const bloquear = efectivoDisponible <= 0 || !(usuario.rol === 2 || usuario.rol === 3 || usuario.rol === 1);
 
             montoInput.disabled = bloquear;
             descripcionInput.disabled = bloquear;
             btnAgregar.disabled = bloquear;
-            btnAgregar.textContent = bloquear ? 'Sin efectivo' : 'Agregar gasto';
+            btnAgregar.textContent = bloquear ? 'Sin efectivo' : 'Añadir';
         }
 
         async function registrarGastoCorte() {
@@ -2378,10 +2935,10 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const descripcionInput = document.getElementById('gasto-descripcion');
             const monto = parseFloat(montoInput.value);
             const descripcion = descripcionInput.value.trim();
-            const totalCajaLabel = document.getElementById('lbl-corte-total-modal');
-            const totalCaja = parseFloat(totalCajaLabel.textContent.replace(/,/g, '')) || 0;
+            const totalCajaLabel = document.getElementById('lbl-caja-fisica');
+            const totalCaja = parseFloat(totalCajaLabel.textContent.replace("$", '').replace(/,/g, "")) || 0;
             
-            if (!(usuario.rol === 2 || usuario.rol === 3)) {
+            if (!(usuario.rol === 2 || usuario.rol === 3 || usuario.rol === 1)) {
                 alert("Tu rol no tiene permisos para registrar gastos.");
                 return;
             }
@@ -2403,7 +2960,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             }
 
             if (!descripcion) {
-                alert("Ingresa una descripción para el gasto.");
+                alert("Ingresa un Concepto para el gasto.");
                 return;
             }
 
@@ -2454,6 +3011,49 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             }
         }
 
+        // ==========================================
+        // LÓGICA DE INGRESOS EXTRA
+        // ==========================================
+        async function agregarIngresoExtra() {
+            const desc = document.getElementById('desc-ingreso').value.trim();
+            const monto = parseFloat(document.getElementById('monto-ingreso').value);
+
+            if (!desc || isNaN(monto) || monto <= 0) {
+                alert("Ingresa un concepto y un monto válido.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/ingreso-extra', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuarioId: idCobrador, descripcion: desc, monto: monto })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('desc-ingreso').value = '';
+                    document.getElementById('monto-ingreso').value = '';
+                    cargarWidgetCorte(); // Recargamos para actualizar las matemáticas
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Error de red al guardar el ingreso.");
+            }
+        }
+
+        async function cancelarIngresoExtra(id) {
+            if (!confirm("¿Seguro que deseas cancelar este ingreso extra?")) return;
+            try {
+                const res = await fetch(`/api/cancelar-ingreso-extra/${id}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) cargarWidgetCorte();
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
         async function cancelarPago(idPago) {
         // Confirmación antes de borrar
         const confirmar = confirm("¿Estás seguro de que deseas cancelar este pago?");
@@ -2487,13 +3087,16 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
         function cerrarModalCorte() {
             document.getElementById('modal-corte').classList.add('hidden');
+            CargarWidgetCorteDashboard();
         }
 
         function abrirModalAdmin() {
-            const lblBrutoModal = document.getElementById('lbl-corte-bruto-modal');
+            const lblSaldoInicial = document.getElementById('lbl-saldo-inicial');
+            const lblIngresesosExtra = document.getElementById('lbl-ingresos-extra');
+            const lblMensualidades = document.getElementById('lbl-mensualidades');
     
-            if (parseFloat(lblBrutoModal.textContent.replace(/,/g, '')) <= 0) {
-                alert("⚠️ No se puede realizar el corte: No hay pagos pendientes para autorizar.");
+            if (parseFloat(lblSaldoInicial.textContent.replace("$", '')) <= 0 && parseFloat(lblIngresesosExtra.textContent.replace("$", '')) <= 0  && parseFloat(lblMensualidades.textContent.replace("$", '')) <= 0) {
+                alert("⚠️ No se puede realizar el corte: No hay movimientos.");
                 return; // Detiene la ejecución aquí mismo
             }
             document.getElementById('modal-admin').classList.remove('hidden');
@@ -2504,27 +3107,58 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const user = document.getElementById('admin-user').value;
             const pass = document.getElementById('admin-pass').value;
             
-
-            if(!user || !pass) {
-                alert("El administrador debe ingresar sus datos.");
+            // 2. Obtener el monto total disponible (deberías tener una variable global o extraerla del DOM)
+            // Supongamos que tienes una variable 'totalCajaDisponible' calculada previamente
+            const totalCajaDisponible = parseFloat(document.getElementById('lbl-caja-total').innerText.replace(/[^0-9.-]+/g,"")) || 0;
+            
+            // NUEVO: Capturar cuánto dinero entrega
+            const montoEntregarInput = document.getElementById('input-monto-entregar').value;
+            const montoEntregado = parseFloat(montoEntregarInput) || 0;
+            const lblSaldoEnCajaPrint = document.getElementById('lbl-saldo-en-caja-print');
+            const lblEntregadoAdminPrint = document.getElementById('lbl-entregado-admin-print');
+            
+            // --- VALIDACIONES DE SEGURIDAD ---
+            if (!user || !pass) {
+                alert("⚠️ El administrador debe ingresar sus datos.");
                 return;
             }
-            
 
+            // Validación: Obligar a ingresar un monto
+            if (isNaN(montoEntregado) || montoEntregado <= 0) {
+                alert("⚠️ Por favor, ingresa un monto válido a entregar.");
+                return;
+            }
+
+            // Validación: No puede entregar más de lo que hay en caja
+            if (montoEntregado > totalCajaDisponible) {
+                alert(`❌ Error: El monto a entregar ($${montoEntregado.toFixed(2)}) excede el total disponible en caja ($${totalCajaDisponible.toFixed(2)}).`);
+                return;
+            }
+            // ---------------------------------lbl-saldo-en-caja-print , lbl-entregado-admin-print
+            
             try {
                 const response = await fetch(`${urlBase}/api/procesar-corte`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuarioId: idCobrador, adminUser: user, adminPassword: pass })
+                    //body: JSON.stringify({ usuarioId: idCobrador, adminUser: user, adminPassword: pass })
+                    // NUEVO: Agregamos montoEntregado al JSON
+                    body: JSON.stringify({ 
+                        usuarioId: idCobrador, 
+                        adminUser: user, 
+                        adminPassword: pass,
+                        montoEntregado: montoEntregado 
+                    })
                 });
                 
                 const data = await response.json();
 
                 if (response.ok) {
-                    // ¡El admin autorizó! Primero imprimimos el PDF
-                    alert("✅ Corte autorizado. Generando reporte PDF...");
+                    lblSaldoEnCajaPrint.innerText = `$${(totalCajaDisponible - montoEntregado).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    lblEntregadoAdminPrint.innerText = `$${montoEntregado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    
+                    alert("✅ Corte autorizado. \nFolio: #" + data.corte_id + "\nEl dinero se transfirió al sistema.");
                     document.getElementById('print-admin').innerText = user.toUpperCase();
-                   
+                    //usuarioId, true, nombreUsuario, corte.id
                     imprimirReporte();
                 } else {
                     alert("❌ Error: " + data.error);

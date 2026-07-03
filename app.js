@@ -501,6 +501,139 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
     }
 });
 
+// =======================================================
+// RUTAS DE LECTURA DE CORTE (ACTUALIZADAS - PASO 3)
+// =======================================================
+
+// 1. Obtener el Corte Actual (El día a día del cobrador)
+app.get('/api/corte-caja/:usuarioId', async (req, res) => {
+    const { usuarioId } = req.params;
+    try {
+        // 1. Rescatamos el Saldo Inicial (Monto retenido del último corte cerrado)
+        const [ultimoCorte] = await db.query(
+            'SELECT monto_retenido, monto_entregado FROM cortes_caja WHERE usuario_id = ? ORDER BY id DESC LIMIT 1',
+            [usuarioId]
+        );
+        const saldoInicial = ultimoCorte.length > 0 ? parseFloat(ultimoCorte[0].monto_retenido) : 0.00;
+        const montoEntregado = ultimoCorte.length > 0 ? parseFloat(ultimoCorte[0].monto_entregado) : 0.00;
+        // 2. Obtener los pagos pendientes (Mensualidades exclusivas de clientes)
+        const [detalles] = await db.query(
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+             FROM pagos p 
+             JOIN clientes c ON p.cliente_id = c.id 
+             WHERE p.usuario_id = ? AND p.estado_corte IN (0, 3)
+             ORDER BY p.id DESC`,
+            [usuarioId]
+        );
+
+        // 3. Obtener los gastos pendientes
+        const [gastos] = await db.query(
+            `SELECT id, fecha_gasto, descripcion, monto, estado_corte 
+             FROM gastos 
+             WHERE usuario_id = ? AND estado_corte IN (0, 3) 
+             ORDER BY id DESC`,
+            [usuarioId]
+        );
+
+        // 4. NUEVO: Obtener los ingresos extra pendientes
+        const [ingresosExtra] = await db.query(
+            `SELECT id, fecha_ingreso, descripcion, monto, estado_corte 
+             FROM ingresos_extra 
+             WHERE usuario_id = ? AND estado_corte IN (0, 3) 
+             ORDER BY id DESC`,
+            [usuarioId]
+        );
+
+        // Sumatorias para la caja
+        let totalPagos = detalles.filter(d => parseInt(d.estado_corte) === 0).reduce((sum, d) => sum + parseFloat(d.monto), 0);
+        let totalGastos = gastos.filter(g => parseInt(g.estado_corte) === 0).reduce((sum, g) => sum + parseFloat(g.monto), 0);
+        let totalIngresos = ingresosExtra.filter(i => parseInt(i.estado_corte) === 0).reduce((sum, i) => sum + parseFloat(i.monto), 0);
+        
+        // FÓRMULA MAESTRA DE CAJA FÍSICA
+        let totalCajaFisica = saldoInicial + totalPagos + totalIngresos - totalGastos;
+        let totalCobrosNum = detalles.filter(d => parseInt(d.estado_corte) === 0).length;
+
+        // Armamos el JSON final para mandarlo a la pantalla
+        res.json({
+            resumen: {
+                saldo_inicial: saldoInicial,
+                total_dinero: totalPagos, 
+                total_ingresos_extra: totalIngresos,
+                total_gastos: totalGastos,
+                total_neto: totalCajaFisica, // Total en billetes y monedas que debe haber
+                total_cobros: totalCobrosNum,
+                monto_entregado: montoEntregado
+            },
+            detalles: detalles,
+            gastos: gastos,
+            ingresos_extra: ingresosExtra // Inyectamos la nueva lista
+        });
+    } catch (error) {
+        console.error("Error al obtener corte actual:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 2. La Máquina del Tiempo (Cortes Históricos)
+app.get('/api/corte-caja-historico/:corteId', async (req, res) => {
+    const { corteId } = req.params;
+    try {
+        // A) Rescatamos el resumen guardado, incluyendo todos los campos nuevos de tu esquema
+        const [resumenCorte] = await db.query(
+            `SELECT saldo_inicial, total_cobrado as total_dinero, total_ingresos_extra, total_gastos, 
+                    total_entregado as total_neto, monto_entregado, monto_retenido, fecha_corte 
+             FROM cortes_caja WHERE id = ?`,
+            [corteId]
+        );
+
+        if (resumenCorte.length === 0) {
+            return res.status(404).json({ error: "Corte histórico no encontrado" });
+        }
+
+        // B) Buscamos los pagos amarrados a este candado
+        const [detalles] = await db.query(
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+             FROM pagos p 
+             JOIN clientes c ON p.cliente_id = c.id 
+             WHERE p.corte_id = ? 
+             ORDER BY p.id DESC`,
+            [corteId]
+        );
+
+        // C) Buscamos los gastos amarrados
+        const [gastos] = await db.query(
+            `SELECT id, fecha_gasto, descripcion, monto, estado_corte
+             FROM gastos
+             WHERE corte_id = ?
+             ORDER BY id DESC`,
+            [corteId]
+        );
+
+        // D) NUEVO: Buscamos los ingresos extra amarrados a este candado
+        const [ingresosExtra] = await db.query(
+            `SELECT id, fecha_ingreso, descripcion, monto, estado_corte
+             FROM ingresos_extra
+             WHERE corte_id = ?
+             ORDER BY id DESC`,
+            [corteId]
+        );
+
+        resumenCorte[0].total_cobros = detalles.filter(d => parseInt(d.estado_corte) === 1).length;
+
+        // E) Respondemos con la estructura idéntica a la ruta del día a día
+        res.json({ 
+            resumen: resumenCorte[0], 
+            detalles: detalles, 
+            gastos: gastos,
+            ingresos_extra: ingresosExtra
+        });
+        
+    } catch (error) {
+        console.error("Error al obtener detalle histórico:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+/* 
 // 1. Ruta para obtener el total y la lista de pagos sin entregar (estado_corte = 0)
 app.get('/api/corte-caja/:usuarioId', async (req, res) => {
     const { usuarioId } = req.params;
@@ -538,6 +671,81 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+ */
+/* app.post('/api/gastos', async (req, res) => {
+    const { usuarioId, monto, descripcion } = req.body;
+
+    try {
+        const montoNumero = parseFloat(monto);
+        const descripcionLimpia = (descripcion || '').trim();
+
+        if (!usuarioId) {
+            return res.status(400).json({ success: false, error: 'Usuario no válido.' });
+        }
+
+        if (!montoNumero || montoNumero <= 0) {
+            return res.status(400).json({ success: false, error: 'El monto del gasto debe ser mayor a cero.' });
+        }
+
+        if (!descripcionLimpia) {
+            return res.status(400).json({ success: false, error: 'La descripción del gasto es obligatoria.' });
+        }
+
+        const [usuarios] = await db.query(
+            'SELECT rol_id FROM usuarios WHERE id = ? AND rol_id IN (1, 2, 3)',
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            return res.status(403).json({ success: false, error: 'Tu rol no tiene permisos para registrar gastos.' });
+        }
+
+        // 3. Consulta de Resumen de Caja (¡Aquí está la mejora!)
+        // Se añaden los ingresos_extra a la consulta SQL. 
+        // Nota: Asegúrate de que tu tabla se llame 'ingresos_extra'. Si tiene otro nombre, cámbialo en la línea 40.
+        const [resumenCaja] = await db.query(
+            `SELECT
+                IFNULL((SELECT SUM(monto) FROM pagos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_pagos,
+                IFNULL((SELECT SUM(monto) FROM ingresos_extra WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_ingresos,
+                IFNULL((SELECT SUM(monto) FROM gastos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_gastos`,
+            [usuarioId, usuarioId, usuarioId] // Pasamos el usuarioId tres veces para las tres subconsultas
+        );
+        
+        // 4. Extracción de valores individuales
+        const totalPagos = parseFloat(resumenCaja[0].total_pagos) || 0;
+        const totalIngresos = parseFloat(resumenCaja[0].total_ingresos) || 0;
+        const totalGastos = parseFloat(resumenCaja[0].total_gastos) || 0;
+
+        // Opcional: Si tienes un "Saldo Inicial" guardado en base de datos para este corte, 
+        // deberías consultarlo arriba y sumarlo aquí. Por ejemplo: const saldoInicial = 2000;
+        const saldoInicial = 0; // Cambia esto si lo obtienes de la BD para que coincida con tus $5,200 exactos.
+
+        // 5. Cálculo real del efectivo disponible
+        const efectivoDisponible = (totalPagos + totalIngresos + saldoInicial) - totalGastos;
+
+        // 6. Candado de seguridad: Verificar si hay dinero suficiente
+        if (efectivoDisponible <= 0) {
+            return res.status(400).json({ success: false, error: 'No hay efectivo disponible en caja para registrar gastos.' });
+        }
+        if (montoNumero > efectivoDisponible) {
+            return res.status(400).json({
+                success: false,
+                error: `El gasto excede el efectivo disponible ($${efectivoDisponible.toFixed(2)}).`
+            });
+        }
+
+        const [result] = await db.query(
+            'INSERT INTO gastos (usuario_id, monto, descripcion) VALUES (?, ?, ?)',
+            [usuarioId, montoNumero, descripcionLimpia]
+        );
+
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error('Error al registrar gasto:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+}); */
+
 
 app.post('/api/gastos', async (req, res) => {
     const { usuarioId, monto, descripcion } = req.body;
@@ -558,8 +766,9 @@ app.post('/api/gastos', async (req, res) => {
             return res.status(400).json({ success: false, error: 'La descripción del gasto es obligatoria.' });
         }
 
+        // 1. Verificamos permisos
         const [usuarios] = await db.query(
-            'SELECT rol_id FROM usuarios WHERE id = ? AND rol_id IN (2, 3)',
+            'SELECT rol_id FROM usuarios WHERE id = ? AND rol_id IN (1, 2, 3)',
             [usuarioId]
         );
 
@@ -567,19 +776,38 @@ app.post('/api/gastos', async (req, res) => {
             return res.status(403).json({ success: false, error: 'Tu rol no tiene permisos para registrar gastos.' });
         }
 
+        // 2. NUEVO: Obtenemos el Saldo Inicial consultando el último corte cerrado/aprobado
+        // Buscamos el último registro en la tabla cortes_caja para este usuario que esté aprobado (estado = 1)
+        const [ultimoCorteCerrado] = await db.query(
+            'SELECT monto_retenido FROM cortes_caja WHERE usuario_id = ? ORDER BY id DESC LIMIT 1',
+            [usuarioId]
+        );
+        
+        // Si existe un corte previo, extraemos el monto_retenido. Si no, arranca en 0.
+        const saldoInicial = ultimoCorteCerrado.length > 0 ? parseFloat(ultimoCorteCerrado[0].monto_retenido) : 0.00;
+
+        // 3. Consulta de Resumen de Caja del turno actual (estado_corte = 0)
         const [resumenCaja] = await db.query(
             `SELECT
                 IFNULL((SELECT SUM(monto) FROM pagos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_pagos,
+                IFNULL((SELECT SUM(monto) FROM ingresos_extra WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_ingresos,
                 IFNULL((SELECT SUM(monto) FROM gastos WHERE usuario_id = ? AND estado_corte = 0), 0) AS total_gastos`,
-            [usuarioId, usuarioId]
+            [usuarioId, usuarioId, usuarioId]
         );
+        
+        // 4. Extracción de valores individuales
+        const totalPagos = parseFloat(resumenCaja[0].total_pagos) || 0;
+        const totalIngresos = parseFloat(resumenCaja[0].total_ingresos) || 0;
+        const totalGastos = parseFloat(resumenCaja[0].total_gastos) || 0;
 
-        const efectivoDisponible = (parseFloat(resumenCaja[0].total_pagos) || 0) - (parseFloat(resumenCaja[0].total_gastos) || 0);
+        // 5. Cálculo real del efectivo disponible (AHORA SÍ TOMA EN CUENTA EL SALDO INICIAL)
+        const efectivoDisponible = (totalPagos + totalIngresos + saldoInicial) - totalGastos;
 
+        // 6. Candado de seguridad: Verificar si hay dinero suficiente
         if (efectivoDisponible <= 0) {
-            return res.status(400).json({ success: false, error: 'No hay efectivo disponible para registrar gastos.' });
+            return res.status(400).json({ success: false, error: 'No hay efectivo disponible en caja para registrar gastos.' });
         }
-
+        
         if (montoNumero > efectivoDisponible) {
             return res.status(400).json({
                 success: false,
@@ -587,6 +815,7 @@ app.post('/api/gastos', async (req, res) => {
             });
         }
 
+        // 7. Si pasa todas las validaciones, se inserta el gasto
         const [result] = await db.query(
             'INSERT INTO gastos (usuario_id, monto, descripcion) VALUES (?, ?, ?)',
             [usuarioId, montoNumero, descripcionLimpia]
@@ -598,7 +827,6 @@ app.post('/api/gastos', async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.post('/api/cancelar-gasto/:id', async (req, res) => {
     const idGasto = req.params.id;
     const { usuarioId } = req.body;
@@ -622,44 +850,254 @@ app.post('/api/cancelar-gasto/:id', async (req, res) => {
 
 // 2. Ruta para AUTORIZAR y procesar el corte
 app.post('/api/procesar-corte', async (req, res) => {
-    const { usuarioId, adminUser, adminPassword } = req.body;
+    // AHORA RECIBIMOS EL MONTO ENTREGADO DESDE EL FRONTEND
+    const { usuarioId, adminUser, adminPassword, montoEntregado } = req.body;
+    
+    const connection = await db.getConnection();
+
     try {
-        // A) Validamos al administrador (Ajusta 'usuarios' según el nombre real de tu tabla de login)
-        const [admins] = await db.query(
+        // A) Validamos al administrador
+        const [admins] = await connection.query(
             'SELECT id FROM usuarios WHERE correo = ? AND password = ? AND rol_id = "2"', 
             [adminUser, adminPassword]
         );
         
         if (admins.length === 0) {
+            connection.release();
+            return res.status(401).json({ error: "Credenciales de administrador incorrectas." });
+        }
+        const adminId = admins[0].id;
+
+        // B) INICIAMOS LA TRANSACCIÓN
+        await connection.beginTransaction();
+
+        // C) 1. Rescatamos el Saldo Inicial (Lo que quedó en la caja en el último corte)
+        const [resSaldo] = await connection.query(
+            'SELECT monto_retenido FROM cortes_caja WHERE usuario_id = ? ORDER BY id DESC LIMIT 1',
+            [usuarioId]
+        );
+        const saldoInicial = resSaldo.length > 0 ? parseFloat(resSaldo[0].monto_retenido) : 0.00;
+
+        // C) 2. Sumamos todos los rubros activos
+        const [resPagos] = await connection.query('SELECT SUM(monto) as total FROM pagos WHERE usuario_id = ? AND estado_corte = 0', [usuarioId]);
+        const totalCobrado = parseFloat(resPagos[0].total) || 0;
+
+        const [resGastos] = await connection.query('SELECT SUM(monto) as total FROM gastos WHERE usuario_id = ? AND estado_corte = 0', [usuarioId]);
+        const totalGastos = parseFloat(resGastos[0].total) || 0;
+
+        const [resIngresos] = await connection.query('SELECT SUM(monto) as total FROM ingresos_extra WHERE usuario_id = ? AND estado_corte = 0', [usuarioId]);
+        const totalIngresos = parseFloat(resIngresos[0].total) || 0;
+
+        // D) LA FÓRMULA MATEMÁTICA MAESTRA
+        const totalCajaFisica = saldoInicial + totalCobrado + totalIngresos - totalGastos;
+        const entregado = parseFloat(montoEntregado) || 0;
+        const retenido = totalCajaFisica - entregado; // Lo que se queda en el cajón
+
+        // E) Creamos el registro Maestro del Corte con los nuevos campos
+        const [insertCorte] = await connection.query(
+            `INSERT INTO cortes_caja 
+            (usuario_id, admin_autorizo_id, total_cobrado, total_gastos, total_entregado, saldo_inicial, total_ingresos_extra, monto_entregado, monto_retenido) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [usuarioId, adminId, totalCobrado, totalGastos, totalCajaFisica, saldoInicial, totalIngresos, entregado, retenido]
+        );
+        const corteId = insertCorte.insertId;
+
+        // F) Aplicamos el candado a TODO (Pagos, Gastos e Ingresos Extra)
+        // (Activos)
+        await connection.query('UPDATE pagos SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0', [corteId, usuarioId]);
+        await connection.query('UPDATE gastos SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0', [corteId, usuarioId]);
+        await connection.query('UPDATE ingresos_extra SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0', [corteId, usuarioId]);
+        // (Cancelados)
+        await connection.query('UPDATE pagos SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3', [corteId, usuarioId]);
+        await connection.query('UPDATE gastos SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3', [corteId, usuarioId]);
+        await connection.query('UPDATE ingresos_extra SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3', [corteId, usuarioId]);
+
+        // G) TRANSFERENCIA AUTOMÁTICA AL ADMINISTRADOR (Nivel ERP)
+        if (entregado > 0) {
+            // Obtenemos el nombre del cobrador para el concepto
+            const [userRows] = await connection.query('SELECT nombre FROM usuarios WHERE id = ?', [usuarioId]);
+            const nombreUser = userRows[0]?.nombre || 'Cobrador';
+            
+            // Inyectamos el dinero entregado directamente como un ingreso extra en tu cuenta de Admin
+            await connection.query(
+                'INSERT INTO ingresos_extra (usuario_id, descripcion, monto, estado_corte) VALUES (?, ?, ?, 0)',
+                [adminId, `Recepción de corte de caja Folio #${corteId} (${nombreUser})`, entregado]
+            );
+        }
+
+        // H) Confirmamos y cerramos Transacción
+        await connection.commit();
+        res.json({ success: true, message: "Corte procesado. Fondos transferidos con éxito.", corte_id: corteId });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error("Error crítico al procesar corte:", error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        connection.release();
+    }
+});
+
+/* app.post('/api/procesar-corte', async (req, res) => {
+    const { usuarioId, adminUser, adminPassword } = req.body;
+    
+    // Obtenemos una conexión dedicada exclusiva para esta Transacción
+    const connection = await db.getConnection();
+
+    try {
+        // A) Validamos al administrador y obtenemos su ID
+        const [admins] = await connection.query(
+            'SELECT id FROM usuarios WHERE correo = ? AND password = ? AND rol_id = "2"', 
+            [adminUser, adminPassword]
+        );
+        
+        if (admins.length === 0) {
+            connection.release();
             return res.status(401).json({ error: "Credenciales de administrador incorrectas." });
         }
 
-        // B) Si el admin es correcto, cambiamos el estado de 0 a 1 y de 3 a 4
-        await db.query(
-            'UPDATE pagos SET estado_corte = 1 WHERE usuario_id = ? AND estado_corte = 0',
+        const adminId = admins[0].id;
+
+        // B) INICIAMOS LA TRANSACCIÓN (Seguridad anti-fallos)
+        await connection.beginTransaction();
+
+        // C) Calculamos los totales EXACTOS de este turno ANTES de cerrarlo
+        const [resPagos] = await connection.query(
+            'SELECT SUM(monto) as total_cobrado FROM pagos WHERE usuario_id = ? AND estado_corte = 0',
             [usuarioId]
         );
+        const totalCobrado = parseFloat(resPagos[0].total_cobrado) || 0;
 
-        await db.query(
-            'UPDATE pagos SET estado_corte = 4 WHERE usuario_id = ? AND estado_corte = 3',
+        const [resGastos] = await connection.query(
+            'SELECT SUM(monto) as total_gastos FROM gastos WHERE usuario_id = ? AND estado_corte = 0',
             [usuarioId]
         );
+        const totalGastos = parseFloat(resGastos[0].total_gastos) || 0;
 
-        await db.query(
-            'UPDATE gastos SET estado_corte = 1 WHERE usuario_id = ? AND estado_corte = 0',
-            [usuarioId]
-        );
+        const totalEntregado = totalCobrado - totalGastos;
 
-        await db.query(
-            'UPDATE gastos SET estado_corte = 4 WHERE usuario_id = ? AND estado_corte = 3',
-            [usuarioId]
+        // D) Creamos el registro Maestro del Corte Histórico en la nueva tabla
+        const [insertCorte] = await connection.query(
+            `INSERT INTO cortes_caja (usuario_id, admin_autorizo_id, total_cobrado, total_gastos, total_entregado) 
+             VALUES (?, ?, ?, ?, ?)`,
+            [usuarioId, adminId, totalCobrado, totalGastos, totalEntregado]
         );
         
-        res.json({ success: true, message: "Corte autorizado y procesado con éxito." });
+        // Obtenemos el ID del corte que se acaba de crear (Este es el CANDADO)
+        const corteId = insertCorte.insertId;
+
+        // E) Aplicamos el candado a los pagos y gastos cambiando su estado y asignando el corte_id
+        
+        // Pagos Activos
+        await connection.query(
+            'UPDATE pagos SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0',
+            [corteId, usuarioId]
+        );
+        // Pagos Cancelados
+        await connection.query(
+            'UPDATE pagos SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3',
+            [corteId, usuarioId]
+        );
+
+        // Gastos Activos
+        await connection.query(
+            'UPDATE gastos SET estado_corte = 1, corte_id = ? WHERE usuario_id = ? AND estado_corte = 0',
+            [corteId, usuarioId]
+        );
+        // Gastos Cancelados
+        await connection.query(
+            'UPDATE gastos SET estado_corte = 4, corte_id = ? WHERE usuario_id = ? AND estado_corte = 3',
+            [corteId, usuarioId]
+        );
+
+        // F) Si llegamos aquí sin errores, CONFIRMAMOS los cambios en la base de datos
+        await connection.commit();
+        
+        res.json({ success: true, message: "Corte autorizado y guardado en el historial con éxito.", corte_id: corteId });
+
     } catch (error) {
+        // Si hay cualquier error, REVERTIMOS TODOS los cambios
+        await connection.rollback();
+        console.error("Error crítico al procesar corte:", error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        // Siempre soltamos la conexión para no saturar el servidor
+        connection.release();
+    }
+});
+ */
+
+// ==========================================
+// RUTAS PARA EL HISTORIAL DE CORTES (PASO 3)
+// ==========================================
+
+// 1. Obtener la lista de cortes anteriores de un cobrador específico
+app.get('/api/historico-cortes/:usuarioId', async (req, res) => {
+    const { usuarioId } = req.params;
+    try {
+        const [cortes] = await db.query(
+            `SELECT id, fecha_corte, total_cobrado, total_gastos, total_entregado 
+             FROM cortes_caja 
+             WHERE usuario_id = ? 
+             ORDER BY id DESC`,
+            [usuarioId]
+        );
+        res.json(cortes);
+    } catch (error) {
+        console.error("Error al obtener lista de histórico:", error);
         res.status(500).json({ error: error.message });
     }
 });
+
+// 2. La "Máquina del tiempo": Obtener los detalles exactos de un corte cerrado
+/* app.get('/api/corte-caja-historico/:corteId', async (req, res) => {
+    const { corteId } = req.params;
+    try {
+        // A) Rescatamos el resumen guardado en la bóveda
+        const [resumenCorte] = await db.query(
+            `SELECT total_cobrado as total_dinero, total_gastos, total_entregado as total_neto, fecha_corte 
+             FROM cortes_caja WHERE id = ?`,
+            [corteId]
+        );
+
+        if (resumenCorte.length === 0) {
+            return res.status(404).json({ error: "Corte histórico no encontrado" });
+        }
+
+        // B) Buscamos los pagos amarrados a este candado (corte_id)
+        const [detalles] = await db.query(
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+             FROM pagos p 
+             JOIN clientes c ON p.cliente_id = c.id 
+             WHERE p.corte_id = ? 
+             ORDER BY p.id DESC`,
+            [corteId]
+        );
+
+        // C) Buscamos los gastos amarrados a este candado (corte_id)
+        const [gastos] = await db.query(
+            `SELECT id, fecha_gasto, descripcion, monto, estado_corte
+             FROM gastos
+             WHERE corte_id = ?
+             ORDER BY id DESC`,
+            [corteId]
+        );
+
+        // Calculamos cuántos cobros activos (estado 1) hubo en este corte
+        resumenCorte[0].total_cobros = detalles.filter(d => parseInt(d.estado_corte) === 1).length;
+
+        // D) Respondemos con la MISMA estructura que usa tu Frontend actual
+        res.json({ 
+            resumen: resumenCorte[0], 
+            detalles: detalles, 
+            gastos: gastos 
+        });
+        
+    } catch (error) {
+        console.error("Error al obtener detalle histórico:", error);
+        res.status(500).json({ error: error.message });
+    }
+}); */
 
 // Ruta para obtener todas las localidades (para el selector del formulario)
 app.get('/api/localidades', async (req, res) => {
@@ -757,5 +1195,114 @@ app.put('/api/clientes/:id/alias', async (req, res) => {
     }
 });
 
+/* // Ruta para obtener el resumen de cobradores (Supervisión Admin)
+app.get('/api/admin/supervision-cortes/:adminId', async (req, res) => {
+    const adminId = req.params.adminId;
+    try {
+        const query = `
+            SELECT u.id as cobrador_id, u.nombre as cobrador_nombre, 
+                   COUNT(p.id) as total_cobros, SUM(p.monto) as total_recaudado
+            FROM pagos p
+            JOIN usuarios u ON p.usuario_id = u.id
+            WHERE p.estado_corte = 0 AND u.id != ?
+            GROUP BY u.id
+            ORDER BY total_recaudado DESC
+        `;
+        const [cobradores] = await db.execute(query, [adminId]);
+        res.json(cobradores);
+    } catch (error) {
+        console.error("Error en supervisión de cortes:", error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+}); */
 
+// Ruta para obtener el resumen de cobradores (Supervisión Admin)
+app.get('/api/admin/supervision-cortes/:adminId', async (req, res) => {
+    const adminId = req.params.adminId;
+    try {
+        // Hacemos que la tabla principal sea 'usuarios' y usamos subconsultas 
+        // para que traiga a todos, aunque los montos de sus tablas sean 0.
+        const query = `
+            SELECT 
+                u.id AS cobrador_id, 
+                u.nombre AS cobrador_nombre,
+                
+                IFNULL((SELECT COUNT(id) FROM pagos WHERE usuario_id = u.id AND estado_corte = 0), 0) AS total_cobros,
+                IFNULL((SELECT SUM(monto) FROM pagos WHERE usuario_id = u.id AND estado_corte = 0), 0) AS total_recaudado,
+                IFNULL((SELECT SUM(monto) FROM ingresos_extra WHERE usuario_id = u.id AND estado_corte = 0), 0) AS total_ingresos_extra,
+                IFNULL((SELECT SUM(monto) FROM gastos WHERE usuario_id = u.id AND estado_corte = 0), 0) AS total_gastos,
+                
+                -- Obtenemos el saldo inicial del último corte aprobado (estado = 1)
+                IFNULL((SELECT monto_retenido FROM cortes_caja WHERE usuario_id = u.id ORDER BY id DESC LIMIT 1), 0) AS saldo_inicial
+            
+            FROM usuarios u
+            WHERE u.id != ? 
+            -- NOTA: Si en la tabla 'usuarios' también guardas a los clientes, descomenta la siguiente línea 
+            -- para filtrar solo a los que tienen rol de cobrador/staff (ej. roles 1, 2, 3)
+            -- AND u.rol_id IN (1, 2, 3)
+            
+            ORDER BY total_recaudado DESC
+        `;
+        
+        const [cobradores] = await db.execute(query, [adminId]);
+
+        // Procesamos los datos antes de enviarlos para asegurar que sean números 
+        // y calcular la Caja Física total de una vez.
+        const resultadosFormateados = cobradores.map(c => {
+            const saldoInicial = parseFloat(c.saldo_inicial);
+            const totalRecaudado = parseFloat(c.total_recaudado); // Mensualidades
+            const ingresosExtra = parseFloat(c.total_ingresos_extra);
+            const gastos = parseFloat(c.total_gastos);
+            
+            // Matemáticas de la caja física: (Fondo + Mensualidades + Extra) - Gastos
+            const cajaFisica = (saldoInicial + totalRecaudado + ingresosExtra) - gastos;
+
+            return {
+                cobrador_id: c.cobrador_id,
+                cobrador_nombre: c.cobrador_nombre,
+                total_cobros: parseInt(c.total_cobros),
+                saldo_inicial: saldoInicial,
+                total_recaudado: totalRecaudado,
+                total_ingresos_extra: ingresosExtra,
+                total_gastos: gastos,
+                caja_fisica: cajaFisica
+            };
+        });
+
+        res.json(resultadosFormateados);
+    } catch (error) {
+        console.error("Error en supervisión de cortes:", error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ==========================================
+// MÓDULO DE CAJA CHICA: INGRESOS EXTRA
+// ==========================================
+
+// Registrar un ingreso extra
+app.post('/api/ingreso-extra', async (req, res) => {
+    const { usuarioId, descripcion, monto } = req.body;
+    try {
+        await db.query(
+            'INSERT INTO ingresos_extra (usuario_id, descripcion, monto) VALUES (?, ?, ?)',
+            [usuarioId, descripcion, monto]
+        );
+        res.json({ success: true, message: "Ingreso extra registrado correctamente" });
+    } catch (error) {
+        console.error("Error al registrar ingreso extra:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Cancelar un ingreso extra (estado 3)
+app.post('/api/cancelar-ingreso-extra/:id', async (req, res) => {
+    const idIngreso = req.params.id;
+    try {
+        await db.query('UPDATE ingresos_extra SET estado_corte = 3 WHERE id = ?', [idIngreso]);
+        res.json({ success: true, message: "Ingreso extra cancelado" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 

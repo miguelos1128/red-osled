@@ -985,8 +985,79 @@
             });
         });
 
+        // 1. Dibuja las tarjetas en la pantalla principal  
         // 1. Dibuja las tarjetas en la pantalla principal       
         async function cargarSupervisionCobradores() {
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
+                if (!usuarioActual || usuarioActual.rol !== 2) return; 
+
+                const response = await fetch(`/api/admin/supervision-cortes/${usuarioActual.id}`);
+                const cobradores = await response.json();
+
+                const contenedor = document.getElementById('lista-supervision-cobradores');
+                contenedor.innerHTML = ''; 
+
+                if (cobradores.length === 0) {
+                    contenedor.innerHTML = '<p style="color: #7f8c8d; font-size: 14px; font-style: italic;">No hay usuarios para supervisar.</p>';
+                    return;
+                }
+
+                const formatear = (num) => parseFloat(num || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                cobradores.forEach(cobrador => {
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = 'tarjeta-cobrador';
+                    
+                    // Al dar clic se abre el modal de corte
+                    tarjeta.onclick = async () => {
+                        await cargarWidgetCorte(cobrador.cobrador_id, true, cobrador.cobrador_nombre);
+                        document.getElementById('modal-corte').classList.remove('hidden');
+                    };
+                    
+                    tarjeta.innerHTML = `
+                        <div class="tarjeta-header">
+                            <div>
+                                <h4>${cobrador.cobrador_nombre}</h4>
+                                <span style="font-size: 12px; color: #64748b;">💳 ${cobrador.total_cobros} cobros realizados</span>
+                            </div>
+                            <button onclick="event.stopPropagation(); abrirModalHistorial(${cobrador.cobrador_id}, '${cobrador.cobrador_nombre}')" class="btn-historial-mini" title="Ver cortes anteriores">🕒</button>
+                        </div>
+
+                        <div class="tarjeta-desglose">
+                            <div class="desglose-item">
+                                <span>Saldo Inicial:</span>
+                                <strong>$${formatear(cobrador.saldo_inicial)}</strong>
+                            </div>
+                            <div class="desglose-item positivo">
+                                <span>+ Mensualidades:</span>
+                                <strong>$${formatear(cobrador.total_recaudado)}</strong>
+                            </div>
+                            <div class="desglose-item positivo">
+                                <span>+ Ingresos Extra:</span>
+                                <strong>$${formatear(cobrador.total_ingresos_extra)}</strong>
+                            </div>
+                            <div class="desglose-item negativo">
+                                <span>- Gastos:</span>
+                                <strong>-$${formatear(cobrador.total_gastos)}</strong>
+                            </div>
+                        </div>
+
+                        <div class="tarjeta-footer">
+                            <span>Total en Caja Física:</span>
+                            <span style="color: #2563eb;">$${formatear(cobrador.caja_fisica)}</span>
+                        </div>
+                    `;
+                    
+                    contenedor.appendChild(tarjeta);
+                });
+
+            } catch (error) {
+                console.error("Error al cargar supervisión de cobradores:", error);
+            }
+        }
+        
+/*         async function cargarSupervisionCobradores() {
             try {
                 const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
                 if (!usuarioActual || usuarioActual.rol !== 2) return; 
@@ -1029,7 +1100,7 @@
             } catch (error) {
                 console.error("Error al cargar supervisión de cobradores:", error);
             }
-        }
+        } */
     
         function aplicarFiltros(){
             // 1. Creamos la variable que llevará la cuenta

@@ -1195,7 +1195,7 @@ app.put('/api/clientes/:id/alias', async (req, res) => {
     }
 });
 
-// Ruta para obtener el resumen de cobradores (Supervisión Admin)
+/* // Ruta para obtener el resumen de cobradores (Supervisión Admin)
 app.get('/api/admin/supervision-cortes/:adminId', async (req, res) => {
     const adminId = req.params.adminId;
     try {
@@ -1210,6 +1210,66 @@ app.get('/api/admin/supervision-cortes/:adminId', async (req, res) => {
         `;
         const [cobradores] = await db.execute(query, [adminId]);
         res.json(cobradores);
+    } catch (error) {
+        console.error("Error en supervisión de cortes:", error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+}); */
+
+// Ruta para obtener el resumen de cobradores (Supervisión Admin)
+app.get('/api/admin/supervision-cortes/:adminId', async (req, res) => {
+    const adminId = req.params.adminId;
+    try {
+        // Hacemos que la tabla principal sea 'usuarios' y usamos subconsultas 
+        // para que traiga a todos, aunque los montos de sus tablas sean 0.
+        const query = `
+            SELECT 
+                u.id AS cobrador_id, 
+                u.nombre AS cobrador_nombre,
+                
+                IFNULL((SELECT COUNT(id) FROM pagos WHERE usuario_id = u.id AND estado_corte = 0), 0) AS total_cobros,
+                IFNULL((SELECT SUM(monto) FROM pagos WHERE usuario_id = u.id AND estado_corte = 0), 0) AS total_recaudado,
+                IFNULL((SELECT SUM(monto) FROM ingresos_extra WHERE usuario_id = u.id AND estado_corte = 0), 0) AS total_ingresos_extra,
+                IFNULL((SELECT SUM(monto) FROM gastos WHERE usuario_id = u.id AND estado_corte = 0), 0) AS total_gastos,
+                
+                -- Obtenemos el saldo inicial del último corte aprobado (estado = 1)
+                IFNULL((SELECT monto_retenido FROM cortes_caja WHERE usuario_id = u.id ORDER BY id DESC LIMIT 1), 0) AS saldo_inicial
+            
+            FROM usuarios u
+            WHERE u.id != ? 
+            -- NOTA: Si en la tabla 'usuarios' también guardas a los clientes, descomenta la siguiente línea 
+            -- para filtrar solo a los que tienen rol de cobrador/staff (ej. roles 1, 2, 3)
+            -- AND u.rol_id IN (1, 2, 3)
+            
+            ORDER BY total_recaudado DESC
+        `;
+        
+        const [cobradores] = await db.execute(query, [adminId]);
+
+        // Procesamos los datos antes de enviarlos para asegurar que sean números 
+        // y calcular la Caja Física total de una vez.
+        const resultadosFormateados = cobradores.map(c => {
+            const saldoInicial = parseFloat(c.saldo_inicial);
+            const totalRecaudado = parseFloat(c.total_recaudado); // Mensualidades
+            const ingresosExtra = parseFloat(c.total_ingresos_extra);
+            const gastos = parseFloat(c.total_gastos);
+            
+            // Matemáticas de la caja física: (Fondo + Mensualidades + Extra) - Gastos
+            const cajaFisica = (saldoInicial + totalRecaudado + ingresosExtra) - gastos;
+
+            return {
+                cobrador_id: c.cobrador_id,
+                cobrador_nombre: c.cobrador_nombre,
+                total_cobros: parseInt(c.total_cobros),
+                saldo_inicial: saldoInicial,
+                total_recaudado: totalRecaudado,
+                total_ingresos_extra: ingresosExtra,
+                total_gastos: gastos,
+                caja_fisica: cajaFisica
+            };
+        });
+
+        res.json(resultadosFormateados);
     } catch (error) {
         console.error("Error en supervisión de cortes:", error);
         res.status(500).json({ error: 'Error interno del servidor' });

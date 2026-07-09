@@ -715,6 +715,8 @@
         let configLocalidades = {};
         let perfilUsuario ="";
         let detallePago;
+        let ultimoDetallePago = null;
+        let clienteSeleccionado = null;
 
         if (!usuarioJson) {
             window.location.href = 'index.html';
@@ -1438,7 +1440,7 @@
             if(paquete === '16M') costoInput.value = 600;
         }
 
-        let clienteSeleccionado = null;
+        
 
         // 1. Controlador inteligente de búsqueda (Alterna entre Nombre e IP)
         async function controladorBusqueda(tipo) {
@@ -1764,7 +1766,7 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
         }
 
         // Esta función va dentro del evento submit de tu formulario de pago
-        let ultimoDetallePago = null;
+        
 
         async function procesarPagoFinal() {
             const monto = parseFloat(document.getElementById('monto-pago-input').value);
@@ -1954,7 +1956,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             }
         }
 
-        function mostrarResumenYPrepararImpresion(detalle) {
+       /*  function mostrarResumenYPrepararImpresion(detalle) {
             let resumenTexto = "✅ PAGO REGISTRADO CON ÉXITO\n\n";
             resumenTexto += "El sistema ha distribuido el pago así:\n";
             
@@ -1974,7 +1976,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 location.reload();
             }
         }
-
+ */
         // 2. Función que crea el ticket visual
         function generarTicketImpresion(detalle) {
             //console.log(detalle)
@@ -1983,6 +1985,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 location.reload();
                 return;
             }
+            console.log("llegando a imprimir ticket" + detalle)
+            console.log("cliente seleccionado " + clienteSeleccionado)
             const ventana = window.open('', '_blank', 'width=900,height=1200');
             
             // Generamos las filas de la tabla del ticket
@@ -2020,8 +2024,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     
                     <div class="divider"></div>
                     
-                    <p><strong>Cliente:</strong> ${clienteSeleccionado.nombre_completo}<br>
-                    <strong>IP:</strong> ${clienteSeleccionado.direccion_ip}</p>
+                    <p><strong>Cliente:</strong> ${clienteSeleccionado.alias_cliente}<br>
+                    <strong>Cliente:</strong> ${clienteSeleccionado.direccion_ip}</p>
                     
                     <div class="divider"></div>
                     
@@ -2040,7 +2044,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     <div class="divider" style="border-top: 2px solid #000;"></div>
                     
                     <div align="right" style="font-size: 18px;">
-                        <strong>TOTAL PAGADO: $${totalFormateado}</strong>
+                        <strong>TOTAL PAGADO: $${total}</strong>
                     </div>
                     
                     <div class="footer text-center">

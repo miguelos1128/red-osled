@@ -249,7 +249,7 @@
 
             <div class="acciones-pago-exitoso">
                 <div class="acciones-contacto" >   
-                    <a id="btn-enviar-whatsapp-pago" class="btn-whatsapp-pago button" href="#" target="_blank" rel="noopener">
+                    <a id="btn-enviar-whatsapp-pago" class="btn-whatsapp-pago button" target="_blank" rel="noopener">
                         Enviar WhatsApp
                     </a>
                     <div id="editar-box-cobro">
@@ -1927,6 +1927,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             `https://api.whatsapp.com/send/?phone=${telefonoWhatsapp}&text=${encodeURIComponent(mensajeWhatsapp)}&type=phone_number&app_absent=0`;
 
                 window.open(linkWhats, "_blank");
+            btnWhatsapp.href = linkWhats;
         }
 
         function imprimirReciboUltimoPago() {

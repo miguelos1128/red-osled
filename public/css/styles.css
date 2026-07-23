@@ -1240,6 +1240,59 @@ td {
     border-bottom: 1px solid #eee;
 }
 
+.seccion-colapsada .seccion-colapsable-contenido {
+    display: none;
+}
+
+.seccion-header-acciones {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-colapsar-seccion {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #111827;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.btn-colapsar-seccion i {
+    display: none;
+}
+
+.btn-colapsar-seccion::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-135deg);
+    margin-top: 5px;
+}
+
+.btn-colapsar-seccion:hover {
+    background: rgba(17, 24, 39, 0.06);
+    color: #000;
+}
+
+.seccion-colapsada .btn-colapsar-seccion {
+    background: transparent;
+    color: #111827;
+}
+
+.seccion-colapsada .btn-colapsar-seccion::before {
+    transform: rotate(45deg);
+    margin-top: -5px;
+}
+
 .grid-info-cliente {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -1442,7 +1495,7 @@ td {
 
 
 /* --- ESTILOS FASE 2: FINANZAS --- */
-.finanzas-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.finanzas-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 15px; }
 .btn-descarga-pdf { background-color: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.3s;}
 .btn-descarga-pdf:hover { background-color: #c0392b; }
 
@@ -1588,6 +1641,19 @@ td {
 }
 
 @media (max-width: 560px) {
+    .finanzas-header,
+    .bitacora-servicio-header {
+        align-items: flex-start;
+    }
+
+    .seccion-header-acciones {
+        flex-shrink: 0;
+    }
+
+    .btn-descarga-pdf {
+        padding: 8px 10px;
+    }
+
     .bitacora-servicio-lista,
     .bitacora-evento-grid {
         grid-template-columns: 1fr;

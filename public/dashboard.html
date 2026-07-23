@@ -510,56 +510,68 @@
                 <div id="seccion-finanzas" class="seccion-detalle">
                     <div class="finanzas-header">
                         <h3>💰 Historial Financiero</h3>
-                        <button class="btn-descarga-pdf" onclick="generarPDFEstadoCuenta()">
-                            <i class="fas fa-file-pdf"></i> Descargar PDF
-                        </button>
-                    </div>
-
-                    <div class="finanzas-resumen">
-                        <div class="tarjeta-resumen verde">
-                            <span>Total Pagado Histórico</span>
-                            <h4 id="detalle-total-pagado">$0.00</h4>
-                        </div>
-                        <div class="tarjeta-resumen alerta" id="tarjeta-pendientes">
-                            <span>Adeudo Pendiente</span>
-                            <h4 id="detalle-total-pendiente">$0.00</h4>
+                        <div class="seccion-header-acciones">
+                            <button class="btn-descarga-pdf" onclick="generarPDFEstadoCuenta()">
+                                <i class="fas fa-file-pdf"></i> Descargar PDF
+                            </button>
+                            <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('seccion-finanzas', this)" aria-label="Contraer historial financiero" aria-expanded="true" title="Contraer sección">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <div id="detalle-meses-pendientes-box" class="meses-pendientes-box hidden">
-                        <div>
-                            <span>Meses pendientes</span>
-                            <p id="detalle-meses-pendientes">-</p>
+                    <div class="seccion-colapsable-contenido">
+                        <div class="finanzas-resumen">
+                            <div class="tarjeta-resumen verde">
+                                <span>Total Pagado Histórico</span>
+                                <h4 id="detalle-total-pagado">$0.00</h4>
+                            </div>
+                            <div class="tarjeta-resumen alerta" id="tarjeta-pendientes">
+                                <span>Adeudo Pendiente</span>
+                                <h4 id="detalle-total-pendiente">$0.00</h4>
+                            </div>
                         </div>
-                        <div id="notificar-box">
 
+                        <div id="detalle-meses-pendientes-box" class="meses-pendientes-box hidden">
+                            <div>
+                                <span>Meses pendientes</span>
+                                <p id="detalle-meses-pendientes">-</p>
+                            </div>
+                            <div id="notificar-box">
+
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="tabla-contenedor">
-                        <table class="tabla-pagos">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Mes pagado</th>
-                                    <th>Monto</th>
-                                    <th>Cobrador</th>
-                                    <th>Tipo de Pago</th>
-                                </tr>
-                            </thead>
-                            <tbody id="detalle-tabla-pagos">
-                            
-                            </tbody>
-                        </table>
+                        <div class="tabla-contenedor">
+                            <table class="tabla-pagos">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Mes pagado</th>
+                                        <th>Monto</th>
+                                        <th>Cobrador</th>
+                                        <th>Tipo de Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detalle-tabla-pagos">
+                                
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <div id="seccion-bitacora-servicio" class="seccion-detalle">
                     <div class="bitacora-servicio-header">
                         <h3>Historial de Servicio</h3>
+                        <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('seccion-bitacora-servicio', this)" aria-label="Contraer historial de servicio" aria-expanded="true" title="Contraer sección">
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
                     </div>
-                    <div id="detalle-bitacora-servicio" class="bitacora-servicio-lista">
-                        <p class="bitacora-vacia">No hay eventos de servicio registrados.</p>
+                    <div class="seccion-colapsable-contenido">
+                        <div id="detalle-bitacora-servicio" class="bitacora-servicio-lista">
+                            <p class="bitacora-vacia">No hay eventos de servicio registrados.</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -2272,12 +2284,45 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 alert('No se pudo conectar con el servidor.');
             }
         }
+
+        function actualizarBotonColapsarSeccion(boton, colapsada) {
+            if (!boton) return;
+
+            const icono = boton.querySelector('i');
+            boton.setAttribute('aria-expanded', String(!colapsada));
+            boton.setAttribute('aria-label', colapsada ? 'Expandir sección' : 'Contraer sección');
+            boton.setAttribute('title', colapsada ? 'Expandir sección' : 'Contraer sección');
+
+            if (icono) {
+                icono.classList.toggle('fa-chevron-up', !colapsada);
+                icono.classList.toggle('fa-chevron-down', colapsada);
+            }
+        }
+
+        function toggleSeccionDetalle(idSeccion, boton) {
+            const seccion = document.getElementById(idSeccion);
+            if (!seccion) return;
+
+            const colapsada = seccion.classList.toggle('seccion-colapsada');
+            actualizarBotonColapsarSeccion(boton, colapsada);
+        }
+
+        function restaurarSeccionesDetalleAbiertas() {
+            ['seccion-finanzas', 'seccion-bitacora-servicio'].forEach(idSeccion => {
+                const seccion = document.getElementById(idSeccion);
+                if (!seccion) return;
+
+                seccion.classList.remove('seccion-colapsada');
+                actualizarBotonColapsarSeccion(seccion.querySelector('.btn-colapsar-seccion'), false);
+            });
+        }
  
         // Función para abrir el modal y cargar desde Node.js
         async function abrirDetallesCliente(idCliente) {
             clienteDetalleActualId = idCliente;
             // 1. Mostrar el Modal primero y poner un mensaje de carga
             document.getElementById('modal-detalles-cliente').classList.remove('hidden');
+            restaurarSeccionesDetalleAbiertas();
             document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
 
             try {

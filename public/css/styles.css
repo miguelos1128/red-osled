@@ -303,7 +303,8 @@ td {
 }
 
 
-#filtro-localidad {
+#filtro-localidad,
+#filtro-estado-servicio {
     width: 100%;
     padding: 12px;
     border: 1px solid #ddd;
@@ -313,7 +314,8 @@ td {
     background-color: white;
     cursor: pointer;
 }
-#select-ordenar:hover {
+#select-ordenar:hover,
+#filtro-estado-servicio:hover {
     border-color: #3b82f6; /* Color azul al pasar el mouse */
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
@@ -329,13 +331,15 @@ td {
     cursor: pointer;
 }
 
-#filtro-localidad:hover {
+#filtro-localidad:hover,
+#filtro-estado-servicio:hover {
     border-color: #3b82f6; /* Color azul al pasar el mouse */
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* Estilizar el select múltiple nativo */
-#filtro-localidad {
+#filtro-localidad,
+#filtro-estado-servicio {
     width: 100%;
     min-width: 220px;
     border:  1px solid #ddd;
@@ -449,6 +453,20 @@ td {
 .cliente-badge-suspendido.decision-usuario {
     background: #fef3c7;
     color: #92400e;
+}
+
+.cliente-badge-baja {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #991b1b;
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
 }
 
 .cliente-ip {

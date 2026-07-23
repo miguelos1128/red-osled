@@ -68,6 +68,7 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         // 1. OBTENER DATOS DEL USUARIO DESDE LA URL (req.query)
         // El frontend nos enviará algo como: ?rol=3&localidades=1,2
         const rol = parseInt(req.query.rol);
+        const filtroEstadoServicio = String(req.query.estado_servicio || 'todos_activos');
         
         // Convertimos el texto "1,2" en un arreglo real de números: [1, 2]
         let localidadesArray = [];
@@ -87,11 +88,35 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
                 AND bs.estado = 'Activo'
             LEFT JOIN pagos p ON c.id = p.cliente_id 
                 AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
-            WHERE LOWER(COALESCE(c.estado_servicio, '')) <> 'baja'
         `;
 
         // Arreglo para guardar los valores que reemplazaremos en los signos de interrogación (?)
         let queryParams = [];
+        const condiciones = [];
+
+        switch (filtroEstadoServicio) {
+            case 'activo':
+                condiciones.push("LOWER(COALESCE(c.estado_servicio, '')) = 'activo'");
+                break;
+            case 'suspendidos':
+                condiciones.push("LOWER(COALESCE(c.estado_servicio, '')) = 'suspendido'");
+                break;
+            case 'falta_pago':
+                condiciones.push("LOWER(COALESCE(c.estado_servicio, '')) = 'suspendido'");
+                condiciones.push("bs.tipo_evento = 'falta_pago'");
+                break;
+            case 'decision_usuario':
+                condiciones.push("LOWER(COALESCE(c.estado_servicio, '')) = 'suspendido'");
+                condiciones.push("bs.tipo_evento = 'decision_usuario'");
+                break;
+            case 'baja':
+                condiciones.push("LOWER(COALESCE(c.estado_servicio, '')) = 'baja'");
+                break;
+            case 'todos_activos':
+            default:
+                condiciones.push("LOWER(COALESCE(c.estado_servicio, '')) <> 'baja'");
+                break;
+        }
 
         // 3. APLICAR EL FILTRO DE LOCALIDADES (LA LÓGICA DE ROLES)
         // Si es rol 3 (Supervisor) o rol 1 (Recepcionista) y tiene localidades asignadas:
@@ -100,10 +125,14 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
             const placeholders = localidadesArray.map(() => '?').join(',');
             
             // Agregamos la condición a la consulta
-            query += ` AND c.localidad_id IN (${placeholders}) `;
+            condiciones.push(`c.localidad_id IN (${placeholders})`);
             
             // Guardamos los números de las localidades para que la base de datos los procese de forma segura
             queryParams = [...localidadesArray]; 
+        }
+
+        if (condiciones.length > 0) {
+            query += ` WHERE ${condiciones.join(' AND ')} `;
         }
 
         // 4. CERRAR LA CONSULTA

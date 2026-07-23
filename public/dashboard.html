@@ -47,6 +47,16 @@
                         </select>
                     </div>
                     <div class="filtro-localidad-wrapper">
+                        <select id="filtro-estado-servicio">
+                            <option value="todos_activos">Todos activos</option>
+                            <option value="activo">Activos</option>
+                            <option value="suspendidos">Suspendidos</option>
+                            <option value="falta_pago">Suspendido: Falta de Pago</option>
+                            <option value="decision_usuario">Suspendido: Decisión del Usuario</option>
+                            <option value="baja">Dados de baja</option>
+                        </select>
+                    </div>
+                    <div class="filtro-localidad-wrapper">
                         <select id="filtro-localidad" multiple size="1">
                             <option value="todas">Todas las Localidades</option>
                         </select>
@@ -588,9 +598,11 @@
         const usuarioJson = sessionStorage.getItem('usuario');
         const buscadorInput = document.getElementById('buscador-nombre');
         const selectLocalidad = document.getElementById('filtro-localidad');
+        const selectEstadoServicio = document.getElementById('filtro-estado-servicio');
         const inputBuscador = document.getElementById('buscador-nombre');
         let configLocalidades = {};
         let perfilUsuario ="";
+        let filtroLocalidadTodasSeleccionadoAntes = false;
 
 
         if (!usuarioJson) {
@@ -681,9 +693,10 @@
             // 2. Construimos la URL con los parámetros del usuario
             // Convertimos su arreglo de localidades [1, 2] a un texto "1,2"
             const localidadesTexto = usuario.localidades.join(',');
+            const filtroEstado = encodeURIComponent(selectEstadoServicio?.value || 'todos_activos');
             
             // Armamos la URL final: /api/admin/clientes-historial?rol=3&localidades=1,2
-            const urlFiltro = `${urlBase}/api/admin/clientes-historial?rol=${usuario.rol}&localidades=${localidadesTexto}`;
+            const urlFiltro = `${urlBase}/api/admin/clientes-historial?rol=${usuario.rol}&localidades=${localidadesTexto}&estado_servicio=${filtroEstado}`;
             
             try {
                 // 3. Hacemos la petición a nuestra nueva URL inteligente
@@ -777,6 +790,8 @@
                     card.setAttribute('data-corte', cliente.dia_pago);
                     card.setAttribute('data-ip', cliente.direccion_ip);
                     card.setAttribute('data-fecha', cliente.fecha_instalacion || "2000-01-01");
+                    card.setAttribute('data-estado-servicio', (cliente.estado_servicio || '').toLowerCase());
+                    card.setAttribute('data-tipo-suspension', cliente.tipo_suspension_activa || '');
                     const badgeRentaCard = Number(cliente.es_renta) === 1
                         ? '<span class="cliente-badge-renta">RENTA</span>'
                         : '';
@@ -784,6 +799,9 @@
                     const tipoSuspensionCard = cliente.tipo_suspension_activa || '';
                     const badgeSuspendidoCard = estadoServicioCard === 'suspendido'
                         ? `<span class="cliente-badge-suspendido ${tipoSuspensionCard === 'decision_usuario' ? 'decision-usuario' : 'falta-pago'}">Suspendido</span>`
+                        : '';
+                    const badgeBajaCard = estadoServicioCard === 'baja'
+                        ? '<span class="cliente-badge-baja">Baja</span>'
                         : '';
 
                     card.innerHTML = `
@@ -793,6 +811,7 @@
                                     <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
                                     ${badgeRentaCard}
                                     ${badgeSuspendidoCard}
+                                    ${badgeBajaCard}
                                 </div>
                                 <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
                             </div>
@@ -831,6 +850,7 @@
                 activarScrollSincronizado();
                 // 3. Imprimimos el total final en nuestro nuevo elemento HTML
                 document.getElementById('contador-clientes').textContent = clientesVisibles;
+                filtrarTarjetasAdmin();
             } catch (error) {
                 console.error("Error cargando clientes:", error);
             }
@@ -841,94 +861,94 @@
             aplicarFiltros();
             // Primero, cargamos los clientes al iniciar la página
             cargarVistaAdminClientes();
-
-            // LÓGICA DEL BUSCADOR EN TIEMPO REAL
-            
-
-            inputBuscador.addEventListener('input', function(e) {
-                // Obtenemos el texto que escribió el usuario en minúsculas
-                const terminoBusqueda = e.target.value.toLowerCase();
-                
-                // Seleccionamos todas las tarjetas que están en pantalla
-                const tarjetas = document.querySelectorAll('.cliente-card');
-
-                tarjetas.forEach(tarjeta => {
-                    // Buscamos el nombre específico dentro de esa tarjeta
-                    const nombreCliente = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
-
-                    // Si el nombre incluye lo que escribimos, mostramos la tarjeta, si no, la ocultamos
-                    if (nombreCliente.includes(terminoBusqueda)) {
-                        tarjeta.classList.remove('hidden'); 
-                    } else {
-                        tarjeta.classList.add('hidden');
-                    }
-                });
-            });
         });
 
         
 
+        function obtenerOpcionesFiltroLocalidad() {
+            return Array.from(selectLocalidad.options || []);
+        }
+
+        function obtenerOpcionesLocalidadReales() {
+            return obtenerOpcionesFiltroLocalidad().filter(opcion => opcion.value !== 'todas');
+        }
+
+        function obtenerLocalidadesSeleccionadas() {
+            return obtenerOpcionesLocalidadReales()
+                .filter(opcion => opcion.selected)
+                .map(opcion => String(opcion.value));
+        }
+
+        function actualizarSeleccionTodasLocalidades() {
+            const opcionTodas = selectLocalidad.querySelector('option[value="todas"]');
+            const opcionesReales = obtenerOpcionesLocalidadReales();
+            if (!opcionTodas) return;
+
+            const todasSeleccionadas = opcionesReales.length > 0 && opcionesReales.every(opcion => opcion.selected);
+            opcionTodas.selected = todasSeleccionadas;
+            filtroLocalidadTodasSeleccionadoAntes = todasSeleccionadas;
+        }
+
+        function inicializarFiltroTodasLocalidades() {
+            obtenerOpcionesLocalidadReales().forEach(opcion => {
+                opcion.selected = true;
+            });
+            actualizarSeleccionTodasLocalidades();
+        }
+
+        function filtrarTarjetasAdmin() {
+            const textoBusqueda = buscadorInput.value.toLowerCase().trim();
+            const opcionesReales = obtenerOpcionesLocalidadReales();
+            const localidadesSeleccionadas = obtenerLocalidadesSeleccionadas();
+            const filtroLocalidadesListo = opcionesReales.length > 0;
+            const tarjetas = document.querySelectorAll('.cliente-card');
+            let clientesVisibles = 0;
+
+            tarjetas.forEach(tarjeta => {
+                const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+                const idLocalidadTarjeta = String(tarjeta.getAttribute('data-localidad') || '').trim();
+                const coincideNombre = !textoBusqueda || nombre.includes(textoBusqueda);
+                const coincideLocalidad = !filtroLocalidadesListo || localidadesSeleccionadas.includes(idLocalidadTarjeta);
+
+                if (coincideNombre && coincideLocalidad) {
+                    tarjeta.classList.remove('hidden');
+                    clientesVisibles++;
+                } else {
+                    tarjeta.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('contador-clientes').textContent = clientesVisibles;
+        }
+
+        function manejarCambioFiltroLocalidad() {
+            buscadorInput.value = '';
+
+            const opcionTodas = selectLocalidad.querySelector('option[value="todas"]');
+            const opcionesReales = obtenerOpcionesLocalidadReales();
+            const todasSeleccionadaAhora = Boolean(opcionTodas?.selected);
+
+            if (opcionTodas && todasSeleccionadaAhora !== filtroLocalidadTodasSeleccionadoAntes) {
+                opcionesReales.forEach(opcion => {
+                    opcion.selected = todasSeleccionadaAhora;
+                });
+                filtroLocalidadTodasSeleccionadoAntes = todasSeleccionadaAhora;
+            } else {
+                actualizarSeleccionTodasLocalidades();
+            }
+
+            filtrarTarjetasAdmin();
+        }
+
         function aplicarFiltros(){
-            // 1. Creamos la variable que llevará la cuenta
-            
-            // 1. EVENTO: CUANDO ESCRIBES UN NOMBRE
-             buscadorInput.addEventListener('input', function(e) {
-                    // Resetear el filtro de localidad a "todas"
-                    selectLocalidad.value = 'todas';
-                    
-                    const textoBusqueda = e.target.value.toLowerCase().trim();
-                    const tarjetas = document.querySelectorAll('.cliente-card');
-                    let clientesVisibles = 0;
+            buscadorInput.addEventListener('input', function() {
+                filtrarTarjetasAdmin();
+            });
 
-                    tarjetas.forEach(tarjeta => {
-                        const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
-                        
-                        // Filtramos SOLO por el nombre
-                        if (nombre.includes(textoBusqueda)) {
-                            tarjeta.classList.remove('hidden');
-                            clientesVisibles++;
-                        } else {
-                            tarjeta.classList.add('hidden');
-                        }
-                    });
-                     // 3. Imprimimos el total final en nuestro nuevo elemento HTML
-                    document.getElementById('contador-clientes').textContent = clientesVisibles;
-                });
-
-            // 2. EVENTO: CUANDO SELECCIONAS UNA LOCALIDAD
-            selectLocalidad.addEventListener('change', function(e) {
-                // Limpiar el texto del buscador de nombre
+            selectLocalidad.addEventListener('change', manejarCambioFiltroLocalidad);
+            selectEstadoServicio.addEventListener('change', function() {
                 buscadorInput.value = '';
-                
-                            // NUEVO: En lugar de un solo valor, obtenemos una lista (Array) de todo lo seleccionado
-                // Convertimos las opciones seleccionadas a un arreglo y extraemos solo su "value"
-                const opcionesSeleccionadas = Array.from(e.target.selectedOptions).map(opcion => opcion.value);
-                
-               // const localidadSeleccionada = String(e.target.value).trim();
-                const tarjetas = document.querySelectorAll('.cliente-card');
-                let clientesVisibles = 0;
-
-                tarjetas.forEach(tarjeta => {
-                    let idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
-                    idLocalidadTarjeta = idLocalidadTarjeta ? String(idLocalidadTarjeta).trim() : 'null';
-
-                    // LÓGICA DE FILTRADO MÚLTIPLE:
-                    // 1. ¿El usuario seleccionó "todas"? o ¿desmarcó todo (lista vacía)?
-                    const mostrarTodas = opcionesSeleccionadas.includes("todas") || opcionesSeleccionadas.length === 0;
-                    
-                    // 2. ¿El ID de la localidad de esta tarjeta está dentro de la lista que eligió el usuario?
-                    const coincideLocalidad = opcionesSeleccionadas.includes(idLocalidadTarjeta);
-
-                    // Si cumple cualquiera de las dos condiciones, mostramos la tarjeta
-                    if (mostrarTodas || coincideLocalidad) {
-                        tarjeta.classList.remove('hidden');
-                        clientesVisibles++;
-                    } else {
-                        tarjeta.classList.add('hidden');
-                    }
-                });
-                // 3. Imprimimos el total final en nuestro nuevo elemento HTML
-                document.getElementById('contador-clientes').textContent = clientesVisibles;
+                cargarVistaAdminClientes();
             });
             activarScrollSincronizado();
         }
@@ -1045,6 +1065,7 @@
 
                
             });
+            inicializarFiltroTodasLocalidades();
         }
 
         // Ejecuta esta función al cargar el panel

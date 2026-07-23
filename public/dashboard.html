@@ -1301,7 +1301,7 @@
                             const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                             const ajustePendiente = parseFloat(item.monto_ajuste_pendiente) || 0;
                             const ajusteTexto = ajustePendiente > 0
-                                ? ` (saldo a favor -$${ajustePendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                                ? ` (saldo a favor -$${Math.floor(ajustePendiente).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })})`
                                 : '';
                             return `${item.mes} $${pendiente}${ajusteTexto}`;
                         }).join(', ')}</span>`
@@ -1587,7 +1587,7 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const ajusteAplicado = parseFloat(item.ajuste_aplicado) || 0;
                 const ajusteHtml = ajusteAplicado > 0
-                    ? `<small>Saldo a favor aplicado: $${ajusteAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>`
+                    ? `<small>Saldo a favor aplicado: $${Math.floor(ajusteAplicado).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</small>`
                     : '';
                 return `
                     <div class="resumen-pago-fila">
@@ -1638,7 +1638,7 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
             const pagosTexto = detalle
                 .map(p => {
                     const ajusteAplicado = parseFloat(p.ajuste_aplicado) || 0;
-                    const ajusteTexto = ajusteAplicado > 0 ? `\n   Saldo a favor aplicado: $${ajusteAplicado.toFixed(2)}` : '';
+                    const ajusteTexto = ajusteAplicado > 0 ? `\n   Saldo a favor aplicado: $${Math.floor(ajusteAplicado)}` : '';
                     return `${emojiMes} *${p.mes}:* $${p.monto}${ajusteTexto}`;
                 })
                 .join('\n');
@@ -1731,7 +1731,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const ajusteAplicado = parseFloat(item.ajuste_aplicado) || 0;
                 const ajusteTexto = ajusteAplicado > 0
-                    ? `<br><small>Saldo a favor aplicado: $${ajusteAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>`
+                    ? `<br><small>Saldo a favor aplicado: $${Math.floor(ajusteAplicado).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</small>`
                     : '';
                 const concepto = item.tipo === 'reconexion'
                     ? 'Reconexión'
@@ -1874,8 +1874,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const fechaInicio = new Date();
             const fechaFin = new Date(fechaInicio);
             fechaFin.setDate(fechaFin.getDate() + dias);
-            const montoAjuste = (costoMensual / 30) * dias;
-            const montoTexto = montoAjuste.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const montoAjuste = Math.floor((costoMensual / 30) * dias);
+            const montoTexto = montoAjuste.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
             preview.textContent =
                 `Inicio: ${fechaInicio.toLocaleDateString('es-MX')} | Fin: ${fechaFin.toLocaleDateString('es-MX')} | Compensación estimada: $${montoTexto}`;
@@ -1935,13 +1935,13 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                         const fechaCorteAvance = fechaFinObj && hoy > fechaFinObj ? fechaFinObj : hoy;
                         const diasTranscurridos = Math.max(0, Math.min(diasProgramados, Math.ceil((fechaCorteAvance - fechaInicioObj) / msPorDia)));
                         const costoMensual = parseFloat(cliente.costo_mensual) || 0;
-                        const montoAcumulado = (costoMensual / 30) * diasTranscurridos;
+                        const montoAcumulado = Math.floor((costoMensual / 30) * diasTranscurridos);
                         const fechaFin = suspensionActiva.fecha_fin
                             ? fechaFinObj.toLocaleDateString('es-MX')
                             : 'pendiente';
                         const monto = parseFloat(suspensionActiva.monto_ajuste) || 0;
-                        const montoTexto = monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        const montoAcumuladoTexto = montoAcumulado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        const montoTexto = monto.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                        const montoAcumuladoTexto = montoAcumulado.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                         textoSuspension += ` | Regresa: ${fechaFin} | Avance: ${diasTranscurridos} de ${diasProgramados} días | Saldo acumulado: $${montoAcumuladoTexto} de $${montoTexto}`;
                     }
 
@@ -1970,7 +1970,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const diasCompensados = parseInt(estadoCuenta.dias_compensados) || 0;
             const ajustes = parseFloat(estadoCuenta.monto_ajustes) || 0;
             const ajusteTexto = ajustes > 0
-                ? ` | Saldo a favor: $${ajustes.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                ? ` | Saldo a favor: $${Math.floor(ajustes).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                 : '';
 
             document.getElementById('servicio-info-cuenta').textContent =
@@ -2131,7 +2131,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     mensaje += `\nDías compensados: ${result.dias_compensados}`;
                 }
                 if (result.monto_ajuste > 0) {
-                    mensaje += `\nSaldo a favor generado: $${parseFloat(result.monto_ajuste).toFixed(2)}`;
+                    mensaje += `\nSaldo a favor generado: $${Math.floor(parseFloat(result.monto_ajuste))}`;
                 }
                 alert(mensaje);
                 abrirDetallesCliente(clienteDetalleActualId);
@@ -2252,7 +2252,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const mesesPendientes = estadoCuenta.meses_adeudados || [];
 
                 const adeudoFormateado = adeudoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const saldoFormateado = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const saldoFormateado = Math.floor(saldoFavor).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 const pagadoFormateado = totalPagadoHistoricoNume.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 document.getElementById('detalle-total-pendiente').textContent = adeudoPendiente > 0 ? `$${adeudoFormateado}` : `$0.00`;
                 document.getElementById('detalle-total-pagado').textContent = `$${pagadoFormateado}`;
@@ -2262,7 +2262,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const ajustePendiente = parseFloat(item.monto_ajuste_pendiente) || 0;
                     const ajusteTexto = ajustePendiente > 0
-                        ? ` (saldo a favor -$${ajustePendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                        ? ` (saldo a favor -$${Math.floor(ajustePendiente).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })})`
                         : '';
                     return `${item.mes} $${pendiente}${ajusteTexto}`;
                 }).join(', ');

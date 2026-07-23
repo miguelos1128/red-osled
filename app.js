@@ -484,7 +484,7 @@ function calcularDiasEntre(fechaInicio, fechaFin = new Date()) {
 function calcularMontoAjuste(costoMensual, diasCompensados) {
     const costo = parseFloat(costoMensual) || 0;
     const dias = parseInt(diasCompensados) || 0;
-    return Number(((costo / 30) * dias).toFixed(2));
+    return Math.floor((costo / 30) * dias);
 }
 
 async function consultarBitacoraServicio(ejecutor, clienteId) {

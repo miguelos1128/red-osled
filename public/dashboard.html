@@ -125,8 +125,11 @@
             <div id="resultado-busqueda" class="hidden">
                 <div class="card-pago">
                     <div class="card-header">
-                        <h4 id="res-nombre"></h4>
-                        <span id="res-ip" class="badge-ip"></span>
+                        <div>
+                            <h4 id="res-nombre"></h4>
+                            <span id="res-ip" class="badge-ip"></span>
+                        </div>
+                        <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
                     </div>
                     <div class="card-body">
                         <p><strong>Fecha de pago:</strong> <span id="res-dia"></span></p>
@@ -753,6 +756,11 @@
                     const badgeRentaCard = Number(cliente.es_renta) === 1
                         ? '<span class="cliente-badge-renta">RENTA</span>'
                         : '';
+                    const estadoServicioCard = (cliente.estado_servicio || '').toLowerCase();
+                    const tipoSuspensionCard = cliente.tipo_suspension_activa || '';
+                    const badgeSuspendidoCard = estadoServicioCard === 'suspendido'
+                        ? `<span class="cliente-badge-suspendido ${tipoSuspensionCard === 'decision_usuario' ? 'decision-usuario' : 'falta-pago'}">Suspendido</span>`
+                        : '';
 
                     card.innerHTML = `
                         <div class="cliente-header">
@@ -760,6 +768,7 @@
                                 <div class="cliente-nombre-linea">
                                     <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
                                     ${badgeRentaCard}
+                                    ${badgeSuspendidoCard}
                                 </div>
                                 <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
                             </div>
@@ -1216,6 +1225,32 @@
         }
 
         // 2. Al hacer clic en un cliente de la lista
+        function configurarEstadoServicioResultado(cliente, servicio) {
+            const badge = document.getElementById('res-estado-servicio');
+            const estadoServicio = (cliente.estado_servicio || '').toLowerCase();
+            const suspensionActiva = servicio?.suspension_activa || null;
+            const tipoSuspension = suspensionActiva?.tipo_evento || null;
+
+            badge.className = 'badge-servicio-resultado';
+
+            if (estadoServicio === 'suspendido' || suspensionActiva) {
+                if (tipoSuspension === 'decision_usuario') {
+                    badge.textContent = 'Suspendido: Decisión del Usuario';
+                    badge.classList.add('servicio-decision-usuario');
+                } else if (tipoSuspension === 'falta_pago') {
+                    badge.textContent = 'Suspendido: Falta de Pago';
+                    badge.classList.add('servicio-falta-pago');
+                } else {
+                    badge.textContent = 'Suspendido';
+                    badge.classList.add('servicio-falta-pago');
+                }
+                return;
+            }
+
+            badge.textContent = 'Activo';
+            badge.classList.add('servicio-activo');
+        }
+
         async function seleccionarCliente(cliente) {
             
             // LIMPIEZA INICIAL
@@ -1247,6 +1282,7 @@
                 const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 document.getElementById('res-costo').innerText = costoFormateado;
                 document.getElementById('res-dia').textContent = cliente.dia_pago;
+                configurarEstadoServicioResultado(data.cliente || cliente, estadoCuenta.servicio);
 
                 document.getElementById('btn-ver-pagos').onclick = function() {
                     abrirHistorial(cliente.id, cliente.nombre_completo);

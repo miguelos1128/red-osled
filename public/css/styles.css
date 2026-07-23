@@ -435,6 +435,27 @@ td {
     line-height: 1;
 }
 
+.cliente-badge-suspendido {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.cliente-badge-suspendido.falta-pago {
+    background: #fde2df;
+    color: #b42318;
+}
+
+.cliente-badge-suspendido.decision-usuario {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 .cliente-ip {
     font-size: 0.85rem;
     font-family: monospace;
@@ -1299,6 +1320,41 @@ td {
 .estado-activo { background-color: #27ae60; }
 .estado-suspendido { background-color: #f39c12; }
 .estado-retirado { background-color: #e74c3c; }
+
+.card-pago .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.badge-servicio-resultado {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.badge-servicio-resultado.servicio-activo {
+    background: #e8f7ef;
+    color: #1e8e3e;
+}
+
+.badge-servicio-resultado.servicio-falta-pago {
+    background: #fde2df;
+    color: #b42318;
+}
+
+.badge-servicio-resultado.servicio-decision-usuario {
+    background: #fef3c7;
+    color: #92400e;
+}
 
 .badge-renta {
     padding: 6px 12px;

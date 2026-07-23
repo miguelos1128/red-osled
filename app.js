@@ -79,9 +79,12 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         // (Dejamos un espacio antes del GROUP BY para poder insertar el WHERE si es necesario)
         let query = `
             SELECT 
-                c.id, c.nombre_completo, c.telefono, c.es_renta, fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
+                c.id, c.nombre_completo, c.telefono, c.es_renta, c.estado_servicio, bs.tipo_evento AS tipo_suspension_activa,
+                fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
                 IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
             FROM clientes c
+            LEFT JOIN bitacora_servicio bs ON bs.cliente_id = c.id
+                AND bs.estado = 'Activo'
             LEFT JOIN pagos p ON c.id = p.cliente_id 
                 AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
         `;
@@ -105,7 +108,8 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         // 4. CERRAR LA CONSULTA
         // Agregamos la agrupación y el orden sin importar si filtramos o no
         query += `
-            GROUP BY c.id, c.nombre_completo, c.telefono, c.es_renta, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id
+            GROUP BY c.id, c.nombre_completo, c.telefono, c.es_renta, c.estado_servicio, bs.tipo_evento,
+                c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id
             ORDER BY c.dia_pago;
         `;
 

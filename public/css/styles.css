@@ -1417,6 +1417,16 @@ td {
     padding: 10px;
 }
 
+.servicio-observaciones {
+    grid-column: 1 / -1;
+    min-height: 82px;
+    resize: vertical;
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: inherit;
+}
+
 .btn-suspender-servicio {
     background: #d97706;
     color: white;
@@ -1556,6 +1566,15 @@ td {
     border-top: 1px solid #e5e7eb;
     color: #4b5563;
     white-space: pre-wrap;
+}
+
+.bitacora-observaciones span {
+    display: block;
+    margin-bottom: 4px;
+    color: #7f8c8d;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
 .bitacora-vacia {

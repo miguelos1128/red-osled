@@ -487,9 +487,37 @@ function calcularMontoAjuste(costoMensual, diasCompensados) {
     return Math.floor((costo / 30) * dias);
 }
 
+let columnaObservacionesBitacora = null;
+let columnaObservacionesBitacoraCargada = false;
+
+async function obtenerColumnaObservacionesBitacora(ejecutor) {
+    if (columnaObservacionesBitacoraCargada) {
+        return columnaObservacionesBitacora;
+    }
+
+    const [columnas] = await ejecutor.query('SHOW COLUMNS FROM bitacora_servicio');
+    const columnaEncontrada = columnas.find(columna => {
+        const nombre = String(columna.Field || '').toLowerCase().trim();
+        return nombre === 'observaciones' || nombre === 'observacion';
+    });
+    columnaObservacionesBitacora = columnaEncontrada ? columnaEncontrada.Field : null;
+    columnaObservacionesBitacoraCargada = true;
+
+    return columnaObservacionesBitacora;
+}
+
+function escaparIdentificadorMysql(nombre) {
+    return `\`${String(nombre).replace(/`/g, '``')}\``;
+}
+
 async function consultarBitacoraServicio(ejecutor, clienteId) {
+    const columnaObservaciones = await obtenerColumnaObservacionesBitacora(ejecutor);
+    const selectObservaciones = columnaObservaciones
+        ? `b.${escaparIdentificadorMysql(columnaObservaciones)} AS observaciones,`
+        : 'NULL AS observaciones,';
+
     const [bitacora] = await ejecutor.query(
-        `SELECT b.*,
+        `SELECT b.*, ${selectObservaciones}
             COALESCE((
                 SELECT SUM(a.monto_aplicado)
                 FROM aplicaciones_ajustes_servicio a
@@ -807,7 +835,7 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
 
 app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
     const clienteId = req.params.id;
-    const { tipo_evento, dias_compensados, fecha_inicio, fecha_fin } = req.body;
+    const { tipo_evento, dias_compensados, fecha_inicio, fecha_fin, observaciones } = req.body;
     const tiposValidos = ['falta_pago', 'decision_usuario', 'falla_tecnica'];
 
     try {
@@ -827,10 +855,19 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
         }
 
         if (tipo_evento === 'falla_tecnica') {
-            const dias = parseInt(dias_compensados) || (fecha_inicio && fecha_fin ? calcularDiasEntre(fecha_inicio, fecha_fin) : 0);
+            const dias = parseInt(dias_compensados) || 0;
+            const observacionesLimpias = (observaciones || '').trim();
+
+            if (!fecha_inicio || !fecha_fin) {
+                return res.status(400).json({ success: false, error: 'Captura fecha inicio y fecha fin de la falla tecnica.' });
+            }
 
             if (dias <= 0) {
                 return res.status(400).json({ success: false, error: 'Indica los días compensados de la falla técnica.' });
+            }
+
+            if (!observacionesLimpias) {
+                return res.status(400).json({ success: false, error: 'Agrega observaciones sobre la falla tecnica.' });
             }
 
             const [clienteRows] = await db.query(
@@ -843,15 +880,28 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
             }
 
             const montoAjuste = calcularMontoAjuste(clienteRows[0].costo_mensual, dias);
+            const columnaObservaciones = await obtenerColumnaObservacionesBitacora(db);
 
-            await db.query(
+            if (!columnaObservaciones) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'No existe la columna observaciones en bitacora_servicio.'
+                });
+            }
+
+            const [resultadoInsert] = await db.query(
                 `INSERT INTO bitacora_servicio
-                    (cliente_id, tipo_evento, fecha_inicio, fecha_fin, dias_compensados, monto_ajuste, estado)
-                 VALUES (?, ?, ?, ?, ?, ?, 'Finalizado')`,
-                [clienteId, tipo_evento, fecha_inicio || new Date(), fecha_fin || new Date(), dias, montoAjuste]
+                    (cliente_id, tipo_evento, fecha_inicio, fecha_fin, dias_compensados, monto_ajuste, estado, ${escaparIdentificadorMysql(columnaObservaciones)})
+                 VALUES (?, ?, ?, ?, ?, ?, 'Finalizado', ?)`,
+                [clienteId, tipo_evento, fecha_inicio, fecha_fin, dias, montoAjuste, observacionesLimpias]
             );
 
-            return res.json({ success: true, message: 'Falla técnica registrada.' });
+            return res.json({
+                success: true,
+                message: 'Falla tecnica registrada.',
+                bitacora_id: resultadoInsert.insertId,
+                observaciones_guardadas: observacionesLimpias
+            });
         }
 
         if (tipo_evento === 'decision_usuario') {
@@ -1429,3 +1479,5 @@ app.get('/cliente-completo/:id', async (req, res) => {
         res.status(500).json({ error: 'Error interno del servidor al consultar la base de datos' });
     }
 }); */
+
+

@@ -16,3 +16,6 @@ CREATE TABLE IF NOT EXISTS aplicaciones_ajustes_servicio (
     CONSTRAINT fk_ajustes_pago
         FOREIGN KEY (pago_id) REFERENCES pagos(id)
 );
+
+ALTER TABLE clientes
+MODIFY COLUMN estado_servicio ENUM('activo', 'suspendido', 'baja') NOT NULL DEFAULT 'activo';

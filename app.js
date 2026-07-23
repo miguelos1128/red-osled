@@ -87,6 +87,7 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
                 AND bs.estado = 'Activo'
             LEFT JOIN pagos p ON c.id = p.cliente_id 
                 AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
+            WHERE LOWER(COALESCE(c.estado_servicio, '')) <> 'baja'
         `;
 
         // Arreglo para guardar los valores que reemplazaremos en los signos de interrogación (?)
@@ -99,7 +100,7 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
             const placeholders = localidadesArray.map(() => '?').join(',');
             
             // Agregamos la condición a la consulta
-            query += ` WHERE c.localidad_id IN (${placeholders}) `;
+            query += ` AND c.localidad_id IN (${placeholders}) `;
             
             // Guardamos los números de las localidades para que la base de datos los procese de forma segura
             queryParams = [...localidadesArray]; 
@@ -229,8 +230,9 @@ app.get('/api/buscar-clientes', async (req, res) => {
         
         // 2. Preparamos la consulta base
         let query = `
-            SELECT id, nombre_completo, telefono, direccion_ip, costo_mensual, fecha_instalacion, dia_pago 
+            SELECT id, nombre_completo, telefono, direccion_ip, costo_mensual, fecha_instalacion, dia_pago, estado_servicio
             FROM clientes  WHERE  (nombre_completo LIKE ? OR direccion_ip LIKE ? )
+              AND LOWER(COALESCE(estado_servicio, '')) <> 'baja'
             `;
         let params = [`%${term}%`, `%${term}%`]
 
@@ -1040,6 +1042,67 @@ app.post('/api/clientes/:id/reactivar-servicio', async (req, res) => {
     } catch (error) {
         console.error('Error al reactivar servicio:', error);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/clientes/:id/dar-baja', async (req, res) => {
+    const clienteId = req.params.id;
+    const connection = await db.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        const [clienteRows] = await connection.query(
+            'SELECT id, nombre_completo, estado_servicio FROM clientes WHERE id = ? FOR UPDATE',
+            [clienteId]
+        );
+
+        if (clienteRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+        }
+
+        const [activos] = await connection.query(
+            `SELECT id, tipo_evento
+             FROM bitacora_servicio
+             WHERE cliente_id = ? AND estado = 'Activo' AND tipo_evento = 'falta_pago'
+             ORDER BY id DESC
+             LIMIT 1`,
+            [clienteId]
+        );
+
+        if (activos.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'Solo se puede dar de baja desde una suspensión activa por falta de pago.'
+            });
+        }
+
+        await connection.query(
+            `UPDATE bitacora_servicio
+             SET fecha_fin = NOW(), dias_compensados = 0, monto_ajuste = 0, estado = 'Finalizado'
+             WHERE id = ?`,
+            [activos[0].id]
+        );
+
+        await connection.query(
+            'UPDATE clientes SET estado_servicio = ? WHERE id = ?',
+            ['baja', clienteId]
+        );
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: 'Cliente dado de baja correctamente.'
+        });
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error al dar de baja cliente:', error);
+        res.status(500).json({ success: false, error: error.message });
+    } finally {
+        connection.release();
     }
 });
 

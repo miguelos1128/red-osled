@@ -140,7 +140,7 @@
                         </div>
                     </div>
                     <div class="grupo-botones-pago">
-                        <button onclick="prepararPago()" class="btn-pago button">Seleccionar Mes a Pagar</button>
+                        <button id="btn-preparar-pago" onclick="prepararPago()" class="btn-pago button">Seleccionar Mes a Pagar</button>
                         <button id="btn-ver-pagos" class="btn-pago button">Ver Pagos</button>
                     </div>
                 </div>
@@ -503,6 +503,7 @@
                         <div id="servicio-suspendido-controles" class="servicio-controles hidden">
                             <p id="servicio-suspension-detalle"></p>
                             <button class="button btn-reactivar-servicio" onclick="reactivarServicioCliente()">Reactivar Servicio</button>
+                            <button class="button btn-baja-servicio hidden" onclick="darBajaClienteSuspendido()">Dar de baja</button>
                         </div>
                     </div>
                 </div>
@@ -1189,6 +1190,8 @@
         }
 
         let clienteSeleccionado = null;
+        let estadoCuentaResultadoActual = null;
+        let suspensionResultadoActual = null;
 
         // 1. Controlador inteligente de búsqueda (Alterna entre Nombre e IP)
         async function controladorBusqueda(tipo) {
@@ -1274,11 +1277,22 @@
             badge.classList.add('servicio-activo');
         }
 
+        function configurarBotonPagoResultado() {
+            const boton = document.getElementById('btn-preparar-pago');
+            if (!boton) return;
+
+            const esSuspensionFaltaPago = suspensionResultadoActual?.tipo_evento === 'falta_pago';
+            boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Seleccionar Mes a Pagar';
+        }
+
         async function seleccionarCliente(cliente) {
             
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
             clienteSeleccionado = cliente;
+            estadoCuentaResultadoActual = null;
+            suspensionResultadoActual = null;
+            configurarBotonPagoResultado();
             
             // Limpiar las listas flotantes
             document.getElementById('sugerenciasNombre').innerHTML = '';
@@ -1298,6 +1312,8 @@
                 if (!response.ok) throw new Error("Error al consultar estado de cuenta");
                 const data = await response.json();
                 const estadoCuenta = data.estado_cuenta;
+                estadoCuentaResultadoActual = estadoCuenta;
+                suspensionResultadoActual = estadoCuenta?.servicio?.suspension_activa || null;
 
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
@@ -1306,6 +1322,7 @@
                 document.getElementById('res-costo').innerText = costoFormateado;
                 document.getElementById('res-dia').textContent = cliente.dia_pago;
                 configurarEstadoServicioResultado(data.cliente || cliente, estadoCuenta.servicio);
+                configurarBotonPagoResultado();
 
                 document.getElementById('btn-ver-pagos').onclick = function() {
                     abrirHistorial(cliente.id, cliente.nombre_completo);
@@ -1478,9 +1495,73 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
 
         
         // 3. Abrir el modal de pago
+        function esResultadoSuspendidoPorFaltaPago() {
+            return suspensionResultadoActual?.tipo_evento === 'falta_pago';
+        }
+
+        async function cobrarReactivacionDesdeResultado() {
+            if (!clienteSeleccionado) return;
+
+            const adeudoMensual = parseFloat(estadoCuentaResultadoActual?.adeudo_mensual) || parseFloat(estadoCuentaResultadoActual?.adeudo_actual) || 0;
+            const minimoReactivacion = adeudoMensual;
+            const minimoTexto = minimoReactivacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            if (minimoReactivacion <= 0) {
+                alert('El cliente no tiene adeudo pendiente para cobrar desde esta vista.');
+                return;
+            }
+
+            const montoTexto = prompt(
+                `Monto recibido para reactivar el servicio.\n\nMínimo requerido: $${minimoTexto}`,
+                minimoReactivacion.toFixed(2)
+            );
+
+            if (montoTexto === null) return;
+
+            const montoRecibido = parseFloat(montoTexto.replace(/[^0-9.]/g, ''));
+            if (!montoRecibido || montoRecibido <= 0) {
+                alert('Captura un monto válido para reactivar.');
+                return;
+            }
+
+            if (montoRecibido < minimoReactivacion) {
+                alert(`Para reactivar el servicio debes cobrar al menos $${minimoTexto}.`);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${urlBase}/api/clientes/${clienteSeleccionado.id}/reactivar-con-pago`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        usuarioId: idCobrador,
+                        montoRecibido
+                    })
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert(result.error || 'No se pudo reactivar el servicio.');
+                    return;
+                }
+
+                document.getElementById('resultado-busqueda').classList.add('hidden');
+                mostrarResumenPagoExitoso(result.detalle || []);
+                cargarVistaAdminClientes();
+            } catch (error) {
+                console.error('Error reactivando servicio desde resultado:', error);
+                alert('No se pudo conectar con el servidor.');
+            }
+        }
+
         function prepararPago() {
 
             if (!clienteSeleccionado) return;
+
+            if (esResultadoSuspendidoPorFaltaPago()) {
+                cobrarReactivacionDesdeResultado();
+                return;
+            }
 
             document.getElementById('modal-nombre-cliente').innerText = clienteSeleccionado.nombre_completo;
             
@@ -1939,7 +2020,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
         function formatearTipoEventoServicio(tipo) {
             const etiquetas = {
-                falta_pago: 'Falta de Pago',
+                falta_pago: 'Falta de Pago Suspendido',
                 decision_usuario: 'Decisión del Usuario',
                 falla_tecnica: 'Falla Técnica'
             };
@@ -1953,6 +2034,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const controlesSuspendido = document.getElementById('servicio-suspendido-controles');
             const detalleSuspension = document.getElementById('servicio-suspension-detalle');
             const btnReactivar = document.querySelector('.btn-reactivar-servicio');
+            const btnBajaServicio = document.querySelector('.btn-baja-servicio');
             const previewDecisionUsuario = document.getElementById('preview-decision-usuario');
             const previewFallaTecnica = document.getElementById('preview-falla-tecnica');
             const diasDecisionUsuarioInput = document.getElementById('dias-decision-usuario');
@@ -1970,7 +2052,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 controlesSuspendido.classList.remove('hidden');
                 const tipoSuspension = suspensionActiva?.tipo_evento || null;
                 estadoTexto.textContent = tipoSuspension
-                    ? `Suspendido: ${formatearTipoEventoServicio(tipoSuspension)}`
+                    ? ` ${formatearTipoEventoServicio(tipoSuspension)}`
                     : 'Suspendido';
                 if (tipoSuspension === 'falta_pago') {
                     gestionBox.classList.add('servicio-falta-pago');
@@ -1980,6 +2062,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 btnReactivar.textContent = suspensionActiva?.tipo_evento === 'falta_pago'
                     ? 'Cobrar y Reactivar'
                     : 'Reactivar Servicio';
+                btnBajaServicio.classList.toggle('hidden', suspensionActiva?.tipo_evento !== 'falta_pago');
 
                 if (suspensionActiva) {
                     const fechaInicio = new Date(suspensionActiva.fecha_inicio).toLocaleString('es-MX');
@@ -2011,6 +2094,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             } else {
                 controlesSuspendido.classList.add('hidden');
                 controlesActivo.classList.remove('hidden');
+                btnBajaServicio.classList.add('hidden');
                 estadoTexto.textContent = 'Activo';
                 detalleSuspension.textContent = '';
                 document.getElementById('select-tipo-suspension').value = 'falta_pago';
@@ -2281,6 +2365,45 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 cargarVistaAdminClientes();
             } catch (error) {
                 console.error('Error reactivando servicio:', error);
+                alert('No se pudo conectar con el servidor.');
+            }
+        }
+
+        async function darBajaClienteSuspendido() {
+            if (!clienteDetalleActualId || suspensionServicioActual?.tipo_evento !== 'falta_pago') return;
+
+            const nombreCliente = clienteSeleccionado?.nombre_completo || 'este cliente';
+            const adeudoActual = parseFloat(estadoCuentaDetalleActual?.adeudo_actual) || 0;
+            const adeudoTexto = adeudoActual.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const confirmar = confirm(
+                `¿Confirmas dar de baja a ${nombreCliente}?\n\n` +
+                `Adeudo registrado: $${adeudoTexto}\n\n` +
+                'El cliente dejará de aparecer en búsquedas y listados activos.'
+            );
+
+            if (!confirmar) return;
+
+            try {
+                const response = await fetch(`${urlBase}/api/clientes/${clienteDetalleActualId}/dar-baja`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert(result.error || 'No se pudo dar de baja al cliente.');
+                    return;
+                }
+
+                alert(result.message || 'Cliente dado de baja correctamente.');
+                document.getElementById('modal-detalles-cliente').classList.add('hidden');
+                document.getElementById('resultado-busqueda').classList.add('hidden');
+                clienteDetalleActualId = null;
+                suspensionServicioActual = null;
+                estadoCuentaDetalleActual = null;
+                cargarVistaAdminClientes();
+            } catch (error) {
+                console.error('Error dando de baja cliente:', error);
                 alert('No se pudo conectar con el servidor.');
             }
         }

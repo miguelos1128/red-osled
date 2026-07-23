@@ -1492,6 +1492,16 @@ td {
     border: none;
 }
 
+.btn-baja-servicio {
+    background: #dc2626;
+    color: white;
+    border: none;
+}
+
+.btn-baja-servicio:hover {
+    background: #b91c1c;
+}
+
 
 
 /* --- ESTILOS FASE 2: FINANZAS --- */

@@ -1325,6 +1325,18 @@ td {
     background: #fafafa;
 }
 
+.gestion-servicio-box.servicio-falta-pago {
+    border-color: #e74c3c;
+    border-left: 5px solid #e74c3c;
+    background: #fff7f6;
+}
+
+.gestion-servicio-box.servicio-decision-usuario {
+    border-color: #f59e0b;
+    border-left: 5px solid #f59e0b;
+    background: #fffaf0;
+}
+
 .gestion-servicio-header {
     display: flex;
     justify-content: space-between;
@@ -1345,10 +1357,30 @@ td {
     font-weight: bold;
 }
 
+.gestion-servicio-box.servicio-falta-pago .gestion-servicio-header span {
+    background: #fde2df;
+    color: #b42318;
+}
+
+.gestion-servicio-box.servicio-decision-usuario .gestion-servicio-header span {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 .servicio-info-cuenta,
 #servicio-suspension-detalle {
     margin: 6px 0 12px;
     color: #5f6b7a;
+}
+
+.servicio-preview {
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    border-left: 4px solid #1a73e8;
+    border-radius: 6px;
+    background: #eef5ff;
+    color: #18324a;
+    font-size: 14px;
 }
 
 .servicio-controles {

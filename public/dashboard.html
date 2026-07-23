@@ -490,8 +490,10 @@
                             <input type="number" id="dias-falla-tecnica" class="hidden" min="1" placeholder="Días sin servicio">
                             <input type="date" id="falla-fecha-inicio" class="hidden">
                             <input type="date" id="falla-fecha-fin" class="hidden">
+                            <input type="number" id="dias-decision-usuario" class="hidden" min="1" placeholder="Días fuera" oninput="actualizarPreviewDecisionUsuario()">
                             <button class="button btn-suspender-servicio" onclick="registrarEventoServicio()">Registrar evento</button>
                         </div>
+                        <p id="preview-decision-usuario" class="servicio-preview hidden"></p>
 
                         <div id="servicio-suspendido-controles" class="servicio-controles hidden">
                             <p id="servicio-suspension-detalle"></p>
@@ -1261,7 +1263,11 @@
                     const mesesTexto = mesesPendientes.length > 0
                         ? `<br><span style="color: #555; font-size: 0.9em;">Meses pendientes: ${mesesPendientes.map(item => {
                             const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                            return `${item.mes} $${pendiente}`;
+                            const ajustePendiente = parseFloat(item.monto_ajuste_pendiente) || 0;
+                            const ajusteTexto = ajustePendiente > 0
+                                ? ` (saldo a favor -$${ajustePendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                                : '';
+                            return `${item.mes} $${pendiente}${ajusteTexto}`;
                         }).join(', ')}</span>`
                         : '';
                     msgUltimoPago.innerHTML = `
@@ -1543,9 +1549,13 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                 const concepto = item.tipo === 'reconexion' ? 'Reconexión' : item.mes;
                 const subtitulo = item.tipo === 'reconexion' ? '' : ` <small>${tipoLabel}</small>`;
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const ajusteAplicado = parseFloat(item.ajuste_aplicado) || 0;
+                const ajusteHtml = ajusteAplicado > 0
+                    ? `<small>Saldo a favor aplicado: $${ajusteAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>`
+                    : '';
                 return `
                     <div class="resumen-pago-fila">
-                        <span>${concepto}${subtitulo}</span>
+                        <span>${concepto}${subtitulo}${ajusteHtml}</span>
                         <strong>$${montoFormateado}</strong>
                     </div>
                 `;
@@ -1590,7 +1600,11 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
             const emojiTiempo = hora < 12 ? '☀️' : hora < 19 ? '🌇' : '🌜';
            
             const pagosTexto = detalle
-                .map(p => `${emojiMes} *${p.mes}:* $${p.monto}`)
+                .map(p => {
+                    const ajusteAplicado = parseFloat(p.ajuste_aplicado) || 0;
+                    const ajusteTexto = ajusteAplicado > 0 ? `\n   Saldo a favor aplicado: $${ajusteAplicado.toFixed(2)}` : '';
+                    return `${emojiMes} *${p.mes}:* $${p.monto}${ajusteTexto}`;
+                })
                 .join('\n');
             const totalFormateadoWA = total.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
             const mensajeWhatsapp =
@@ -1679,12 +1693,16 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             // Generamos las filas de la tabla del ticket
             let filasTicket = detalle.map(item => {
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const ajusteAplicado = parseFloat(item.ajuste_aplicado) || 0;
+                const ajusteTexto = ajusteAplicado > 0
+                    ? `<br><small>Saldo a favor aplicado: $${ajusteAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>`
+                    : '';
                 const concepto = item.tipo === 'reconexion'
                     ? 'Reconexión'
                     : `${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}`.trim();
                 return `
                 <tr>
-                    <td style="padding: 5px 0;">${concepto}</td>
+                    <td style="padding: 5px 0;">${concepto}${ajusteTexto}</td>
                     <td align="right" style="padding: 5px 0;">$${montoFormateado}</td>
                 </tr>
             `;
@@ -1791,9 +1809,40 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         function actualizarFormularioSuspension() {
             const tipo = document.getElementById('select-tipo-suspension').value;
             const mostrarFalla = tipo === 'falla_tecnica';
+            const mostrarDecisionUsuario = tipo === 'decision_usuario';
             document.getElementById('dias-falla-tecnica').classList.toggle('hidden', !mostrarFalla);
             document.getElementById('falla-fecha-inicio').classList.toggle('hidden', !mostrarFalla);
             document.getElementById('falla-fecha-fin').classList.toggle('hidden', !mostrarFalla);
+            document.getElementById('dias-decision-usuario').classList.toggle('hidden', !mostrarDecisionUsuario);
+            document.getElementById('preview-decision-usuario').classList.toggle('hidden', !mostrarDecisionUsuario);
+            actualizarPreviewDecisionUsuario();
+        }
+
+        function actualizarPreviewDecisionUsuario() {
+            const tipo = document.getElementById('select-tipo-suspension').value;
+            const preview = document.getElementById('preview-decision-usuario');
+
+            if (tipo !== 'decision_usuario') {
+                preview.textContent = '';
+                return;
+            }
+
+            const dias = parseInt(document.getElementById('dias-decision-usuario').value);
+            const costoMensual = parseFloat(clienteSeleccionado?.costo_mensual) || 0;
+
+            if (!dias || dias <= 0) {
+                preview.textContent = 'Captura los días de ausencia para calcular fecha fin y saldo a favor.';
+                return;
+            }
+
+            const fechaInicio = new Date();
+            const fechaFin = new Date(fechaInicio);
+            fechaFin.setDate(fechaFin.getDate() + dias);
+            const montoAjuste = (costoMensual / 30) * dias;
+            const montoTexto = montoAjuste.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            preview.textContent =
+                `Inicio: ${fechaInicio.toLocaleDateString('es-MX')} | Fin: ${fechaFin.toLocaleDateString('es-MX')} | Compensación estimada: $${montoTexto}`;
         }
 
         function formatearTipoEventoServicio(tipo) {
@@ -1806,26 +1855,61 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         }
 
         function configurarGestionServicio(cliente, servicio) {
+            const gestionBox = document.getElementById('gestion-servicio-box');
             const estadoTexto = document.getElementById('servicio-estado-texto');
             const controlesActivo = document.getElementById('servicio-activo-controles');
             const controlesSuspendido = document.getElementById('servicio-suspendido-controles');
             const detalleSuspension = document.getElementById('servicio-suspension-detalle');
             const btnReactivar = document.querySelector('.btn-reactivar-servicio');
+            const previewDecisionUsuario = document.getElementById('preview-decision-usuario');
+            const diasDecisionUsuarioInput = document.getElementById('dias-decision-usuario');
             const suspensionActiva = servicio?.suspension_activa || null;
             const estadoServicio = (cliente.estado_servicio || '').toLowerCase();
             suspensionServicioActual = suspensionActiva;
+            gestionBox.classList.remove('servicio-falta-pago', 'servicio-decision-usuario');
+            previewDecisionUsuario.classList.add('hidden');
+            previewDecisionUsuario.textContent = '';
 
             if (estadoServicio === 'suspendido' || suspensionActiva) {
                 controlesActivo.classList.add('hidden');
                 controlesSuspendido.classList.remove('hidden');
-                estadoTexto.textContent = 'Suspendido';
+                const tipoSuspension = suspensionActiva?.tipo_evento || null;
+                estadoTexto.textContent = tipoSuspension
+                    ? `Suspendido: ${formatearTipoEventoServicio(tipoSuspension)}`
+                    : 'Suspendido';
+                if (tipoSuspension === 'falta_pago') {
+                    gestionBox.classList.add('servicio-falta-pago');
+                } else if (tipoSuspension === 'decision_usuario') {
+                    gestionBox.classList.add('servicio-decision-usuario');
+                }
                 btnReactivar.textContent = suspensionActiva?.tipo_evento === 'falta_pago'
                     ? 'Cobrar y Reactivar'
                     : 'Reactivar Servicio';
 
                 if (suspensionActiva) {
                     const fechaInicio = new Date(suspensionActiva.fecha_inicio).toLocaleString('es-MX');
-                    detalleSuspension.textContent = `${formatearTipoEventoServicio(suspensionActiva.tipo_evento)} desde ${fechaInicio}`;
+                    let textoSuspension = `${formatearTipoEventoServicio(suspensionActiva.tipo_evento)} desde ${fechaInicio}`;
+
+                    if (suspensionActiva.tipo_evento === 'decision_usuario') {
+                        const fechaInicioObj = new Date(suspensionActiva.fecha_inicio);
+                        const fechaFinObj = suspensionActiva.fecha_fin ? new Date(suspensionActiva.fecha_fin) : null;
+                        const hoy = new Date();
+                        const msPorDia = 1000 * 60 * 60 * 24;
+                        const diasProgramados = parseInt(suspensionActiva.dias_compensados) || 0;
+                        const fechaCorteAvance = fechaFinObj && hoy > fechaFinObj ? fechaFinObj : hoy;
+                        const diasTranscurridos = Math.max(0, Math.min(diasProgramados, Math.ceil((fechaCorteAvance - fechaInicioObj) / msPorDia)));
+                        const costoMensual = parseFloat(cliente.costo_mensual) || 0;
+                        const montoAcumulado = (costoMensual / 30) * diasTranscurridos;
+                        const fechaFin = suspensionActiva.fecha_fin
+                            ? fechaFinObj.toLocaleDateString('es-MX')
+                            : 'pendiente';
+                        const monto = parseFloat(suspensionActiva.monto_ajuste) || 0;
+                        const montoTexto = monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        const montoAcumuladoTexto = montoAcumulado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        textoSuspension += ` | Regresa: ${fechaFin} | Avance: ${diasTranscurridos} de ${diasProgramados} días | Saldo acumulado: $${montoAcumuladoTexto} de $${montoTexto}`;
+                    }
+
+                    detalleSuspension.textContent = textoSuspension;
                 } else {
                     detalleSuspension.textContent = 'Suspensión activa sin bitácora encontrada.';
                 }
@@ -1834,6 +1918,11 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 controlesActivo.classList.remove('hidden');
                 estadoTexto.textContent = 'Activo';
                 detalleSuspension.textContent = '';
+                document.getElementById('select-tipo-suspension').value = 'falta_pago';
+                diasDecisionUsuarioInput.value = '';
+                document.getElementById('dias-falla-tecnica').value = '';
+                document.getElementById('falla-fecha-inicio').value = '';
+                document.getElementById('falla-fecha-fin').value = '';
                 actualizarFormularioSuspension();
             }
         }
@@ -1845,11 +1934,11 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const diasCompensados = parseInt(estadoCuenta.dias_compensados) || 0;
             const ajustes = parseFloat(estadoCuenta.monto_ajustes) || 0;
             const ajusteTexto = ajustes > 0
-                ? ` | Ajustes: $${ajustes.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                ? ` | Saldo a favor: $${ajustes.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 : '';
 
             document.getElementById('servicio-info-cuenta').textContent =
-                `Próximo pago real: ${fechaProximo} | Días compensados: ${diasCompensados}${ajusteTexto}`;
+                `Próximo pago: ${fechaProximo} | Días compensados: ${diasCompensados}${ajusteTexto}`;
         }
 
         async function registrarEventoServicio() {
@@ -1857,6 +1946,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
             const tipo = document.getElementById('select-tipo-suspension').value;
             const diasFalla = parseInt(document.getElementById('dias-falla-tecnica').value);
+            const diasDecisionUsuario = parseInt(document.getElementById('dias-decision-usuario').value);
             const fechaInicioFalla = document.getElementById('falla-fecha-inicio').value;
             const fechaFinFalla = document.getElementById('falla-fecha-fin').value;
             const payload = { tipo_evento: tipo };
@@ -1869,6 +1959,22 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 if (diasFalla > 0) payload.dias_compensados = diasFalla;
                 if (fechaInicioFalla) payload.fecha_inicio = fechaInicioFalla;
                 if (fechaFinFalla) payload.fecha_fin = fechaFinFalla;
+            }
+
+            if (tipo === 'decision_usuario') {
+                const adeudoActual = parseFloat(estadoCuentaDetalleActual?.adeudo_actual) || 0;
+
+                if (adeudoActual > 0) {
+                    alert('Solo puedes registrar una ausencia cuando el cliente está al corriente.');
+                    return;
+                }
+
+                if (!diasDecisionUsuario || diasDecisionUsuario <= 0) {
+                    alert('Indica cuántos días estará ausente el cliente.');
+                    return;
+                }
+
+                payload.dias_compensados = diasDecisionUsuario;
             }
 
             const confirmar = confirm(`¿Confirmas registrar ${formatearTipoEventoServicio(tipo)} para este cliente?`);
@@ -1901,11 +2007,37 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
             if (suspensionServicioActual?.tipo_evento === 'falta_pago') {
                 const adeudoMensual = parseFloat(estadoCuentaDetalleActual?.adeudo_mensual) || 0;
-                const montoReconexion = 50;
-                const minimoReactivacion = adeudoMensual + montoReconexion;
+                const minimoReactivacion = adeudoMensual;
                 const minimoTexto = minimoReactivacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                if (minimoReactivacion <= 0) {
+                    const confirmar = confirm('El cliente no tiene adeudo pendiente. ¿Confirmas reactivar el servicio?');
+                    if (!confirmar) return;
+
+                    try {
+                        const response = await fetch(`${urlBase}/api/clientes/${clienteDetalleActualId}/reactivar-servicio`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const result = await response.json();
+
+                        if (!response.ok || !result.success) {
+                            alert(result.error || 'No se pudo reactivar el servicio.');
+                            return;
+                        }
+
+                        alert(result.message || 'Servicio reactivado correctamente.');
+                        abrirDetallesCliente(clienteDetalleActualId);
+                        cargarVistaAdminClientes();
+                    } catch (error) {
+                        console.error('Error reactivando servicio:', error);
+                        alert('No se pudo conectar con el servidor.');
+                    }
+                    return;
+                }
+
                 const montoTexto = prompt(
-                    `Monto recibido para reactivar el servicio.\n\nMínimo requerido: $${minimoTexto}\nIncluye adeudo pendiente + $50.00 de reconexión.`,
+                    `Monto recibido para reactivar el servicio.\n\nMínimo requerido: $${minimoTexto}`,
                     minimoReactivacion.toFixed(2)
                 );
 
@@ -1962,11 +2094,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 if (result.dias_compensados > 0) {
                     mensaje += `\nDías compensados: ${result.dias_compensados}`;
                 }
-                if (result.nuevo_dia_pago) {
-                    mensaje += `\nNuevo día de pago: ${result.nuevo_dia_pago}`;
-                }
                 if (result.monto_ajuste > 0) {
-                    mensaje += `\nAjuste generado: $${parseFloat(result.monto_ajuste).toFixed(2)}`;
+                    mensaje += `\nSaldo a favor generado: $${parseFloat(result.monto_ajuste).toFixed(2)}`;
                 }
                 alert(mensaje);
                 abrirDetallesCliente(clienteDetalleActualId);
@@ -2095,7 +2224,11 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const mesesPendientesBox = document.getElementById('detalle-meses-pendientes-box');
                 const mesesPendientesTexto = mesesPendientes.map(item => {
                     const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    return `${item.mes} $${pendiente}`;
+                    const ajustePendiente = parseFloat(item.monto_ajuste_pendiente) || 0;
+                    const ajusteTexto = ajustePendiente > 0
+                        ? ` (saldo a favor -$${ajustePendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                        : '';
+                    return `${item.mes} $${pendiente}${ajusteTexto}`;
                 }).join(', ');
                 document.getElementById('detalle-meses-pendientes').textContent = mesesPendientesTexto || '-';
                 mesesPendientesBox.classList.toggle('hidden', mesesPendientes.length === 0);

@@ -63,6 +63,8 @@ app.get('/api/clientes', async (req, res) => {
 
 app.get('/api/admin/clientes-historial', async (req, res) => {
     try {
+        await finalizarAusenciasProgramadasVencidas(db);
+
         // 1. OBTENER DATOS DEL USUARIO DESDE LA URL (req.query)
         // El frontend nos enviará algo como: ?rol=3&localidades=1,2
         const rol = parseInt(req.query.rol);
@@ -323,32 +325,56 @@ app.post('/api/registrar-pago', async (req, res) => {
             historial[pago.mes_pagado] = (historial[pago.mes_pagado] || 0) + (parseFloat(pago.monto) || 0);
         });
 
-        const [bitacora] = await db.query(
-            'SELECT * FROM bitacora_servicio WHERE cliente_id = ? ORDER BY id DESC',
-            [clienteId]
-        );
+        const bitacora = await consultarBitacoraServicio(db, clienteId);
         const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora);
+        let ajustePendienteDisponible = parseFloat(estadoCuenta.monto_ajustes_pendientes) || 0;
         const registros = [];
-        const aplicarPagoMes = async (etiquetaMes, pendienteMes) => {
+        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0) => {
             const pagadoAntes = historial[etiquetaMes] || 0;
             const montoAAplicar = Math.min(saldoRestante, pendienteMes);
             let nuevoTipo = (montoAAplicar >= pendienteMes && pagadoAntes === 0) ? 'completo' : 'abono';
 
-            if (pagadoAntes + montoAAplicar >= costoMensual) nuevoTipo = 'completo';
+            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= costoMensual) nuevoTipo = 'completo';
 
-            await db.query(
+            const [pagoResult] = await db.query(
                 'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
                 [clienteId, usuarioId, montoAAplicar, etiquetaMes, nuevoTipo]
             );
 
-            registros.push({ mes: etiquetaMes, monto: montoAAplicar, tipo: nuevoTipo });
+            const ajusteAplicado = await aplicarAjustesPendientes(db, clienteId, etiquetaMes, ajusteAAplicar, pagoResult.insertId);
+
+            registros.push({
+                mes: etiquetaMes,
+                monto: montoAAplicar,
+                tipo: nuevoTipo,
+                ajuste_aplicado: ajusteAplicado
+            });
             saldoRestante -= montoAAplicar;
             historial[etiquetaMes] = pagadoAntes + montoAAplicar;
+            ajustePendienteDisponible = Number(Math.max(ajustePendienteDisponible - ajusteAplicado, 0).toFixed(2));
         };
 
         for (const mesAdeudado of estadoCuenta.meses_adeudados) {
             if (saldoRestante <= 0) break;
-            await aplicarPagoMes(mesAdeudado.mes, mesAdeudado.pendiente);
+            const ajusteAAplicar = Math.min(ajustePendienteDisponible, parseFloat(mesAdeudado.monto_ajuste_pendiente) || 0);
+
+            if ((parseFloat(mesAdeudado.pendiente) || 0) <= 0 && ajusteAAplicar > 0) {
+                const ajusteAplicado = await aplicarAjustesPendientes(connection, clienteId, mesAdeudado.mes, ajusteAAplicar);
+                registros.push({
+                    mes: mesAdeudado.mes,
+                    monto: 0,
+                    tipo: 'ajuste',
+                    ajuste_aplicado: ajusteAplicado
+                });
+                ajustePendienteDisponible = Number(Math.max(ajustePendienteDisponible - ajusteAplicado, 0).toFixed(2));
+                continue;
+            }
+
+            await aplicarPagoMes(
+                mesAdeudado.mes,
+                mesAdeudado.pendiente,
+                ajusteAAplicar
+            );
         }
 
         const fechaInstalacion = new Date(clienteData.fecha_instalacion);
@@ -366,17 +392,26 @@ app.post('/api/registrar-pago', async (req, res) => {
         const anioLimite = new Date().getFullYear() + 2;
 
         while (saldoRestante > 0 && cursor.anio <= anioLimite) {
-            if (mesCubiertoPorSuspensionFaltaPago(cursor.anio, cursor.mesIndex, bitacora)) {
+            const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
+            const pagadoEnEsteMes = historial[etiquetaMes] || 0;
+            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMensual - pagadoEnEsteMes, 0));
+            const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes - ajusteAAplicar, 0);
+
+            if (pendienteMes <= 0 && ajusteAAplicar > 0) {
+                const ajusteAplicado = await aplicarAjustesPendientes(connection, clienteId, etiquetaMes, ajusteAAplicar);
+                registros.push({
+                    mes: etiquetaMes,
+                    monto: 0,
+                    tipo: 'ajuste',
+                    ajuste_aplicado: ajusteAplicado
+                });
+                ajustePendienteDisponible = Number(Math.max(ajustePendienteDisponible - ajusteAplicado, 0).toFixed(2));
                 cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
                 continue;
             }
 
-            const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
-            const pagadoEnEsteMes = historial[etiquetaMes] || 0;
-            const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes, 0);
-
             if (pendienteMes > 0) {
-                await aplicarPagoMes(etiquetaMes, pendienteMes);
+                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar);
             }
 
             cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
@@ -442,47 +477,191 @@ function calcularDiasEntre(fechaInicio, fechaFin = new Date()) {
     return Math.max(0, Math.ceil((fin - inicio) / msPorDia));
 }
 
+function calcularMontoAjuste(costoMensual, diasCompensados) {
+    const costo = parseFloat(costoMensual) || 0;
+    const dias = parseInt(diasCompensados) || 0;
+    return Number(((costo / 30) * dias).toFixed(2));
+}
+
+async function consultarBitacoraServicio(ejecutor, clienteId) {
+    const [bitacora] = await ejecutor.query(
+        `SELECT b.*,
+            COALESCE((
+                SELECT SUM(a.monto_aplicado)
+                FROM aplicaciones_ajustes_servicio a
+                WHERE a.bitacora_id = b.id
+            ), 0) AS monto_ajuste_aplicado,
+            (
+                SELECT GROUP_CONCAT(CONCAT(a.mes_aplicado, '::', a.monto_aplicado) SEPARATOR '||')
+                FROM aplicaciones_ajustes_servicio a
+                WHERE a.bitacora_id = b.id
+            ) AS aplicaciones_ajuste
+         FROM bitacora_servicio b
+         WHERE b.cliente_id = ?
+         ORDER BY b.id DESC`,
+        [clienteId]
+    );
+
+    return bitacora;
+}
+
+async function finalizarAusenciasProgramadasVencidas(ejecutor, clienteId = null) {
+    const params = [];
+    let filtroCliente = '';
+
+    if (clienteId) {
+        filtroCliente = 'AND b.cliente_id = ?';
+        params.push(clienteId);
+    }
+
+    const [eventos] = await ejecutor.query(
+        `SELECT b.*, c.costo_mensual
+         FROM bitacora_servicio b
+         JOIN clientes c ON c.id = b.cliente_id
+         WHERE b.tipo_evento = 'decision_usuario'
+           AND b.estado = 'Activo'
+           AND b.fecha_fin IS NOT NULL
+           AND b.fecha_fin <= NOW()
+           ${filtroCliente}`,
+        params
+    );
+
+    for (const evento of eventos) {
+        const dias = parseInt(evento.dias_compensados) || calcularDiasEntre(evento.fecha_inicio, evento.fecha_fin);
+        const montoAjuste = parseFloat(evento.monto_ajuste) || calcularMontoAjuste(evento.costo_mensual, dias);
+
+        await ejecutor.query(
+            `UPDATE bitacora_servicio
+             SET dias_compensados = ?, monto_ajuste = ?, estado = 'Finalizado'
+             WHERE id = ?`,
+            [dias, montoAjuste, evento.id]
+        );
+
+        await ejecutor.query(
+            `UPDATE clientes
+             SET estado_servicio = 'activo'
+             WHERE id = ?
+               AND NOT EXISTS (
+                   SELECT 1
+                   FROM bitacora_servicio
+                   WHERE cliente_id = ?
+                     AND estado = 'Activo'
+                     AND id <> ?
+               )`,
+            [evento.cliente_id, evento.cliente_id, evento.id]
+        );
+    }
+}
+
+function obtenerAplicacionesAjuste(evento) {
+    if (!evento.aplicaciones_ajuste) return [];
+
+    return String(evento.aplicaciones_ajuste)
+        .split('||')
+        .map(item => {
+            const [mes, monto] = item.split('::');
+            return { mes, monto: parseFloat(monto) || 0 };
+        })
+        .filter(item => item.mes && item.monto > 0);
+}
+
+function eventoGeneraSaldoFavor(evento) {
+    return ['falla_tecnica', 'decision_usuario'].includes(evento.tipo_evento)
+        && evento.estado === 'Finalizado'
+        && (parseFloat(evento.monto_ajuste) || 0) > 0;
+}
+
+function resumirAjustesServicio(eventos) {
+    const aplicadoPorMes = {};
+    let totalGenerado = 0;
+    let totalAplicado = 0;
+
+    (eventos || []).forEach(evento => {
+        if (!eventoGeneraSaldoFavor(evento)) return;
+
+        const montoGenerado = parseFloat(evento.monto_ajuste) || 0;
+        const aplicaciones = obtenerAplicacionesAjuste(evento);
+        const montoAplicado = aplicaciones.reduce((total, item) => total + item.monto, 0);
+
+        totalGenerado += montoGenerado;
+        totalAplicado += montoAplicado;
+
+        aplicaciones.forEach(item => {
+            aplicadoPorMes[item.mes] = (aplicadoPorMes[item.mes] || 0) + item.monto;
+        });
+    });
+
+    return {
+        total_generado: Number(totalGenerado.toFixed(2)),
+        total_aplicado: Number(totalAplicado.toFixed(2)),
+        pendiente: Number(Math.max(totalGenerado - totalAplicado, 0).toFixed(2)),
+        aplicado_por_mes: aplicadoPorMes
+    };
+}
+
+async function aplicarAjustesPendientes(ejecutor, clienteId, mesAplicado, montoAAplicar, pagoId = null) {
+    let restante = Number((parseFloat(montoAAplicar) || 0).toFixed(2));
+    if (restante <= 0) return 0;
+
+    const [eventos] = await ejecutor.query(
+        `SELECT b.id, b.monto_ajuste,
+            COALESCE(SUM(a.monto_aplicado), 0) AS monto_aplicado
+         FROM bitacora_servicio b
+         LEFT JOIN aplicaciones_ajustes_servicio a ON a.bitacora_id = b.id
+         WHERE b.cliente_id = ?
+           AND b.tipo_evento IN ('falla_tecnica', 'decision_usuario')
+           AND b.estado = 'Finalizado'
+           AND b.monto_ajuste > 0
+         GROUP BY b.id, b.monto_ajuste, b.fecha_fin, b.fecha_inicio
+         HAVING (b.monto_ajuste - monto_aplicado) > 0
+         ORDER BY COALESCE(b.fecha_fin, b.fecha_inicio), b.id`,
+        [clienteId]
+    );
+
+    let aplicado = 0;
+
+    for (const evento of eventos) {
+        if (restante <= 0) break;
+
+        const pendienteEvento = Math.max((parseFloat(evento.monto_ajuste) || 0) - (parseFloat(evento.monto_aplicado) || 0), 0);
+        const montoAplicado = Number(Math.min(restante, pendienteEvento).toFixed(2));
+
+        if (montoAplicado <= 0) continue;
+
+        await ejecutor.query(
+            `INSERT INTO aplicaciones_ajustes_servicio
+                (bitacora_id, cliente_id, pago_id, mes_aplicado, monto_aplicado)
+             VALUES (?, ?, ?, ?, ?)`,
+            [evento.id, clienteId, pagoId, mesAplicado, montoAplicado]
+        );
+
+        restante = Number((restante - montoAplicado).toFixed(2));
+        aplicado = Number((aplicado + montoAplicado).toFixed(2));
+    }
+
+    return aplicado;
+}
+
 function resumirBitacoraServicio(bitacora) {
     const eventos = bitacora || [];
     const suspensionActiva = eventos.find(evento => evento.estado === 'Activo') || null;
-    const diasCompensadosFinalizados = eventos.reduce((total, evento) => total + (parseInt(evento.dias_compensados) || 0), 0);
-    const diasCompensadosAplicables = eventos.reduce((total, evento) => {
-        const dias = parseInt(evento.dias_compensados) || 0;
-        const trasladadoADiaPago = ['falta_pago', 'decision_usuario'].includes(evento.tipo_evento) && evento.estado !== 'Activo';
-        return trasladadoADiaPago ? total : total + dias;
+    const diasCompensadosFinalizados = eventos.reduce((total, evento) => {
+        return evento.estado === 'Finalizado' ? total + (parseInt(evento.dias_compensados) || 0) : total;
     }, 0);
-    const diasCongeladosActivos = suspensionActiva && ['falta_pago', 'decision_usuario'].includes(suspensionActiva.tipo_evento)
+    const diasCongeladosActivos = suspensionActiva && suspensionActiva.tipo_evento === 'decision_usuario'
         ? calcularDiasEntre(suspensionActiva.fecha_inicio)
         : 0;
-    const montoAjustes = eventos.reduce((total, evento) => total + (parseFloat(evento.monto_ajuste) || 0), 0);
+    const ajustes = resumirAjustesServicio(eventos);
 
     return {
         eventos,
         suspension_activa: suspensionActiva,
         dias_compensados: diasCompensadosFinalizados + diasCongeladosActivos,
         dias_congelados_activos: diasCongeladosActivos,
-        dias_compensados_efectivos: diasCompensadosAplicables + diasCongeladosActivos,
-        monto_ajustes: montoAjustes
+        dias_compensados_efectivos: 0,
+        monto_ajustes: ajustes.pendiente,
+        ajustes
     };
-}
-
-function mesCubiertoPorSuspensionFaltaPago(anio, mesIndex, bitacora) {
-    const mesClave = (anio * 12) + mesIndex;
-
-    return (bitacora || []).some(evento => {
-        if (evento.tipo_evento !== 'falta_pago') return false;
-
-        const inicio = new Date(evento.fecha_inicio);
-        const fin = evento.fecha_fin ? new Date(evento.fecha_fin) : new Date();
-        const inicioClave = (inicio.getFullYear() * 12) + inicio.getMonth();
-        const finClave = (fin.getFullYear() * 12) + fin.getMonth();
-
-        if (evento.estado === 'Activo' || !evento.fecha_fin) {
-            return mesClave >= inicioClave && mesClave <= finClave;
-        }
-
-        return mesClave >= inicioClave && mesClave < finClave;
-    });
 }
 
 function mesEstaVencido(anio, mesIndex, diaPago, hoy = new Date(), diasCompensados = 0) {
@@ -500,7 +679,8 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
     const diaPago = parseInt(cliente.dia_pago) || fechaInstalacion.getDate() || 1;
     const totalPagado = pagos.reduce((total, pago) => total + (parseFloat(pago.monto) || 0), 0);
     const resumenServicio = resumirBitacoraServicio(bitacora);
-    const diasCompensados = resumenServicio.dias_compensados_efectivos;
+    const ajustesServicio = resumenServicio.ajustes;
+    let saldoAjustePendiente = ajustesServicio.pendiente;
     const pagosPorMes = {};
 
     pagos.forEach(pago => {
@@ -515,43 +695,45 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
     const hoy = new Date();
 
     while (compararMesContable(cursor.anio, cursor.mesIndex, hoy.getFullYear(), hoy.getMonth()) <= 0) {
-        if (mesCubiertoPorSuspensionFaltaPago(cursor.anio, cursor.mesIndex, bitacora)) {
-            cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
-            continue;
-        }
-
-        if (mesEstaVencido(cursor.anio, cursor.mesIndex, diaPago, hoy, diasCompensados)) {
+        if (mesEstaVencido(cursor.anio, cursor.mesIndex, diaPago, hoy, 0)) {
             const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
             const pagadoEnMes = pagosPorMes[etiquetaMes] || 0;
-            const pendiente = Math.max(costoMensual - pagadoEnMes, 0);
+            const ajusteAplicadoEnMes = ajustesServicio.aplicado_por_mes[etiquetaMes] || 0;
+            const pendienteSinAjuste = Math.max(costoMensual - pagadoEnMes - ajusteAplicadoEnMes, 0);
+            const ajustePendienteAplicable = Number(Math.min(saldoAjustePendiente, pendienteSinAjuste).toFixed(2));
+            const pendiente = Number(Math.max(pendienteSinAjuste - ajustePendienteAplicable, 0).toFixed(2));
 
             mesesVencidos.push(etiquetaMes);
+            saldoAjustePendiente = Number(Math.max(saldoAjustePendiente - ajustePendienteAplicable, 0).toFixed(2));
 
-            if (pendiente > 0) {
+            if (pendienteSinAjuste > 0) {
                 mesesAdeudados.push({
                     mes: etiquetaMes,
                     monto_esperado: costoMensual,
-                    monto_cubierto: Math.min(pagadoEnMes, costoMensual),
+                    monto_cubierto: Math.min(pagadoEnMes + ajusteAplicadoEnMes, costoMensual),
+                    monto_ajuste_aplicado: ajusteAplicadoEnMes,
+                    monto_ajuste_pendiente: ajustePendienteAplicable,
+                    pendiente_sin_ajuste: Number(pendienteSinAjuste.toFixed(2)),
                     pendiente: pendiente
                 });
             }
         } else if (!fechaProximoPago) {
-            fechaProximoPago = obtenerFechaVencimiento(cursor.anio, cursor.mesIndex, diaPago, diasCompensados);
+            fechaProximoPago = obtenerFechaVencimiento(cursor.anio, cursor.mesIndex, diaPago, 0);
         }
 
         cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
     }
 
     if (!fechaProximoPago) {
-        fechaProximoPago = obtenerFechaVencimiento(cursor.anio, cursor.mesIndex, diaPago, diasCompensados);
+        fechaProximoPago = obtenerFechaVencimiento(cursor.anio, cursor.mesIndex, diaPago, 0);
     }
 
     const mesesTranscurridos = mesesVencidos.length;
     const montoAjustes = resumenServicio.monto_ajustes;
-    const totalTeorico = mesesTranscurridos * costoMensual;
+    const totalTeorico = Math.max((mesesTranscurridos * costoMensual) - ajustesServicio.total_aplicado, 0);
     const adeudoMensual = mesesAdeudados.reduce((total, mes) => total + mes.pendiente, 0);
     const adeudoActual = adeudoMensual;
-    const saldoFavor = Math.max(totalPagado - totalTeorico, 0);
+    const saldoFavor = Number((Math.max(totalPagado - totalTeorico, 0) + saldoAjustePendiente).toFixed(2));
     const mesesAdeudoDecimal = costoMensual > 0 ? adeudoActual / costoMensual : 0;
 
     return {
@@ -565,9 +747,12 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
         meses_adeudados: mesesAdeudados,
         adeudo_mensual: adeudoMensual,
         monto_ajustes: montoAjustes,
+        monto_ajustes_generados: ajustesServicio.total_generado,
+        monto_ajustes_aplicados: ajustesServicio.total_aplicado,
+        monto_ajustes_pendientes: ajustesServicio.pendiente,
         dias_compensados: resumenServicio.dias_compensados,
         dias_congelados_activos: resumenServicio.dias_congelados_activos,
-        dias_compensados_efectivos: diasCompensados,
+        dias_compensados_efectivos: 0,
         fecha_proximo_pago: fechaProximoPago,
         servicio: resumenServicio
     };
@@ -577,6 +762,8 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
     const clienteId = req.params.id;
 
     try {
+        await finalizarAusenciasProgramadasVencidas(db, clienteId);
+
         const [clienteRows] = await db.query(
             `SELECT c.*, l.nombre AS localidad_nombre
              FROM clientes c
@@ -598,13 +785,7 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
             [clienteId]
         );
 
-        const [bitacora] = await db.query(
-            `SELECT *
-             FROM bitacora_servicio
-             WHERE cliente_id = ?
-             ORDER BY id DESC`,
-            [clienteId]
-        );
+        const bitacora = await consultarBitacoraServicio(db, clienteId);
 
         const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora);
 
@@ -626,6 +807,8 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
     const tiposValidos = ['falta_pago', 'decision_usuario', 'falla_tecnica'];
 
     try {
+        await finalizarAusenciasProgramadasVencidas(db, clienteId);
+
         if (!tiposValidos.includes(tipo_evento)) {
             return res.status(400).json({ success: false, error: 'Tipo de suspensión no válido.' });
         }
@@ -646,14 +829,89 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                 return res.status(400).json({ success: false, error: 'Indica los días compensados de la falla técnica.' });
             }
 
+            const [clienteRows] = await db.query(
+                'SELECT costo_mensual FROM clientes WHERE id = ?',
+                [clienteId]
+            );
+
+            if (clienteRows.length === 0) {
+                return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+            }
+
+            const montoAjuste = calcularMontoAjuste(clienteRows[0].costo_mensual, dias);
+
             await db.query(
                 `INSERT INTO bitacora_servicio
                     (cliente_id, tipo_evento, fecha_inicio, fecha_fin, dias_compensados, monto_ajuste, estado)
-                 VALUES (?, ?, ?, ?, ?, 0.00, 'Finalizado')`,
-                [clienteId, tipo_evento, fecha_inicio || new Date(), fecha_fin || new Date(), dias]
+                 VALUES (?, ?, ?, ?, ?, ?, 'Finalizado')`,
+                [clienteId, tipo_evento, fecha_inicio || new Date(), fecha_fin || new Date(), dias, montoAjuste]
             );
 
             return res.json({ success: true, message: 'Falla técnica registrada.' });
+        }
+
+        if (tipo_evento === 'decision_usuario') {
+            const dias = parseInt(dias_compensados) || 0;
+
+            if (dias <= 0) {
+                return res.status(400).json({ success: false, error: 'Indica los dias de ausencia del cliente.' });
+            }
+
+            const [clienteRows] = await db.query(
+                'SELECT costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?',
+                [clienteId]
+            );
+
+            if (clienteRows.length === 0) {
+                return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+            }
+
+            const [pagos] = await db.query(
+                'SELECT mes_pagado, monto FROM pagos WHERE cliente_id = ? AND estado_corte < 3',
+                [clienteId]
+            );
+            const bitacora = await consultarBitacoraServicio(db, clienteId);
+            const estadoCuenta = calcularEstadoCuentaServidor(
+                {
+                    costo_mensual: clienteRows[0].costo_mensual,
+                    fecha_instalacion: clienteRows[0].fecha_instalacion,
+                    dia_pago: clienteRows[0].dia_pago
+                },
+                pagos,
+                bitacora
+            );
+
+            if ((parseFloat(estadoCuenta.adeudo_actual) || 0) > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Solo se puede registrar ausencia del cliente cuando está al corriente.'
+                });
+            }
+
+            const fechaInicioAusencia = fecha_inicio ? new Date(fecha_inicio) : new Date();
+            const fechaFinAusencia = fecha_fin ? new Date(fecha_fin) : sumarDias(fechaInicioAusencia, dias);
+            const montoAjuste = calcularMontoAjuste(clienteRows[0].costo_mensual, dias);
+
+            await db.query(
+                `INSERT INTO bitacora_servicio
+                    (cliente_id, tipo_evento, fecha_inicio, fecha_fin, dias_compensados, monto_ajuste, estado)
+                 VALUES (?, ?, ?, ?, ?, ?, 'Activo')`,
+                [clienteId, tipo_evento, fechaInicioAusencia, fechaFinAusencia, dias, montoAjuste]
+            );
+
+            await db.query(
+                'UPDATE clientes SET estado_servicio = ? WHERE id = ?',
+                ['Suspendido', clienteId]
+            );
+
+            return res.json({
+                success: true,
+                message: 'Ausencia del cliente registrada correctamente.',
+                dias_compensados: dias,
+                fecha_inicio: fechaInicioAusencia,
+                fecha_fin: fechaFinAusencia,
+                monto_ajuste: montoAjuste
+            });
         }
 
         await db.query(
@@ -679,6 +937,8 @@ app.post('/api/clientes/:id/reactivar-servicio', async (req, res) => {
     const clienteId = req.params.id;
 
     try {
+        await finalizarAusenciasProgramadasVencidas(db, clienteId);
+
         const [activos] = await db.query(
             'SELECT * FROM bitacora_servicio WHERE cliente_id = ? AND estado = "Activo" ORDER BY id DESC LIMIT 1',
             [clienteId]
@@ -689,50 +949,38 @@ app.post('/api/clientes/:id/reactivar-servicio', async (req, res) => {
         }
 
         const evento = activos[0];
-        const diasCompensados = evento.tipo_evento === 'decision_usuario'
-            ? calcularDiasEntre(evento.fecha_inicio)
-            : 0;
-        const montoAjuste = evento.tipo_evento === 'falta_pago' ? 50 : 0;
-        let nuevoDiaPago = null;
+        let fechaFinServicio = new Date();
+        let diasCompensados = 0;
+        let montoAjuste = 0;
 
-        if (evento.tipo_evento === 'decision_usuario' && diasCompensados > 0) {
+        if (evento.tipo_evento === 'decision_usuario') {
+            const fechaFinProgramada = evento.fecha_fin ? new Date(evento.fecha_fin) : new Date();
+            fechaFinServicio = new Date() < fechaFinProgramada ? new Date() : fechaFinProgramada;
+            diasCompensados = calcularDiasEntre(evento.fecha_inicio, fechaFinServicio);
+
             const [clienteRows] = await db.query(
-                'SELECT dia_pago FROM clientes WHERE id = ?',
+                'SELECT costo_mensual FROM clientes WHERE id = ?',
                 [clienteId]
             );
-            const diaPagoActual = parseInt(clienteRows[0]?.dia_pago) || 1;
-            nuevoDiaPago = obtenerFechaVencimiento(
-                new Date().getFullYear(),
-                new Date().getMonth(),
-                diaPagoActual,
-                diasCompensados
-            ).getDate();
+            montoAjuste = calcularMontoAjuste(clienteRows[0]?.costo_mensual, diasCompensados);
         }
 
         await db.query(
             `UPDATE bitacora_servicio
-             SET fecha_fin = NOW(), dias_compensados = ?, monto_ajuste = ?, estado = 'Finalizado'
+             SET fecha_fin = ?, dias_compensados = ?, monto_ajuste = ?, estado = 'Finalizado'
              WHERE id = ?`,
-            [diasCompensados, montoAjuste, evento.id]
+            [fechaFinServicio, diasCompensados, montoAjuste, evento.id]
         );
 
-        if (nuevoDiaPago) {
-            await db.query(
-                'UPDATE clientes SET estado_servicio = ?, dia_pago = ? WHERE id = ?',
-                ['activo', nuevoDiaPago, clienteId]
-            );
-        } else {
-            await db.query(
-                'UPDATE clientes SET estado_servicio = ? WHERE id = ?',
-                ['activo', clienteId]
-            );
-        }
+        await db.query(
+            'UPDATE clientes SET estado_servicio = ? WHERE id = ?',
+            ['activo', clienteId]
+        );
 
         res.json({
             success: true,
             message: 'Servicio reactivado correctamente.',
             dias_compensados: diasCompensados,
-            nuevo_dia_pago: nuevoDiaPago,
             monto_ajuste: montoAjuste
         });
     } catch (error) {
@@ -744,7 +992,6 @@ app.post('/api/clientes/:id/reactivar-servicio', async (req, res) => {
 app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
     const clienteId = req.params.id;
     const { usuarioId, montoRecibido } = req.body;
-    const montoReconexion = 50;
     const connection = await db.getConnection();
 
     try {
@@ -783,22 +1030,19 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
             [clienteId]
         );
 
-        const [bitacora] = await connection.query(
-            'SELECT * FROM bitacora_servicio WHERE cliente_id = ? ORDER BY id DESC',
-            [clienteId]
-        );
+        const bitacora = await consultarBitacoraServicio(connection, clienteId);
 
         const clienteData = clienteRows[0];
         const costoMensual = parseFloat(clienteData.costo_mensual) || 0;
         const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora);
         const adeudoMensual = parseFloat(estadoCuenta.adeudo_mensual) || 0;
-        const minimoReactivacion = adeudoMensual + montoReconexion;
+        const minimoReactivacion = adeudoMensual;
 
         if (montoTotalRecibido < minimoReactivacion) {
             await connection.rollback();
             return res.status(400).json({
                 success: false,
-                error: `Para reactivar debe cubrir $${minimoReactivacion.toFixed(2)}: $${adeudoMensual.toFixed(2)} de adeudo + $${montoReconexion.toFixed(2)} de reconexión.`
+                error: `Para reactivar debe cubrir ${minimoReactivacion.toFixed(2)} de adeudo.`
             });
         }
 
@@ -808,60 +1052,67 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
         });
 
         let saldoRestante = montoTotalRecibido;
+        let ajustePendienteDisponible = parseFloat(estadoCuenta.monto_ajustes_pendientes) || 0;
         const registros = [];
-        const aplicarPagoMes = async (etiquetaMes, pendienteMes) => {
+        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0) => {
             const pagadoAntes = historial[etiquetaMes] || 0;
             const montoAAplicar = Math.min(saldoRestante, pendienteMes);
             let nuevoTipo = (montoAAplicar >= pendienteMes && pagadoAntes === 0) ? 'completo' : 'abono';
 
-            if (pagadoAntes + montoAAplicar >= costoMensual) nuevoTipo = 'completo';
+            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= costoMensual) nuevoTipo = 'completo';
 
-            await connection.query(
+            const [pagoResult] = await connection.query(
                 'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
                 [clienteId, usuarioId, montoAAplicar, etiquetaMes, nuevoTipo]
             );
 
-            registros.push({ mes: etiquetaMes, monto: montoAAplicar, tipo: nuevoTipo });
+            const ajusteAplicado = await aplicarAjustesPendientes(connection, clienteId, etiquetaMes, ajusteAAplicar, pagoResult.insertId);
+
+            registros.push({
+                mes: etiquetaMes,
+                monto: montoAAplicar,
+                tipo: nuevoTipo,
+                ajuste_aplicado: ajusteAplicado
+            });
             saldoRestante -= montoAAplicar;
             historial[etiquetaMes] = pagadoAntes + montoAAplicar;
+            ajustePendienteDisponible = Number(Math.max(ajustePendienteDisponible - ajusteAplicado, 0).toFixed(2));
         };
 
         for (const mesAdeudado of estadoCuenta.meses_adeudados) {
-            if (saldoRestante <= montoReconexion) break;
-            await aplicarPagoMes(mesAdeudado.mes, mesAdeudado.pendiente);
+            if (saldoRestante <= 0) break;
+            const ajusteAAplicar = Math.min(ajustePendienteDisponible, parseFloat(mesAdeudado.monto_ajuste_pendiente) || 0);
+
+            if ((parseFloat(mesAdeudado.pendiente) || 0) <= 0 && ajusteAAplicar > 0) {
+                const ajusteAplicado = await aplicarAjustesPendientes(db, clienteId, mesAdeudado.mes, ajusteAAplicar);
+                registros.push({
+                    mes: mesAdeudado.mes,
+                    monto: 0,
+                    tipo: 'ajuste',
+                    ajuste_aplicado: ajusteAplicado
+                });
+                ajustePendienteDisponible = Number(Math.max(ajustePendienteDisponible - ajusteAplicado, 0).toFixed(2));
+                continue;
+            }
+
+            await aplicarPagoMes(
+                mesAdeudado.mes,
+                mesAdeudado.pendiente,
+                ajusteAAplicar
+            );
         }
-
-        saldoRestante -= montoReconexion;
-        registros.push({ mes: 'Reconexión', monto: montoReconexion, tipo: 'reconexion' });
-
-        const diasCompensados = calcularDiasEntre(activos[0].fecha_inicio);
-        const fechaProximoPagoTrasladada = estadoCuenta.fecha_proximo_pago
-            ? new Date(estadoCuenta.fecha_proximo_pago)
-            : obtenerFechaVencimiento(new Date().getFullYear(), new Date().getMonth(), parseInt(clienteData.dia_pago) || 1, diasCompensados);
-        const nuevoDiaPago = Math.max(1, Math.min(31, fechaProximoPagoTrasladada.getDate()));
 
         await connection.query(
             `UPDATE bitacora_servicio
              SET fecha_fin = NOW(), dias_compensados = ?, monto_ajuste = ?, estado = 'Finalizado'
              WHERE id = ?`,
-            [diasCompensados, montoReconexion, activos[0].id]
+            [0, 0, activos[0].id]
         );
 
         await connection.query(
-            'UPDATE clientes SET estado_servicio = ?, dia_pago = ? WHERE id = ?',
-            ['activo', nuevoDiaPago, clienteId]
+            'UPDATE clientes SET estado_servicio = ? WHERE id = ?',
+            ['activo', clienteId]
         );
-
-        const bitacoraFinalizada = bitacora.map(evento => {
-            if (evento.id !== activos[0].id) return evento;
-            return {
-                ...evento,
-                fecha_fin: new Date(),
-                dias_compensados: diasCompensados,
-                monto_ajuste: montoReconexion,
-                estado: 'Finalizado'
-            };
-        });
 
         const ultimoMesVencido = estadoCuenta.meses_vencidos[estadoCuenta.meses_vencidos.length - 1];
         let cursor;
@@ -878,17 +1129,26 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
         const anioLimite = new Date().getFullYear() + 2;
 
         while (saldoRestante > 0 && cursor.anio <= anioLimite) {
-            if (mesCubiertoPorSuspensionFaltaPago(cursor.anio, cursor.mesIndex, bitacoraFinalizada)) {
+            const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
+            const pagadoEnEsteMes = historial[etiquetaMes] || 0;
+            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMensual - pagadoEnEsteMes, 0));
+            const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes - ajusteAAplicar, 0);
+
+            if (pendienteMes <= 0 && ajusteAAplicar > 0) {
+                const ajusteAplicado = await aplicarAjustesPendientes(db, clienteId, etiquetaMes, ajusteAAplicar);
+                registros.push({
+                    mes: etiquetaMes,
+                    monto: 0,
+                    tipo: 'ajuste',
+                    ajuste_aplicado: ajusteAplicado
+                });
+                ajustePendienteDisponible = Number(Math.max(ajustePendienteDisponible - ajusteAplicado, 0).toFixed(2));
                 cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
                 continue;
             }
 
-            const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
-            const pagadoEnEsteMes = historial[etiquetaMes] || 0;
-            const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes, 0);
-
             if (pendienteMes > 0) {
-                await aplicarPagoMes(etiquetaMes, pendienteMes);
+                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar);
             }
 
             cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
@@ -900,9 +1160,7 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
             success: true,
             message: 'Servicio reactivado y pago registrado correctamente.',
             detalle: registros,
-            dias_compensados: diasCompensados,
-            nuevo_dia_pago: nuevoDiaPago,
-            monto_reconexion: montoReconexion
+            dias_compensados: 0
         });
     } catch (error) {
         await connection.rollback();

@@ -551,6 +551,15 @@
                         </table>
                     </div>
                 </div>
+
+                <div id="seccion-bitacora-servicio" class="seccion-detalle">
+                    <div class="bitacora-servicio-header">
+                        <h3>Historial de Servicio</h3>
+                    </div>
+                    <div id="detalle-bitacora-servicio" class="bitacora-servicio-lista">
+                        <p class="bitacora-vacia">No hay eventos de servicio registrados.</p>
+                    </div>
+                </div>
                 
             </div>
         </div>
@@ -1977,6 +1986,70 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 `Próximo pago: ${fechaProximo} | Días compensados: ${diasCompensados}${ajusteTexto}`;
         }
 
+        function escaparHtml(valor) {
+            return String(valor ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatearFechaBitacora(fecha) {
+            if (!fecha) return 'Pendiente';
+            return new Date(fecha).toLocaleString('es-MX');
+        }
+
+        function renderizarBitacoraServicio(bitacora) {
+            const contenedor = document.getElementById('detalle-bitacora-servicio');
+            const eventos = Array.isArray(bitacora) ? bitacora : [];
+
+            if (eventos.length === 0) {
+                contenedor.innerHTML = '<p class="bitacora-vacia">No hay eventos de servicio registrados.</p>';
+                return;
+            }
+
+            contenedor.innerHTML = eventos.map(evento => {
+                const tipo = evento.tipo_evento || '-';
+                const estado = evento.estado || '-';
+                const diasCompensados = parseInt(evento.dias_compensados) || 0;
+                const montoAjuste = parseFloat(evento.monto_ajuste) || 0;
+                const observaciones = (evento.observaciones || evento.observacion || '').trim();
+                const claseTipo = tipo === 'falta_pago'
+                    ? 'falta-pago'
+                    : tipo === 'decision_usuario'
+                        ? 'decision-usuario'
+                        : tipo === 'falla_tecnica'
+                            ? 'falla-tecnica'
+                            : '';
+                const diasHtml = diasCompensados > 0
+                    ? `<div><span>Días compensados</span><strong>${diasCompensados}</strong></div>`
+                    : '';
+                const montoHtml = montoAjuste > 0
+                    ? `<div><span>Monto ajuste</span><strong>$${Math.floor(montoAjuste).toLocaleString('es-MX')}</strong></div>`
+                    : '';
+                const observacionesHtml = observaciones
+                    ? `<p class="bitacora-observaciones">${escaparHtml(observaciones)}</p>`
+                    : '';
+
+                return `
+                    <article class="bitacora-evento ${claseTipo}">
+                        <div class="bitacora-evento-header">
+                            <strong>${formatearTipoEventoServicio(tipo)}</strong>
+                            <span class="bitacora-estado">${escaparHtml(estado)}</span>
+                        </div>
+                        <div class="bitacora-evento-grid">
+                            <div><span>Fecha inicio</span><strong>${formatearFechaBitacora(evento.fecha_inicio)}</strong></div>
+                            <div><span>Fecha fin</span><strong>${formatearFechaBitacora(evento.fecha_fin)}</strong></div>
+                            ${diasHtml}
+                            ${montoHtml}
+                        </div>
+                        ${observacionesHtml}
+                    </article>
+                `;
+            }).join('');
+        }
+
         async function registrarEventoServicio() {
             if (!clienteDetalleActualId) return;
 
@@ -2157,6 +2230,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 const dataCompleto = await respuestaEstadoCuenta.json();
                 const cliente = dataCompleto.cliente;
                 const pagos = dataCompleto.historial_pagos || [];
+                const bitacoraServicio = dataCompleto.bitacora_servicio || [];
                 const estadoCuenta = dataCompleto.estado_cuenta;
                 clienteSeleccionado = cliente;
                 estadoCuentaDetalleActual = estadoCuenta;
@@ -2215,6 +2289,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
                 configurarGestionServicio(cliente, estadoCuenta.servicio);
                 configurarInfoCuentaServicio(estadoCuenta);
+                renderizarBitacoraServicio(bitacoraServicio);
 
                 // Dejamos un mensaje oculto en la consola para saber que los pagos llegaron bien
                 console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);

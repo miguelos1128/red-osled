@@ -243,6 +243,39 @@ td {
     background-color: #f4f7f6;
 }
 
+.admin-filtros-rapidos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 10px 12px;
+    background-color: #f4f7f6;
+}
+
+.chip-filtro-admin {
+    width: auto;
+    padding: 8px 13px;
+    border: 1px solid #d8dee4;
+    border-radius: 999px;
+    background: #fff;
+    color: #34495e;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chip-filtro-admin:hover {
+    border-color: #1a73e8;
+    color: #1a73e8;
+}
+
+.chip-filtro-admin.activo {
+    border-color: #1a73e8;
+    background: #e8f1ff;
+    color: #0b57d0;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
 /* Burbujas para los meses que NO se han pagado */
 .pago-pendiente {
     background-color: #f1f2f6; /* Un gris muy suave */

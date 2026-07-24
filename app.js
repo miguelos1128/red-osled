@@ -146,7 +146,22 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         // 5. EJECUTAR LA CONSULTA
         // Pasamos el query y los parámetros de forma segura
         const [clientes] = await db.query(query, queryParams);
-        res.json(clientes);
+        const clientesConEstadoCuenta = await Promise.all(clientes.map(async cliente => {
+            const [pagosCliente] = await db.query(
+                'SELECT mes_pagado, monto FROM pagos WHERE cliente_id = ? AND estado_corte < 3',
+                [cliente.id]
+            );
+            const bitacoraCliente = await consultarBitacoraServicio(db, cliente.id);
+            const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagosCliente, bitacoraCliente);
+
+            return {
+                ...cliente,
+                adeudo_actual: estadoCuenta.adeudo_actual,
+                saldo_favor: estadoCuenta.saldo_favor
+            };
+        }));
+
+        res.json(clientesConEstadoCuenta);
 
     } catch (error) {
         res.status(500).json({ error: error.message });

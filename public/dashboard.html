@@ -63,6 +63,12 @@
                     </div>
                 </div>
 
+                <div class="admin-filtros-rapidos" aria-label="Filtros rápidos">
+                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="con_adeudo">Con adeudo</button>
+                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="al_corriente">Al corriente</button>
+                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="renta">RENTA</button>
+                </div>
+
                 
                 
 
@@ -603,6 +609,10 @@
         let configLocalidades = {};
         let perfilUsuario ="";
         let filtroLocalidadTodasSeleccionadoAntes = false;
+        const filtrosRapidosAdmin = {
+            estadoCuenta: null,
+            renta: false
+        };
 
 
         if (!usuarioJson) {
@@ -792,6 +802,8 @@
                     card.setAttribute('data-fecha', cliente.fecha_instalacion || "2000-01-01");
                     card.setAttribute('data-estado-servicio', (cliente.estado_servicio || '').toLowerCase());
                     card.setAttribute('data-tipo-suspension', cliente.tipo_suspension_activa || '');
+                    card.setAttribute('data-adeudo', parseFloat(cliente.adeudo_actual) || 0);
+                    card.setAttribute('data-renta', Number(cliente.es_renta) === 1 ? '1' : '0');
                     const badgeRentaCard = Number(cliente.es_renta) === 1
                         ? '<span class="cliente-badge-renta">RENTA</span>'
                         : '';
@@ -909,8 +921,16 @@
                 const idLocalidadTarjeta = String(tarjeta.getAttribute('data-localidad') || '').trim();
                 const coincideNombre = !textoBusqueda || nombre.includes(textoBusqueda);
                 const coincideLocalidad = !filtroLocalidadesListo || localidadesSeleccionadas.includes(idLocalidadTarjeta);
+                const adeudo = parseFloat(tarjeta.getAttribute('data-adeudo')) || 0;
+                const esRenta = tarjeta.getAttribute('data-renta') === '1';
+                const coincideAdeudo = filtrosRapidosAdmin.estadoCuenta === 'con_adeudo'
+                    ? adeudo > 0
+                    : filtrosRapidosAdmin.estadoCuenta === 'al_corriente'
+                        ? adeudo <= 0
+                        : true;
+                const coincideRenta = filtrosRapidosAdmin.renta ? esRenta : true;
 
-                if (coincideNombre && coincideLocalidad) {
+                if (coincideNombre && coincideLocalidad && coincideAdeudo && coincideRenta) {
                     tarjeta.classList.remove('hidden');
                     clientesVisibles++;
                 } else {
@@ -940,6 +960,27 @@
             filtrarTarjetasAdmin();
         }
 
+        function actualizarChipsFiltrosRapidos() {
+            document.querySelectorAll('.chip-filtro-admin').forEach(chip => {
+                const filtro = chip.dataset.filtroRapido;
+                const activo = filtro === 'renta'
+                    ? filtrosRapidosAdmin.renta
+                    : filtrosRapidosAdmin.estadoCuenta === filtro;
+                chip.classList.toggle('activo', activo);
+            });
+        }
+
+        function manejarFiltroRapidoAdmin(filtro) {
+            if (filtro === 'renta') {
+                filtrosRapidosAdmin.renta = !filtrosRapidosAdmin.renta;
+            } else {
+                filtrosRapidosAdmin.estadoCuenta = filtrosRapidosAdmin.estadoCuenta === filtro ? null : filtro;
+            }
+
+            actualizarChipsFiltrosRapidos();
+            filtrarTarjetasAdmin();
+        }
+
         function aplicarFiltros(){
             buscadorInput.addEventListener('input', function() {
                 filtrarTarjetasAdmin();
@@ -949,6 +990,9 @@
             selectEstadoServicio.addEventListener('change', function() {
                 buscadorInput.value = '';
                 cargarVistaAdminClientes();
+            });
+            document.querySelectorAll('.chip-filtro-admin').forEach(chip => {
+                chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido));
             });
             activarScrollSincronizado();
         }

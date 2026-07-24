@@ -23,14 +23,14 @@ Agregar un modulo de gastos para el perfil de administrador local que permita ag
 estos gastos pueden ser pago de mensualidad, tubos, etc.  --- OK
 
 
-Permitir a los usuarios modificar un número de telefono de algun cliente cuando este no tenga telefono registrado.
+Permitir a los usuarios modificar un número de telefono de algun cliente cuando este no tenga telefono registrado. ---OK
 
 
-al ealizar un corte quede un historico de ese corte. 
+al ealizar un corte quede un historico de ese corte. -- OK
 
 generar corte con libreria para solo descargar el PDF.
 
-Seguridad al intentar cargar un pago en 0 o negativo, bloquear boton al intentar hacer corte en 0, 
+Seguridad al intentar cargar un pago en 0 o negativo, bloquear boton al intentar hacer corte en 0,  --OK
 
 prueba de commit
 

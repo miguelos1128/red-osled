@@ -900,6 +900,31 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
             return res.status(400).json({ success: false, error: 'El cliente ya tiene una suspensión activa.' });
         }
 
+        if (tipo_evento === 'falta_pago') {
+            const [clienteRows] = await db.query(
+                'SELECT costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?',
+                [clienteId]
+            );
+
+            if (clienteRows.length === 0) {
+                return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+            }
+
+            const [pagos] = await db.query(
+                'SELECT mes_pagado, monto FROM pagos WHERE cliente_id = ? AND estado_corte < 3',
+                [clienteId]
+            );
+            const bitacora = await consultarBitacoraServicio(db, clienteId);
+            const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora);
+
+            if ((parseFloat(estadoCuenta.adeudo_actual) || 0) <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Solo se puede suspender por falta de pago cuando el cliente tiene adeudo pendiente.'
+                });
+            }
+        }
+
         if (tipo_evento === 'falla_tecnica') {
             const dias = parseInt(dias_compensados) || 0;
             const observacionesLimpias = (observaciones || '').trim();

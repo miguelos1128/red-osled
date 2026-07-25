@@ -2270,6 +2270,15 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const observacionesFalla = document.getElementById('observaciones-falla-tecnica').value.trim();
             const payload = { tipo_evento: tipo };
 
+            if (tipo === 'falta_pago') {
+                const adeudoActual = parseFloat(estadoCuentaDetalleActual?.adeudo_actual) || 0;
+
+                if (adeudoActual <= 0) {
+                    alert('Solo puedes suspender por falta de pago cuando el cliente tiene adeudo pendiente.');
+                    return;
+                }
+            }
+
             if (tipo === 'falla_tecnica') {
                 if (!fechaInicioFalla || !fechaFinFalla) {
                     alert('Captura fecha inicio y fecha fin de la falla técnica.');

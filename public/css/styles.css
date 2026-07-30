@@ -312,7 +312,7 @@ td {
 #buscador-nombre {
     width: 100%;
     max-width: 400px;
-    padding: 12px 12px 12px 40px; /* Espacio extra a la izquierda para la lupa */
+    padding: 12px 12px 12px 12px; /* Espacio extra a la izquierda para la lupa */
     border: 1px solid #ddd;
     border-radius: 25px; /* Bordes redondeados modernos */
     font-size: 1rem;
@@ -374,7 +374,7 @@ td {
 #filtro-localidad,
 #filtro-estado-servicio {
     width: 100%;
-    min-width: 220px;
+    min-width: 200px;
     border:  1px solid #ddd;
     border-radius: 25px;
     padding: 12px;
@@ -425,6 +425,76 @@ td {
 /* Esta clase ocultará la tarjeta sin importar el tamaño de pantalla */
 .cliente-card.hidden {
     display: none !important;
+}
+
+.cliente-card-baja {
+    border-left-color: #991b1b !important;
+    background: #fffafa;
+}
+
+.cliente-baja-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.cliente-baja-adeudo {
+    min-width: 160px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fef2f2;
+    text-align: right;
+}
+
+.cliente-baja-adeudo span,
+.cliente-baja-detalles span {
+    display: block;
+    color: #7f8c8d;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.cliente-baja-adeudo strong {
+    display: block;
+    margin-top: 4px;
+    color: #991b1b;
+    font-size: 1.15rem;
+}
+
+.cliente-baja-detalles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #fee2e2;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.cliente-baja-detalles strong {
+    display: block;
+    margin-top: 4px;
+    color: #2c3e50;
+}
+
+.cliente-baja-acciones {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+}
+
+.btn-reactivar-baja {
+    width: 150px;
+    height: 45px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 8px;
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 800;
+    cursor: not-allowed;
+    margin: 0;
 }
 
 /* Cabecera de la tarjeta */
@@ -613,6 +683,7 @@ td {
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.3s;
+    margin: 0;
 }
 
 .btn-detalles-slim:hover {
@@ -1791,6 +1862,7 @@ td {
         font-size: 20px;
     }
     .modal-cuerpo .label-movil { display: none; } 
+    
 }
 
 @media (max-width: 520px) {
@@ -2010,7 +2082,11 @@ td {
         margin: 0 !important;        /* Quitamos márgenes que separaban el texto */
         display: inline-block;
     }
-    
+    .cliente-nombre-linea {
+        width: 300px;
+    }
+    .cliente-baja-adeudo {height:90px}
+    .cliente-baja-header {margin-bottom: 0px}
     
 }
 

@@ -80,12 +80,23 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         // (Dejamos un espacio antes del GROUP BY para poder insertar el WHERE si es necesario)
         let query = `
             SELECT 
-                c.id, c.nombre_completo, c.telefono, c.es_renta, c.estado_servicio, bs.tipo_evento AS tipo_suspension_activa,
-                fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
+                c.id, c.nombre_completo, c.telefono, c.observaciones, c.es_renta, c.estado_servicio, bs.tipo_evento AS tipo_suspension_activa,
+                bb.tipo_evento AS motivo_baja, bb.fecha_fin AS fecha_baja,
+                fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id, l.nombre AS localidad_nombre, c.paquete,
                 IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
             FROM clientes c
+            LEFT JOIN localidades l ON l.id = c.localidad_id
             LEFT JOIN bitacora_servicio bs ON bs.cliente_id = c.id
                 AND bs.estado = 'Activo'
+            LEFT JOIN bitacora_servicio bb ON bb.id = (
+                SELECT b2.id
+                FROM bitacora_servicio b2
+                WHERE b2.cliente_id = c.id
+                  AND b2.estado = 'Finalizado'
+                  AND b2.tipo_evento = 'falta_pago'
+                ORDER BY COALESCE(b2.fecha_fin, b2.fecha_inicio) DESC, b2.id DESC
+                LIMIT 1
+            )
             LEFT JOIN pagos p ON c.id = p.cliente_id 
                 AND YEAR(p.fecha_pago) = YEAR(CURRENT_DATE())
         `;
@@ -138,8 +149,9 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         // 4. CERRAR LA CONSULTA
         // Agregamos la agrupación y el orden sin importar si filtramos o no
         query += `
-            GROUP BY c.id, c.nombre_completo, c.telefono, c.es_renta, c.estado_servicio, bs.tipo_evento,
-                c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id
+            GROUP BY c.id, c.nombre_completo, c.telefono, c.observaciones, c.es_renta, c.estado_servicio, bs.tipo_evento,
+                bb.tipo_evento, bb.fecha_fin,
+                c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id, l.nombre, c.paquete
             ORDER BY c.dia_pago;
         `;
 
@@ -353,6 +365,7 @@ app.get('/api/clientes/:id/historial-pagos', async (req, res) => {
 
 app.post('/api/registrar-pago', async (req, res) => {
     const { clienteId, montoRecibido, usuarioId } = req.body;
+    const connection = db;
 
     try {
         const [cliente] = await db.query('SELECT costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?', [clienteId]);
@@ -448,7 +461,7 @@ app.post('/api/registrar-pago', async (req, res) => {
             const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes - ajusteAAplicar, 0);
 
             if (pendienteMes <= 0 && ajusteAAplicar > 0) {
-                const ajusteAplicado = await aplicarAjustesPendientes(connection, clienteId, etiquetaMes, ajusteAAplicar);
+                const ajusteAplicado = await aplicarAjustesPendientes(db, clienteId, etiquetaMes, ajusteAAplicar);
                 registros.push({
                     mes: etiquetaMes,
                     monto: 0,
@@ -971,6 +984,10 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                 success: true,
                 message: 'Falla tecnica registrada.',
                 bitacora_id: resultadoInsert.insertId,
+                fecha_inicio,
+                fecha_fin,
+                dias_compensados: dias,
+                monto_ajuste: montoAjuste,
                 observaciones_guardadas: observacionesLimpias
             });
         }
@@ -1039,11 +1056,13 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
             });
         }
 
+        const fechaInicioSuspension = new Date();
+
         await db.query(
             `INSERT INTO bitacora_servicio
                 (cliente_id, tipo_evento, fecha_inicio, fecha_fin, dias_compensados, monto_ajuste, estado)
-             VALUES (?, ?, NOW(), NULL, 0, 0.00, 'Activo')`,
-            [clienteId, tipo_evento]
+             VALUES (?, ?, ?, NULL, 0, 0.00, 'Activo')`,
+            [clienteId, tipo_evento, fechaInicioSuspension]
         );
 
         await db.query(
@@ -1051,7 +1070,14 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
             ['Suspendido', clienteId]
         );
 
-        res.json({ success: true, message: 'Servicio suspendido correctamente.' });
+        res.json({
+            success: true,
+            message: 'Servicio suspendido correctamente.',
+            tipo_evento,
+            fecha_inicio: fechaInicioSuspension,
+            dias_compensados: 0,
+            monto_ajuste: 0
+        });
     } catch (error) {
         console.error('Error al suspender servicio:', error);
         res.status(500).json({ success: false, error: error.message });
@@ -1105,6 +1131,9 @@ app.post('/api/clientes/:id/reactivar-servicio', async (req, res) => {
         res.json({
             success: true,
             message: 'Servicio reactivado correctamente.',
+            tipo_evento: evento.tipo_evento,
+            fecha_inicio: evento.fecha_inicio,
+            fecha_fin: fechaFinServicio,
             dias_compensados: diasCompensados,
             monto_ajuste: montoAjuste
         });

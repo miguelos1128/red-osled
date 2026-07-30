@@ -31,19 +31,17 @@
 
                 <div class="admin-controles-busqueda">
                     <div class="input-busqueda-wrapper">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="buscador-nombre" placeholder="Buscar cliente por nombre...">
+                        <input type="text" id="buscador-nombre" placeholder="Buscar por nombre, IP, teléfono, localidad, RENTA u observaciones...">
                     </div>
                     <div class="filtro-localidad-wrapper">
                         <select id="select-ordenar" >
-                            <option value="defecto">Ordenar por...</option>
-                            <option value="id_asc">ID (Menor a Mayor)</option>
-                            <option value="nombre_asc">Nombre (A - Z)</option>
-                            <option value="corte_asc">Día de Corte (1 al 31)</option>
-                            <option value="corte_desc">Día de Corte (31 al 1)</option>
-                            <option value="ip_asc">Dirección IP</option>
-                            <option value="fecha_desc">Más recientes (Fecha Inst.)</option>
-                            <option value="fecha_asc">Más antiguos (Fecha Inst.)</option>
+                            <option value="corte_asc" selected>Día de corte</option>
+                            <option value="adeudo_desc">Mayor adeudo</option>
+                            <option value="ip_asc">IP / número de cliente</option>
+                            <option value="nombre_asc">Nombre A-Z</option>
+                            <option value="localidad_asc">Localidad</option>
+                            <option value="fecha_desc">Más Recientes (Fecha Inst)</option>
+                            <option value="fecha_asc">Más Antiguos (Fecha Inst.)</option>
                         </select>
                     </div>
                     <div class="filtro-localidad-wrapper">
@@ -67,6 +65,9 @@
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="con_adeudo">Con adeudo</button>
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="al_corriente">Al corriente</button>
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="renta">RENTA</button>
+                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="paquete_5M">5 Megas</button>
+                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="paquete_8M">8 Megas</button>
+                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="paquete_16M">16 Megas</button>
                 </div>
 
                 
@@ -611,7 +612,8 @@
         let filtroLocalidadTodasSeleccionadoAntes = false;
         const filtrosRapidosAdmin = {
             estadoCuenta: null,
-            renta: false
+            renta: false,
+            paquete: null
         };
 
 
@@ -678,6 +680,16 @@
                 }
                 return `<div class="pago-burbuja ${clase}">${mes}</div>`;
             }).join('');
+        }
+
+        function formatearMotivoBaja(motivo) {
+            const motivos = {
+                falta_pago: 'Falta de pago',
+                decision_usuario: 'Decisión del usuario',
+                falla_tecnica: 'Falla técnica'
+            };
+
+            return motivos[motivo] || 'No especificado';
         }
 
         async function cargarVistaAdminClientes() {
@@ -795,15 +807,26 @@
                     }).join('');
                     
                     // AGREGAMOS LOS DATOS OCULTOS PARA EL FILTRO DE ORDEN
+                    const localidadNombre = cliente.localidad_nombre || configLocalidades[cliente.localidad_id]?.nombre || '';
+                    const textoBusquedaCombinada = [
+                        cliente.nombre_completo,
+                        cliente.direccion_ip,
+                        cliente.telefono,
+                        localidadNombre,
+                        cliente.observaciones
+                    ].filter(Boolean).join(' ');
                     card.setAttribute('data-id', cliente.id);
                     card.setAttribute('data-nombre', cliente.nombre_completo);
                     card.setAttribute('data-corte', cliente.dia_pago);
                     card.setAttribute('data-ip', cliente.direccion_ip);
                     card.setAttribute('data-fecha', cliente.fecha_instalacion || "2000-01-01");
+                    card.setAttribute('data-localidad-nombre', localidadNombre);
                     card.setAttribute('data-estado-servicio', (cliente.estado_servicio || '').toLowerCase());
                     card.setAttribute('data-tipo-suspension', cliente.tipo_suspension_activa || '');
                     card.setAttribute('data-adeudo', parseFloat(cliente.adeudo_actual) || 0);
                     card.setAttribute('data-renta', Number(cliente.es_renta) === 1 ? '1' : '0');
+                    card.setAttribute('data-paquete', cliente.paquete || '');
+                    card.setAttribute('data-busqueda', textoBusquedaCombinada.toLowerCase());
                     const badgeRentaCard = Number(cliente.es_renta) === 1
                         ? '<span class="cliente-badge-renta">RENTA</span>'
                         : '';
@@ -816,7 +839,55 @@
                         ? '<span class="cliente-badge-baja">Baja</span>'
                         : '';
 
-                    card.innerHTML = `
+                    if (estadoServicioCard === 'baja') {
+                        card.classList.add('cliente-card-baja');
+                        const adeudoBaja = parseFloat(cliente.adeudo_actual) || 0;
+                        const adeudoBajaTexto = adeudoBaja.toLocaleString('es-MX', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
+                        const fechaBaja = cliente.fecha_baja
+                            ? new Date(cliente.fecha_baja).toLocaleDateString('es-MX')
+                            : 'Sin fecha';
+                        const motivoBaja = formatearMotivoBaja(cliente.motivo_baja);
+
+                        card.innerHTML = `
+                            <div class="cliente-baja-header">
+                                <div>
+                                    <div class="cliente-nombre-linea">
+                                        <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
+                                        ${badgeBajaCard}
+                                    </div>
+                                    <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
+                                </div>
+                                <div class="cliente-baja-adeudo">
+                                    <span>Adeudo pendiente</span>
+                                    <strong>$${adeudoBajaTexto}</strong>
+                                </div>
+                            </div>
+
+                            <div class="cliente-baja-detalles">
+                                <div>
+                                    <span>Fecha de baja</span>
+                                    <strong>${fechaBaja}</strong>
+                                </div>
+                                <div>
+                                    <span>Motivo</span>
+                                    <strong>${motivoBaja}</strong>
+                                </div>
+                            </div>
+
+                            <div class="cliente-acciones-group cliente-baja-acciones">
+                                <button class="btn-detalles-slim" onclick="abrirHistorial(${cliente.id}, '${String(cliente.nombre_completo || '').replace(/'/g, "\\'")}')">
+                                    <i class="fas fa-history">📜</i> Ver historial
+                                </button>
+                                <button class="btn-reactivar-baja" type="button" disabled title="Próximamente">
+                                    Reactivar cliente
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        card.innerHTML = `
                         <div class="cliente-header">
                             <div class="cliente-info-principal">                              
                                 <div class="cliente-nombre-linea">
@@ -851,7 +922,8 @@
                                 <i class="fas fa-eye">🔔</i> 
                             </button>
                         </div>
-                    `;
+                        `;
+                    }
                     contenedor.appendChild(card);
                     // Después de renderizar las tarjetas
                     const contenedoresMeses = document.querySelectorAll('.cliente-historial-pagos');
@@ -862,6 +934,7 @@
                 activarScrollSincronizado();
                 // 3. Imprimimos el total final en nuestro nuevo elemento HTML
                 document.getElementById('contador-clientes').textContent = clientesVisibles;
+                aplicarOrdenAdminClientes();
                 filtrarTarjetasAdmin();
             } catch (error) {
                 console.error("Error cargando clientes:", error);
@@ -917,9 +990,9 @@
             let clientesVisibles = 0;
 
             tarjetas.forEach(tarjeta => {
-                const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+                const textoTarjeta = tarjeta.getAttribute('data-busqueda') || tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
                 const idLocalidadTarjeta = String(tarjeta.getAttribute('data-localidad') || '').trim();
-                const coincideNombre = !textoBusqueda || nombre.includes(textoBusqueda);
+                const coincideBusqueda = !textoBusqueda || textoTarjeta.includes(textoBusqueda);
                 const coincideLocalidad = !filtroLocalidadesListo || localidadesSeleccionadas.includes(idLocalidadTarjeta);
                 const adeudo = parseFloat(tarjeta.getAttribute('data-adeudo')) || 0;
                 const esRenta = tarjeta.getAttribute('data-renta') === '1';
@@ -929,8 +1002,12 @@
                         ? adeudo <= 0
                         : true;
                 const coincideRenta = filtrosRapidosAdmin.renta ? esRenta : true;
+                const paqueteTarjeta = tarjeta.getAttribute('data-paquete') || '';
+                const coincidePaquete = filtrosRapidosAdmin.paquete
+                    ? paqueteTarjeta === filtrosRapidosAdmin.paquete
+                    : true;
 
-                if (coincideNombre && coincideLocalidad && coincideAdeudo && coincideRenta) {
+                if (coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRenta && coincidePaquete) {
                     tarjeta.classList.remove('hidden');
                     clientesVisibles++;
                 } else {
@@ -965,7 +1042,9 @@
                 const filtro = chip.dataset.filtroRapido;
                 const activo = filtro === 'renta'
                     ? filtrosRapidosAdmin.renta
-                    : filtrosRapidosAdmin.estadoCuenta === filtro;
+                    : filtro.startsWith('paquete_')
+                        ? filtrosRapidosAdmin.paquete === filtro.replace('paquete_', '')
+                        : filtrosRapidosAdmin.estadoCuenta === filtro;
                 chip.classList.toggle('activo', activo);
             });
         }
@@ -973,6 +1052,9 @@
         function manejarFiltroRapidoAdmin(filtro) {
             if (filtro === 'renta') {
                 filtrosRapidosAdmin.renta = !filtrosRapidosAdmin.renta;
+            } else if (filtro.startsWith('paquete_')) {
+                const paquete = filtro.replace('paquete_', '');
+                filtrosRapidosAdmin.paquete = filtrosRapidosAdmin.paquete === paquete ? null : paquete;
             } else {
                 filtrosRapidosAdmin.estadoCuenta = filtrosRapidosAdmin.estadoCuenta === filtro ? null : filtro;
             }
@@ -997,29 +1079,22 @@
             activarScrollSincronizado();
         }
               
-        // EVENTO: ORDENAR TARJETAS
-        document.getElementById('select-ordenar').addEventListener('change', function(e) {
-            const criterio = e.target.value;
+        function aplicarOrdenAdminClientes() {
+            const criterio = document.getElementById('select-ordenar').value || 'corte_asc';
             const contenedor = document.getElementById('admin-clientes-container');
             
             // Obtenemos todas las tarjetas y las convertimos en un Array para poder ordenarlas
             const tarjetas = Array.from(contenedor.querySelectorAll('.cliente-card'));
 
-            // Si vuelve a la opción por defecto, no hacemos nada (o podrías recargar)
-            if (criterio === "defecto") return;
-
             tarjetas.sort((a, b) => {
                 let valA, valB;
 
                 switch(criterio) {
-                    case "id_asc":
-                        return parseInt(a.getAttribute('data-id')) - parseInt(b.getAttribute('data-id'));
-                    
                     case "corte_asc":
                         return parseInt(a.getAttribute('data-corte')) - parseInt(b.getAttribute('data-corte'));
 
-                    case "corte_desc": // NUEVO CASO: Orden descendente del 31 al 1
-                        return parseInt(b.getAttribute('data-corte')) - parseInt(a.getAttribute('data-corte'));
+                    case "adeudo_desc":
+                        return (parseFloat(b.getAttribute('data-adeudo')) || 0) - (parseFloat(a.getAttribute('data-adeudo')) || 0);
                     
                     case "nombre_asc":
                         valA = a.getAttribute('data-nombre').toLowerCase();
@@ -1031,6 +1106,11 @@
                         valB = b.getAttribute('data-ip');
                         // localeCompare con numeric: true ordena excelente tanto números (172) como IPs completas
                         return valA.localeCompare(valB, undefined, {numeric: true}); 
+
+                    case "localidad_asc":
+                        valA = (a.getAttribute('data-localidad-nombre') || '').toLowerCase();
+                        valB = (b.getAttribute('data-localidad-nombre') || '').toLowerCase();
+                        return valA.localeCompare(valB, 'es', { numeric: true });
                     
                     case "fecha_asc":
                         return new Date(a.getAttribute('data-fecha')) - new Date(b.getAttribute('data-fecha'));
@@ -1047,7 +1127,10 @@
             // (JavaScript automáticamente las mueve de posición, no las duplica)
             tarjetas.forEach(tarjeta => contenedor.appendChild(tarjeta));
             activarScrollSincronizado();
-        });
+        }
+
+        // EVENTO: ORDENAR TARJETAS
+        document.getElementById('select-ordenar').addEventListener('change', aplicarOrdenAdminClientes);
 
         // Funciones para el Modal------------
         function mostrarFormularioCliente() {
@@ -1840,6 +1923,143 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 window.open(linkWhats, "_blank");
         }
 
+        function obtenerTelefonoWhatsappCliente(cliente) {
+            const telefono = (cliente?.telefono || '').replace(/\D/g, '');
+            if (!telefono) return '';
+            return telefono.length === 10 ? `52${telefono}` : telefono;
+        }
+
+        function formatearFechaMensajeServicio(fecha) {
+            if (!fecha) return 'Pendiente';
+            return new Date(fecha).toLocaleDateString('es-MX');
+        }
+
+        function formatearMontoMensajeServicio(monto) {
+            return Math.floor(parseFloat(monto) || 0).toLocaleString('es-MX', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        }
+
+        function obtenerTextoMesesAdeudadosServicio(estadoCuenta) {
+            const meses = estadoCuenta?.meses_adeudados || [];
+            if (meses.length === 0) return 'Adeudo pendiente registrado en el sistema.';
+
+            return meses.map(item => {
+                const pendiente = formatearMontoMensajeServicio(item.pendiente);
+                return `${item.mes} $${pendiente}`;
+            }).join(', ');
+        }
+
+        function crearMensajeWhatsappEventoServicio(tipoEvento, datos = {}) {
+            const cliente = datos.cliente || clienteSeleccionado || {};
+            const estadoCuenta = datos.estadoCuenta || estadoCuentaDetalleActual || {};
+            const nombre = cliente.nombre_completo || 'cliente';
+            const emojiSaludo = '\u{1F44B}';
+            const emojiAviso = '\u{1F4E2}';
+            const emojiFecha = '\u{1F4C5}';
+            const emojiDinero = '\u{1F4B0}';
+            const emojiNota = '\u{1F4CC}';
+
+            if (tipoEvento === 'falta_pago') {
+                const adeudo = formatearMontoMensajeServicio(estadoCuenta.adeudo_actual);
+                const mesesTexto = obtenerTextoMesesAdeudadosServicio(estadoCuenta);
+
+                return `Hola *${nombre}* ${emojiSaludo}
+
+${emojiAviso} Te informamos que tu servicio ha sido suspendido por falta de pago.
+
+*Adeudo actual:* $${adeudo}
+*Meses pendientes:* ${mesesTexto}
+
+Para reactivar el servicio es necesario cubrir el adeudo pendiente.
+
+*RED OSLED*`;
+            }
+
+            if (tipoEvento === 'decision_usuario') {
+                const dias = parseInt(datos.dias_compensados) || 0;
+                const monto = formatearMontoMensajeServicio(datos.monto_ajuste);
+
+                return `Hola *${nombre}* ${emojiSaludo}
+
+Tu solicitud de suspensión temporal del servicio ha sido registrada correctamente.
+
+${emojiFecha} *Fecha de inicio:* ${formatearFechaMensajeServicio(datos.fecha_inicio)}
+${emojiFecha} *Fecha programada de regreso:* ${formatearFechaMensajeServicio(datos.fecha_fin)}
+*Días programados:* ${dias}
+${emojiDinero} *Compensación estimada:* $${monto}
+
+${emojiNota} Nota: esta compensación puede variar si el servicio se reactiva antes de la fecha programada.
+
+*RED OSLED*`;
+            }
+
+            if (tipoEvento === 'reactivacion_decision_usuario') {
+                const dias = parseInt(datos.dias_compensados) || 0;
+                const monto = formatearMontoMensajeServicio(datos.monto_ajuste);
+
+                return `Hola *${nombre}* ${emojiSaludo}
+
+Tu servicio ha sido reactivado correctamente.
+
+${emojiFecha} *Inicio de suspensión:* ${formatearFechaMensajeServicio(datos.fecha_inicio)}
+${emojiFecha} *Fecha de reactivación:* ${formatearFechaMensajeServicio(datos.fecha_fin)}
+*Días compensados:* ${dias}
+${emojiDinero} *Descuento a favor:* $${monto}
+
+Este saldo a favor se aplicará en tu siguiente mensualidad.
+
+*RED OSLED*`;
+            }
+
+            if (tipoEvento === 'falla_tecnica') {
+                const dias = parseInt(datos.dias_compensados) || 0;
+                const monto = formatearMontoMensajeServicio(datos.monto_ajuste);
+                const observaciones = (datos.observaciones_guardadas || datos.observaciones || '').trim();
+
+                return `Hola *${nombre}* ${emojiSaludo}
+
+Registramos una compensación por falla técnica en tu servicio.
+
+${emojiFecha} *Fecha de inicio:* ${formatearFechaMensajeServicio(datos.fecha_inicio)}
+${emojiFecha} *Fecha fin:* ${formatearFechaMensajeServicio(datos.fecha_fin)}
+*Días sin servicio:* ${dias}
+*Observaciones:* ${observaciones}
+${emojiDinero} *Compensación agregada a tu cuenta:* $${monto}
+
+Este saldo a favor se aplicará en tu siguiente mensualidad.
+
+*RED OSLED*`;
+            }
+
+            return '';
+        }
+
+        function preguntarEnviarWhatsappEventoServicio(tipoEvento, datos = {}) {
+            const cliente = datos.cliente || clienteSeleccionado || {};
+            const telefonoWhatsapp = obtenerTelefonoWhatsappCliente(cliente);
+
+            if (!telefonoWhatsapp) {
+                alert('El cliente no tiene teléfono válido para enviar WhatsApp.');
+                return;
+            }
+
+            const confirmar = confirm('¿Deseas enviar aviso por WhatsApp al cliente?');
+            if (!confirmar) return;
+
+            const mensajeWhatsapp = crearMensajeWhatsappEventoServicio(tipoEvento, {
+                ...datos,
+                cliente
+            });
+
+            if (!mensajeWhatsapp) return;
+
+            const linkWhats =
+                `https://api.whatsapp.com/send/?phone=${telefonoWhatsapp}&text=${encodeURIComponent(mensajeWhatsapp)}&type=phone_number&app_absent=0`;
+            window.open(linkWhats, '_blank');
+        }
+
         function imprimirReciboUltimoPago() {
             if (!ultimoDetallePago) {
                 alert("No hay un recibo disponible para imprimir.");
@@ -2331,6 +2551,13 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                 }
 
                 alert(result.message || 'Evento registrado correctamente.');
+                if (['falta_pago', 'decision_usuario', 'falla_tecnica'].includes(tipo)) {
+                    preguntarEnviarWhatsappEventoServicio(tipo, {
+                        ...result,
+                        observaciones: observacionesFalla,
+                        estadoCuenta: estadoCuentaDetalleActual
+                    });
+                }
                 abrirDetallesCliente(clienteDetalleActualId);
                 cargarVistaAdminClientes();
             } catch (error) {
@@ -2435,6 +2662,9 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
                     mensaje += `\nSaldo a favor generado: $${Math.floor(parseFloat(result.monto_ajuste))}`;
                 }
                 alert(mensaje);
+                if (result.tipo_evento === 'decision_usuario') {
+                    preguntarEnviarWhatsappEventoServicio('reactivacion_decision_usuario', result);
+                }
                 abrirDetallesCliente(clienteDetalleActualId);
                 cargarVistaAdminClientes();
             } catch (error) {

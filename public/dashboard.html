@@ -1435,6 +1435,7 @@
 
                
             });
+            inicializarFiltroTodasLocalidades();
         }
 
         // Ejecuta esta función al cargar el panel
@@ -4265,6 +4266,13 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
 
         function obtenerLocalidadesSeleccionadas() {
             return obtenerOpcionesLocalidadReales().filter(opcion => opcion.selected).map(opcion => String(opcion.value));
+        }
+
+        function inicializarFiltroTodasLocalidades() {
+            obtenerOpcionesLocalidadReales().forEach(opcion => {
+                opcion.selected = true;
+            });
+            actualizarSeleccionTodasLocalidades();
         }
 
         function actualizarSeleccionTodasLocalidades() {

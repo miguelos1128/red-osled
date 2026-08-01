@@ -1,4 +1,4 @@
-/* Configuración General */
+﻿/* Configuración General */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -2351,3 +2351,501 @@ td {
 .oculto-en-pantalla {
     display: none;
 }
+
+
+/* Merge develop: servicio y filtros */
+.admin-filtros-rapidos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 10px 12px;
+    background-color: #f4f7f6;
+}
+
+.chip-filtro-admin {
+    width: auto;
+    padding: 8px 13px;
+    border: 1px solid #d8dee4;
+    border-radius: 999px;
+    background: #fff;
+    color: #34495e;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chip-filtro-admin:hover {
+    border-color: #1a73e8;
+    color: #1a73e8;
+}
+
+.chip-filtro-admin.activo {
+    border-color: #1a73e8;
+.cliente-badge-renta {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #1a73e8;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.cliente-badge-suspendido {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.cliente-badge-suspendido.falta-pago {
+    background: #fde2df;
+    color: #b42318;
+}
+
+.cliente-badge-suspendido.decision-usuario {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.cliente-badge-baja {
+    display: inline-flex;
+.seccion-colapsada .seccion-colapsable-contenido {
+    display: none;
+}
+
+.seccion-header-acciones {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-colapsar-seccion {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #111827;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.btn-colapsar-seccion i {
+    display: none;
+}
+
+.btn-colapsar-seccion::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-135deg);
+    margin-top: 5px;
+}
+
+.btn-colapsar-seccion:hover {
+    background: rgba(17, 24, 39, 0.06);
+    color: #000;
+}
+
+.seccion-colapsada .btn-colapsar-seccion {
+    background: transparent;
+    color: #111827;
+}
+
+.seccion-colapsada .btn-colapsar-seccion::before {
+    transform: rotate(45deg);
+    margin-top: -5px;
+}
+
+.grid-info-cliente {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.info-grupo label {
+    font-size: 0.85rem; color: #7f8c8d; font-weight: bold; text-transform: uppercase;
+}
+.info-grupo p {
+    margin: 5px 0 0 0; font-size: 1rem; color: #2c3e50;
+}
+
+.detalle-observaciones {
+    margin-top: 15px;
+    padding: 12px 14px;
+    border-left: 4px solid #1a73e8;
+    background: #f8fbff;
+    border-radius: 6px;
+}
+
+.detalle-observaciones p {
+    white-space: pre-wrap;
+}
+
+/* Detalles resaltados */
+.resaltado-azul { font-weight: bold; color: #2980b9 !important; }
+.resaltado-tecnico { font-family: monospace; background: #f1f2f6; padding: 2px 6px; border-radius: 4px; }
+
+/* Badge de Estados */
+.detalle-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.badge-estado {
+    padding: 6px 16px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.9rem;
+}
+.estado-activo { background-color: #27ae60; }
+.estado-suspendido { background-color: #f39c12; }
+.estado-retirado { background-color: #e74c3c; }
+
+.card-pago .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.badge-servicio-resultado {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.badge-servicio-resultado.servicio-activo {
+    background: #e8f7ef;
+    color: #1e8e3e;
+}
+
+.badge-servicio-resultado.servicio-falta-pago {
+    background: #fde2df;
+    color: #b42318;
+}
+
+.badge-servicio-resultado.servicio-decision-usuario {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-renta {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background-color: #1a73e8;
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
+    letter-spacing: 0;
+}
+
+/* Botón WhatsApp */
+.acciones-contacto { margin-top: 20px; }
+.btn-contacto.whatsapp {
+    display: inline-block; background-color: #25D366; color: white;
+    padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;
+}
+
+.gestion-servicio-box {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.gestion-servicio-box.servicio-falta-pago {
+    border-color: #e74c3c;
+    border-left: 5px solid #e74c3c;
+    background: #fff7f6;
+}
+
+.gestion-servicio-box.servicio-decision-usuario {
+    border-color: #f59e0b;
+    border-left: 5px solid #f59e0b;
+    background: #fffaf0;
+}
+
+.gestion-servicio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.gestion-servicio-header h3 {
+    margin: 0;
+}
+
+.gestion-servicio-header span {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #eef2f7;
+    color: #34495e;
+    font-weight: bold;
+}
+
+.gestion-servicio-box.servicio-falta-pago .gestion-servicio-header span {
+    background: #fde2df;
+    color: #b42318;
+}
+
+.gestion-servicio-box.servicio-decision-usuario .gestion-servicio-header span {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.servicio-info-cuenta,
+#servicio-suspension-detalle {
+    margin: 6px 0 12px;
+    color: #5f6b7a;
+}
+
+.servicio-preview {
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    border-left: 4px solid #1a73e8;
+    border-radius: 6px;
+    background: #eef5ff;
+    color: #18324a;
+    font-size: 14px;
+}
+
+.servicio-controles {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(130px, auto)) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.servicio-controles select,
+.servicio-controles input {
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.servicio-observaciones {
+    grid-column: 1 / -1;
+    min-height: 82px;
+    resize: vertical;
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: inherit;
+}
+
+.btn-suspender-servicio {
+    background: #d97706;
+    color: white;
+    border: none;
+}
+
+.btn-reactivar-servicio {
+    background: #27ae60;
+    color: white;
+    border: none;
+}
+
+.btn-baja-servicio {
+    background: #dc2626;
+    color: white;
+    border: none;
+}
+
+.btn-baja-servicio:hover {
+    background: #b91c1c;
+}
+
+
+
+/* --- ESTILOS FASE 2: FINANZAS --- */
+.finanzas-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 15px; }
+.btn-descarga-pdf { background-color: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.3s;}
+.btn-descarga-pdf:hover { background-color: #c0392b; }
+
+.finanzas-resumen { display: flex; gap: 15px; margin-bottom: 20px; }
+.tarjeta-resumen { background: #f8f9fa; padding: 15px; border-radius: 8px; flex: 1; border-left: 5px solid #ccc; }
+.tarjeta-resumen.verde { border-left-color: #27ae60; }
+.tarjeta-resumen.alerta { border-left-color: #f1c40f; }
+.tarjeta-resumen span { color: #7f8c8d; font-size: 0.85rem; text-transform: uppercase; font-weight: bold;}
+.tarjeta-resumen h4 { margin: 5px 0 0 0; font-size: 1.6rem; color: #2c3e50; }
+
+.meses-pendientes-box {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-left: 4px solid #f1c40f;
+    background: #fffdf2;
+    border-radius: 6px;
+}
+
+.meses-pendientes-box span {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.meses-pendientes-box p {
+    margin: 6px 0 0;
+    color: #2c3e50;
+    line-height: 1.45;
+}
+
+.bitacora-servicio-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.bitacora-servicio-header h3 {
+    margin: 0;
+}
+
+.bitacora-servicio-lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.bitacora-evento {
+    padding: 12px 14px;
+    border: 1px solid #e5e7eb;
+    border-left: 5px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.bitacora-evento.falta-pago {
+    border-left-color: #e74c3c;
+    background: #fff7f6;
+}
+
+.bitacora-evento.decision-usuario {
+    border-left-color: #f59e0b;
+    background: #fffaf0;
+}
+
+.bitacora-evento.falla-tecnica {
+    border-left-color: #1a73e8;
+    background: #f8fbff;
+}
+
+.bitacora-evento-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.bitacora-evento-header strong {
+    color: #1f2937;
+}
+
+.bitacora-estado {
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #eef2f7;
+    color: #34495e;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.bitacora-evento-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+}
+
+.bitacora-evento-grid span {
+    display: block;
+    color: #7f8c8d;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.bitacora-evento-grid strong {
+    display: block;
+    margin-top: 3px;
+    color: #2c3e50;
+    font-size: 0.92rem;
+    line-height: 1.25;
+}
+
+.bitacora-observaciones {
+    margin: 12px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid #e5e7eb;
+    color: #4b5563;
+    white-space: pre-wrap;
+}
+
+.bitacora-observaciones span {
+    display: block;
+    margin-bottom: 4px;
+    color: #7f8c8d;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.bitacora-vacia {
+    margin: 0;
+    padding: 14px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    color: #7f8c8d;
+    text-align: center;
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+    .finanzas-header,
+    .bitacora-servicio-header {
+        align-items: flex-start;
+    }
+
+    .seccion-header-acciones {
+        flex-shrink: 0;
+    }
+
+    .btn-descarga-pdf {
+        padding: 8px 10px;
+    }
+
+    .bitacora-servicio-lista,
+    .bitacora-evento-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.tabla-contenedor { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; }

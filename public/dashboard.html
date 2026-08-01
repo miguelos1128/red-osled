@@ -4255,6 +4255,80 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 location.reload();  // Cierra la pestaña automáticamente al terminar (opcional, pero muy útil)
             }, 250);
         }
+
+        // Bloque de filtros de la versión funcional de integracion-develop2.
+        function obtenerOpcionesFiltroLocalidad() {
+            return Array.from(selectLocalidad.options || []);
+        }
+
+        function obtenerOpcionesLocalidadReales() {
+            return obtenerOpcionesFiltroLocalidad().filter(opcion => opcion.value !== 'todas');
+        }
+
+        function obtenerLocalidadesSeleccionadas() {
+            return obtenerOpcionesLocalidadReales().filter(opcion => opcion.selected).map(opcion => String(opcion.value));
+        }
+
+        function actualizarSeleccionTodasLocalidades() {
+            const opcionTodas = selectLocalidad.querySelector('option[value="todas"]');
+            const opcionesReales = obtenerOpcionesLocalidadReales();
+            if (!opcionTodas) return;
+            const todasSeleccionadas = opcionesReales.length > 0 && opcionesReales.every(opcion => opcion.selected);
+            opcionTodas.selected = todasSeleccionadas;
+            filtroLocalidadTodasSeleccionadoAntes = todasSeleccionadas;
+        }
+
+        function filtrarTarjetasAdmin() {
+            const textoBusqueda = buscadorInput.value.toLowerCase().trim();
+            const opcionesReales = obtenerOpcionesLocalidadReales();
+            const localidadesSeleccionadas = obtenerLocalidadesSeleccionadas();
+            const filtroLocalidadesListo = opcionesReales.length > 0;
+            const tarjetas = document.querySelectorAll('.cliente-card');
+            let clientesVisibles = 0;
+
+            tarjetas.forEach(tarjeta => {
+                const textoTarjeta = tarjeta.getAttribute('data-busqueda') || tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+                const coincideBusqueda = !textoBusqueda || textoTarjeta.includes(textoBusqueda);
+                const coincideLocalidad = !filtroLocalidadesListo || localidadesSeleccionadas.includes(String(tarjeta.getAttribute('data-localidad') || '').trim());
+                const adeudo = parseFloat(tarjeta.getAttribute('data-adeudo')) || 0;
+                const coincideAdeudo = filtrosRapidosAdmin.estadoCuenta === 'con_adeudo' ? adeudo > 0 : filtrosRapidosAdmin.estadoCuenta === 'al_corriente' ? adeudo <= 0 : true;
+                const coincideRenta = filtrosRapidosAdmin.renta ? tarjeta.getAttribute('data-renta') === '1' : true;
+                const coincidePaquete = filtrosRapidosAdmin.paquete ? tarjeta.getAttribute('data-paquete') === filtrosRapidosAdmin.paquete : true;
+                const visible = coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRenta && coincidePaquete;
+                tarjeta.classList.toggle('hidden', !visible);
+                if (visible) clientesVisibles++;
+            });
+            document.getElementById('contador-clientes').textContent = clientesVisibles;
+        }
+
+        function actualizarChipsFiltrosRapidos() {
+            document.querySelectorAll('.chip-filtro-admin').forEach(chip => {
+                const filtro = chip.dataset.filtroRapido;
+                const activo = filtro === 'renta' ? filtrosRapidosAdmin.renta : filtro.startsWith('paquete_') ? filtrosRapidosAdmin.paquete === filtro.replace('paquete_', '') : filtrosRapidosAdmin.estadoCuenta === filtro;
+                chip.classList.toggle('activo', activo);
+            });
+        }
+
+        function manejarFiltroRapidoAdmin(filtro) {
+            if (filtro === 'renta') filtrosRapidosAdmin.renta = !filtrosRapidosAdmin.renta;
+            else if (filtro.startsWith('paquete_')) {
+                const paquete = filtro.replace('paquete_', '');
+                filtrosRapidosAdmin.paquete = filtrosRapidosAdmin.paquete === paquete ? null : paquete;
+            } else filtrosRapidosAdmin.estadoCuenta = filtrosRapidosAdmin.estadoCuenta === filtro ? null : filtro;
+            actualizarChipsFiltrosRapidos();
+            filtrarTarjetasAdmin();
+        }
+
+        selectEstadoServicio.addEventListener('change', () => {
+            buscadorInput.value = '';
+            cargarVistaAdminClientes();
+        });
+        selectLocalidad.addEventListener('change', () => {
+            actualizarSeleccionTodasLocalidades();
+            filtrarTarjetasAdmin();
+        });
+        buscadorInput.addEventListener('input', filtrarTarjetasAdmin);
+        document.querySelectorAll('.chip-filtro-admin').forEach(chip => chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido)));
     </script>
 </body>
 </html>

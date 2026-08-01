@@ -1256,7 +1256,7 @@
             }
         } */
     
-        function aplicarFiltros(){
+        function aplicarFiltrosLegacy(){
             // 1. Creamos la variable que llevará la cuenta
             
             // 1. EVENTO: CUANDO ESCRIBES UN NOMBRE
@@ -4329,6 +4329,23 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
         });
         buscadorInput.addEventListener('input', filtrarTarjetasAdmin);
         document.querySelectorAll('.chip-filtro-admin').forEach(chip => chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido)));
+
+        // Inicialización exacta del bloque de filtros funcional.
+        function aplicarFiltros() {
+            buscadorInput.addEventListener('input', filtrarTarjetasAdmin);
+            selectLocalidad.addEventListener('change', () => {
+                actualizarSeleccionTodasLocalidades();
+                filtrarTarjetasAdmin();
+            });
+            selectEstadoServicio.addEventListener('change', () => {
+                buscadorInput.value = '';
+                cargarVistaAdminClientes();
+            });
+            document.querySelectorAll('.chip-filtro-admin').forEach(chip => {
+                chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido));
+            });
+            activarScrollSincronizado();
+        }
     </script>
 </body>
 </html>

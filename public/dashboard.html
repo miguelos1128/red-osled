@@ -18,10 +18,50 @@
             <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
         </div>
 
+        <div id="widget-corte" class="widget-corte">
+            <div class="widget-corte-principal">
+                <div class="widget-corte-badge">
+                    <span class="widget-lbl">EFECTIVO REAL EN CAJA</span>
+                    <span class="widget-monto-principal">💰 $<span id="lbl-caja-total">0.00</span></span>
+                </div>
+                <div class="widget-corte-contador">
+                    <span class="badge-contador"><span id="lbl-caja-cobros">0</span> cobros pendientes</span>
+                </div>
+            </div>
+
+            <div class="widget-corte-desglose-rapido" onclick="cargarWidgetCorte()" >
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Saldo Inicial</span>
+                    <span class="kpi-valor" id="lbl-widget-inicial">$0.00</span>
+                </div>
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Mensualidades</span>
+                    <span class="kpi-valor" id="lbl-widget-mensualidades">$0.00</span>
+                </div>
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Ingresos Extra</span>
+                    <span class="kpi-valor kpi-positivo" id="lbl-widget-extras">+$0.00</span>
+                </div>
+                <div class="mini-kpi">
+                    <span class="kpi-titulo">Gastos</span>
+                    <span class="kpi-valor kpi-negativo" id="lbl-widget-gastos">-$0.00</span>
+                </div>
+            </div>
+            
+            <div class="widget-corte-acciones">
+                <div class="tarjeta-cobrador-monto" style="display: flex; align-items: center;">
+                    <button id="btn-ver-historial" class="btn-historial-mini btn-widget-historial" title="Ver cortes anteriores">🕒</button>
+                </div>
+            </div>
+        </div>
+
         <div id="admin-section" class="admin-only">
             
-            <div class="actions">
+            <div id="modal-actions-admin" class="actions">
                 <button id="btn-nuevo-cliente" class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
+                <div id="lista-supervision-cobradores" class="supervision-container">
+                
+                </div>
             </div>
 
             <div class="main-section">
@@ -31,6 +71,7 @@
 
                 <div class="admin-controles-busqueda">
                     <div class="input-busqueda-wrapper">
+                        <i class="fas fa-search"></i>
                         <input type="text" id="buscador-nombre" placeholder="Buscar por nombre, IP, teléfono, localidad, RENTA u observaciones...">
                     </div>
                     <div class="filtro-localidad-wrapper">
@@ -43,8 +84,7 @@
                             <option value="fecha_desc">Más Recientes (Fecha Inst)</option>
                             <option value="fecha_asc">Más Antiguos (Fecha Inst.)</option>
                         </select>
-                    </div>
-                    <div class="filtro-localidad-wrapper">
+                    </div>                    <div class="filtro-localidad-wrapper">
                         <select id="filtro-estado-servicio">
                             <option value="todos_activos">Todos activos</option>
                             <option value="activo">Activos</option>
@@ -69,11 +109,7 @@
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="paquete_8M">8 Megas</button>
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="paquete_16M">16 Megas</button>
                 </div>
-
-                
-                
-
-                <div id ="admin-clientes-container" class="admin-clientes-container">
+<div id ="admin-clientes-container" class="admin-clientes-container">
                     <div class="cliente-card" data-localidad="Centro">
                         <div class="cliente-header">
                             <div class="cliente-info-principal">
@@ -111,27 +147,7 @@
             
         </div>
 
-        <div id="widget-corte" style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #1976d2; cursor: pointer; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;" onclick="abrirModalCorte()">
-            <div>
-                <span style="font-size: 1.2em; font-weight: bold; color: #1976d2;">💰 Efectivo en Caja: $<span id="lbl-caja-total">0.00</span></span>
-                <br><span style="color: #555; font-size: 0.9em;">Pagos por entregar: <span id="lbl-caja-cobros">0</span></span>
-            </div>
-            <button class= "button" style="background-color: #1976d2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Ver Desglose</button>
-        </div>
-
-        <div id="panel-historial-cortes" class="hidden seccion-gastos-corte">
-            <h3>Historial de cortes</h3>
-            <div id="lista-historial-cortes"></div>
-        </div>
-        <div id="panel-supervision-cortes" class="hidden seccion-gastos-corte">
-            <h3>Supervisión de cobradores</h3>
-            <div id="lista-supervision-cobradores"></div>
-        </div>
-
-        <div class="grupo-botones-pago" style="margin-bottom: 20px;">
-            <button class="button" onclick="mostrarHistorialCortes()">Historial de cortes</button>
-            <button id="btn-supervision-cortes" class="button hidden" onclick="mostrarSupervisionCortes()">Supervisión de cobradores</button>
-        </div>
+        
 
         <div class="main-section">
             <h3>Cobro de Mensualidad</h3>
@@ -171,7 +187,7 @@
                         </div>
                     </div>
                     <div class="grupo-botones-pago">
-                        <button id="btn-preparar-pago" onclick="prepararPago()" class="btn-pago button">Seleccionar Mes a Pagar</button>
+                        <button onclick="prepararPago()" class="btn-pago button">Seleccionar Mes a Pagar</button>
                         <button id="btn-ver-pagos" class="btn-pago button">Ver Pagos</button>
                     </div>
                 </div>
@@ -341,6 +357,10 @@
                 <h2 id="area-imprimible-corte-titulo">Reporte de Corte de Caja</h2>
                 <span class="cerrar-x-modal" onclick="cerrarModalCorte()">&times;</span>
             </div>
+            
+            <div id="banner-info-historica">
+
+            </div>
 
             <div id="area-imprimible-corte">
                 
@@ -351,7 +371,7 @@
                         <div>Cliente</div>
                         <div>Mes Pagado</div>
                         <div>Monto</div>
-                        <div>Estado</div>
+                        <div class="estado-borrar">Estado</div>
                         <div>Acción</div>
                     </div>
 
@@ -359,74 +379,88 @@
                         
                     </div>
                 </div>
-                <div class="reporte-pie-total">
-                    <div class="resumen-corte-linea">
-                        <span>Saldo inicial:</span>
-                        <strong>$<span id="lbl-corte-saldo-inicial">0.00</span></strong>
+
+                <div class="resumen-caja-chica">
+                    <div class="resumen-fila">
+                        <span>Saldo Inicial:</span> 
+                        <strong id="lbl-saldo-inicial">$0.00</strong>
                     </div>
-                    <div class="resumen-corte-linea">
-                        <span>Total cobrado:</span>
-                        <strong>$<span id="lbl-corte-bruto-modal">0.00</span></strong>
+                    <div class="resumen-fila">
+                        <span>+ Mensualidades:</span> 
+                        <strong id="lbl-mensualidades">$0.00</strong>
                     </div>
-                    <div class="resumen-corte-linea ingreso">
-                        <span>Ingresos extra:</span>
-                        <strong>+$<span id="lbl-corte-ingresos-modal">0.00</span></strong>
+                    <div class="resumen-fila">
+                        <span>+ Ingresos Extra:</span> 
+                        <strong id="lbl-ingresos-extra">$0.00</strong>
                     </div>
-                    <div id="resumen-gastos-corte" class="resumen-corte-linea gasto hidden">
-                        <span>Gastos:</span>
-                        <strong>-$<span id="lbl-corte-gastos-modal">0.00</span></strong>
+                    <div class="resumen-fila resumen-gasto ">
+                        <span>- Gastos:</span> 
+                        <strong id="lbl-gastos-totales">$0.00</strong>
                     </div>
-                    <h3>Total a entregar: $<span id="lbl-corte-total-modal">0.00</span></h3>
+                    
+                    <hr class="resumen-separador">
+                    
+                    <div class="resumen-fila resumen-total">
+                        <span><strong>Total en Caja Física:</strong></span> 
+                        <strong id="lbl-caja-fisica">$0.00</strong>
+                    </div>
                 </div>
 
                 <div id="seccion-gastos-corte" class="seccion-gastos-corte hidden">
-                    <h3>Registrar ingreso extra</h3>
-                    <div class="form-gasto-corte form-ingreso-extra">
-                        <input type="number" id="ingreso-extra-monto" min="0.01" step="0.01" placeholder="Monto ($)">
-                        <input type="text" id="ingreso-extra-descripcion" maxlength="255" placeholder="Descripción">
-                        <button class="button btn-agregar-ingreso" onclick="registrarIngresoExtra()">Agregar ingreso</button>
-                    </div>
-
-                    <h3>Registrar gasto</h3>
+                    <h4>Gastos</h4>
                     <div class="form-gasto-corte">
-                        <input type="number" id="gasto-monto" min="0.01" step="0.01" placeholder="Monto ($)">
-                        <input type="text" id="gasto-descripcion" maxlength="255" placeholder="Descripción">
-                        <button class="button btn-agregar-gasto" onclick="registrarGastoCorte()">Agregar gasto</button>
+                        <input type="number" id="gasto-monto" class="input-base" min="1" step="1" placeholder="Monto ($)">
+                        <input type="text" id="gasto-descripcion" class="input-base" maxlength="255" placeholder="Concepto (Ej. Compra de Materiales)" >
+                        <button class="button btn-agregar-gasto" onclick="registrarGastoCorte()">Añadir</button>
                     </div>
-
                     <div class="gastos-corte-lista">
                         <div class="gastos-corte-header">
                             <span>Gasto</span>
                             <span>Monto</span>
                             <span>Acción</span>
                         </div>
-                        <div id="lista-gastos-corte"></div>
-                    </div>
-                    <div class="gastos-corte-lista ingresos-corte-lista">
-                        <div class="gastos-corte-header">
-                            <span>Ingreso extra</span>
-                            <span>Monto</span>
-                            <span>Estado</span>
+                        <div id="lista-gastos-corte">
+
                         </div>
-                        <div id="lista-ingresos-extra"></div>
                     </div>
+                </div>
+
+                <div class="seccion-ingresos-extra">
+                    <h4 class="ingresos-titulo">Ingresos Extra</h4>
+                    <div class="form-ingreso-extra">
+                        <input type="number" id="monto-ingreso"  class="input-base"  min="1" step="1" placeholder="Monto ($)">
+                        <input type="text" id="desc-ingreso"  class="input-base" maxlength="255" placeholder="Concepto (Ej. Anticipo)" >
+                        <button onclick="agregarIngresoExtra()" class="button btn-agregar-ingreso">Añadir</button>
+                    </div>
+                    <div class="gastos-corte-lista">
+                        <div class="gastos-corte-header">
+                            <span>Ingreso</span>
+                            <span>Monto</span>
+                            <span>Acción</span>
+                        </div>
+                        <div id="lista-ingresos-extra">
+
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
 
             <div id="zona-impresion-oculta" class="oculto-en-pantalla">
-                
                 <h2 class="titulo-print">Reporte de Corte de Caja Autorizado</h2>
                     
-                    <div class="encabezado-info-print">
-                        <div class="info-usuarios">
-                            <div class="info-fecha">
-                                <p id="print-fecha-larga">Jueves, 2 de abril del 2026 - 6:24 p.m.</p>
-                            </div>
-                            <p><strong>Corte de:</strong> <span id="print-cobrador">Nombre del Usuario</span></p>
-                            <p><strong>Autorizado por:</strong> <span id="print-admin">Nombre del Administrador</span></p>
+                <div class="encabezado-info-print">
+                    <div class="info-usuarios">
+                        <div class="info-fecha">
+                            <p id="print-fecha-larga">Jueves, 2 de abril del 2026 - 6:24 p.m.</p>
                         </div>
-                        
+                        <p><strong>Corte de:</strong> <span id="print-cobrador">Nombre del Usuario</span></p>
+                        <p><strong>Autorizado por:</strong> <span id="print-admin">Nombre del Administrador</span></p>
                     </div>
+                        
+                </div>
+
+                <h3 class="titulo-print-seccion">Mensualidades Cobradas</h3>    
                 <table class="tabla-impresion">
                     <thead>
                         <tr>
@@ -436,8 +470,31 @@
                             <th>Monto</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-autorizado-body-print">
-                        </tbody>
+                    <tbody id="tabla-autorizado-body-print"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align: right; font-weight: bold;">Total Mensualidades:</td>
+                            <td style="font-weight: bold;">$<span id="lbl-suma-mensualidades-print">0.00</span></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <h3 class="titulo-print-seccion">Ingresos Extra</h3>
+                <table class="tabla-impresion">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-ingresos-extra-body-print"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="text-align: right; font-weight: bold;">Total Ingresos Extra:</td>
+                            <td style="font-weight: bold;">$<span id="lbl-suma-ingresos-extra-print">0.00</span></td>
+                        </tr>
+                    </tfoot>
                 </table>
 
                 <h3 class="titulo-print-seccion">Gastos descontados</h3>
@@ -445,37 +502,85 @@
                     <thead>
                         <tr>
                             <th>Fecha</th>
-                            <th>Descripción</th>
+                            <th>Concepto</th>
                             <th>Monto</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-gastos-body-print">
-                        </tbody>
+                    <tbody id="tabla-gastos-body-print"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="text-align: right; font-weight: bold;">Total Gastos:</td>
+                            <td style="font-weight: bold;">$<span id="lbl-suma-gastos-print">0.00</span></td>
+                        </tr>
+                    </tfoot>
                 </table>
                 
-                <div class="pie-impresion">
+              <!--   <div class="pie-impresion">
                     <p>Total cobrado: $<span id="lbl-autorizado-bruto-print">0.00</span></p>
                     <p>Gastos descontados: -$<span id="lbl-autorizado-gastos-print">0.00</span></p>
                     <h3>Total Autorizado: $<span id="lbl-autorizado-total-print">0.00</span></h3>
+                </div> -->
+
+                <div class="resumen-caja-chica-print">
+                    <h3>Resumen Final de Caja</h3>
+                    <div class="resumen-fila-print">
+                        <span>Saldo Inicial:</span> 
+                        <strong id="lbl-saldo-inicial-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print">
+                        <span>+ Mensualidades:</span> 
+                        <strong id="lbl-mensualidades-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print">
+                        <span>+ Ingresos Extra:</span> 
+                        <strong id="lbl-ingresos-extra-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print negativo">
+                        <span>- Gastos:</span> 
+                        <strong id="lbl-gastos-totales-print">$0.00</strong>
+                    </div>
+                    <hr class="resumen-separador-print">
+                    <div class="resumen-fila-print total">
+                        <span>Total en Caja Física:</span> 
+                        <strong id="lbl-caja-fisica-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print positivo" style="margin-top: 15px;">
+                        <span>Entregado al Admin:</span> 
+                        <strong id="lbl-entregado-admin-print">$0.00</strong>
+                    </div>
+                    <div class="resumen-fila-print neutro total">
+                        <span>Saldo en Caja (Fondo):</span> 
+                        <strong id="lbl-saldo-en-caja-print">$0.00</strong>
+                    </div>
                 </div>
+                
             </div>
             
             <div class="modal-acciones-corte">
-                <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre button">Solicitar Cierre al Administrador</button>
+                <button onclick="abrirModalAdmin()" class="btn-solicitar-cierre button">Entregar Corte al Administrador</button>
             </div>
 
         </div>
     </div>
 
-    <div id="modal-admin" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000;">
-        <div style="background: white; padding: 25px; border-radius: 8px; width: 300px; text-align: center;">
-            <h3 style="color: #d32f2f;">🔒 Autorización Requerida</h3>
-            <p>El administrador debe validar la entrega del efectivo para liberar el corte.</p>
-            <input type="text" id="admin-user" placeholder="Usuario Admin" style="width: 100%; margin-bottom: 10px; padding: 8px;"><br>
-            <input type="password" id="admin-pass" placeholder="Contraseña Admin" style="width: 100%; margin-bottom: 15px; padding: 8px;"><br>
-            <input type="number" id="monto-entregado" min="0" step="0.01" placeholder="Monto entregado ($)" style="width: 100%; margin-bottom: 15px; padding: 8px;"><br>
-            <button class="button" onclick="document.getElementById('modal-admin').classList.add('hidden')" style="padding: 10px; margin-right: 10px;">Cancelar</button>
-            <button class="button" onclick="ejecutarCorteFinal()" style="padding: 10px; background: #1976d2; color: white; border: none; border-radius: 5px;">Autorizar y Generar PDF</button>
+    <div id="modal-admin" class="hidden modal-fondo-admin">
+        <div class="modal-caja-admin">
+            <h3 class="modal-admin-titulo">🔒 Autorización Requerida</h3>
+            <p class="modal-admin-texto">El administrador debe validar la entrega del efectivo para liberar el corte.</p>
+
+            <div class="caja-entrega-efectivo">
+                <label class="caja-entrega-label">¿Cuánto dinero en efectivo se entrega al administrador?</label>
+                <input type="number" id="input-monto-entregar" placeholder="Monto a entregar" class="input-base caja-entrega-input">
+                <small class="caja-entrega-nota">La diferencia se quedará como Saldo Inicial para el siguiente mes.</small>
+            </div>
+
+            <input type="text" id="admin-user" placeholder="Usuario Admin" class="input-admin mb-10">
+            <input type="password" id="admin-pass" placeholder="Contraseña Admin" class="input-admin mb-15">
+            
+            <div class="modal-admin-botones">
+                <button class="button btn-canccelar-admin" onclick="document.getElementById('modal-admin').classList.add('hidden')">Cancelar</button>
+                <button class="button btn-autorizar-admin" onclick="ejecutarCorteFinal()">Autorizar y Generar PDF</button>
+            </div>
         </div>
     </div>
 
@@ -550,8 +655,9 @@
                         </div>
                         
                     </div>
+                </div>
 
-                    <div id="gestion-servicio-box" class="gestion-servicio-box">
+                                    <div id="gestion-servicio-box" class="gestion-servicio-box">
                         <div class="gestion-servicio-header">
                             <h3>Gestión de Servicio</h3>
                             <span id="servicio-estado-texto">-</span>
@@ -580,63 +686,8 @@
                             <button class="button btn-baja-servicio hidden" onclick="darBajaClienteSuspendido()">Dar de baja</button>
                         </div>
                     </div>
-                </div>
 
-                <div id="seccion-finanzas" class="seccion-detalle">
-                    <div class="finanzas-header">
-                        <h3>💰 Historial Financiero</h3>
-                        <div class="seccion-header-acciones">
-                            <button class="btn-descarga-pdf" onclick="generarPDFEstadoCuenta()">
-                                <i class="fas fa-file-pdf"></i> Descargar PDF
-                            </button>
-                            <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('seccion-finanzas', this)" aria-label="Contraer historial financiero" aria-expanded="true" title="Contraer sección">
-                                <i class="fas fa-chevron-up"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="seccion-colapsable-contenido">
-                        <div class="finanzas-resumen">
-                            <div class="tarjeta-resumen verde">
-                                <span>Total Pagado Histórico</span>
-                                <h4 id="detalle-total-pagado">$0.00</h4>
-                            </div>
-                            <div class="tarjeta-resumen alerta" id="tarjeta-pendientes">
-                                <span>Adeudo Pendiente</span>
-                                <h4 id="detalle-total-pendiente">$0.00</h4>
-                            </div>
-                        </div>
-
-                        <div id="detalle-meses-pendientes-box" class="meses-pendientes-box hidden">
-                            <div>
-                                <span>Meses pendientes</span>
-                                <p id="detalle-meses-pendientes">-</p>
-                            </div>
-                            <div id="notificar-box">
-
-                            </div>
-                        </div>
-
-                        <div class="tabla-contenedor">
-                            <table class="tabla-pagos">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Mes pagado</th>
-                                        <th>Monto</th>
-                                        <th>Cobrador</th>
-                                        <th>Tipo de Pago</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="detalle-tabla-pagos">
-                                
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="seccion-bitacora-servicio" class="seccion-detalle">
+                                <div id="seccion-bitacora-servicio" class="seccion-detalle">
                     <div class="bitacora-servicio-header">
                         <h3>Historial de Servicio</h3>
                         <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('seccion-bitacora-servicio', this)" aria-label="Contraer historial de servicio" aria-expanded="true" title="Contraer sección">
@@ -649,7 +700,64 @@
                         </div>
                     </div>
                 </div>
+<div id="seccion-finanzas" class="seccion-detalle">
+                    <div class="finanzas-header">
+                        <h3>💰 Historial Financiero</h3>
+                        <button class="btn-descarga-pdf" onclick="generarPDFEstadoCuenta()">
+                            <i class="fas fa-file-pdf"></i> Descargar PDF
+                        </button>
+                    </div>
+
+                    <div class="finanzas-resu   men">
+                        <div class="tarjeta-resumen verde">
+                            <span>Total Pagado Histórico</span>
+                            <h4 id="detalle-total-pagado">$0.00</h4>
+                        </div>
+                        <div class="tarjeta-resumen alerta" id="tarjeta-pendientes">
+                            <span>Adeudo Pendiente</span>
+                            <h4 id="detalle-total-pendiente">$0.00</h4>
+                        </div>
+                    </div>
+
+                    <div id="detalle-meses-pendientes-box" class="meses-pendientes-box hidden">
+                        <div>
+                            <span>Meses pendientes</span>
+                            <p id="detalle-meses-pendientes">-</p>
+                        </div>
+                        <div id="notificar-box" class="cliente-acciones-group">
+
+                        </div>
+                    </div>
+
+                    <div class="tabla-contenedor">
+                        <table class="tabla-pagos">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Mes pagado</th>
+                                    <th>Monto</th>
+                                    <th>Cobrador</th>
+                                    <th>Tipo de Pago</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detalle-tabla-pagos">
+                            
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-historial" class="hidden modal-fondo-corte" style="align-items: center;">
+        <div class="modal-caja-corte" style="max-width: 500px; margin: auto;">
+            <div class="cabecera-modal-corte">
+                <h2 id="titulo-modal-historial">Mis Cortes Anteriores</h2>
+                <span class="cerrar-x-modal" onclick="document.getElementById('modal-historial').classList.add('hidden')">&times;</span>
+            </div>
+            <div id="lista-historial-contenedor" style="max-height: 400px; overflow-y: auto; padding: 10px 0;">
             </div>
         </div>
     </div>
@@ -666,14 +774,14 @@
         const inputBuscador = document.getElementById('buscador-nombre');
         let configLocalidades = {};
         let perfilUsuario ="";
-        let filtroLocalidadTodasSeleccionadoAntes = false;
-        const filtrosRapidosAdmin = {
-            estadoCuenta: null,
-            renta: false,
-            paquete: null
-        };
         let detallePago;
         let ultimoDetallePago = null;
+        let clienteSeleccionado = null;
+        let clienteDetalleActualId = null;
+        let suspensionServicioActual = null;
+        let estadoCuentaDetalleActual = null;
+        let filtroLocalidadTodasSeleccionadoAntes = false;
+        const filtrosRapidosAdmin = { estadoCuenta: null, renta: false, paquete: null };
 
         if (!usuarioJson) {
             window.location.href = 'index.html';
@@ -683,15 +791,21 @@
         const usuarioString = localStorage.getItem('usuario_actual');
 
         if (usuarioString) {
-            const usuario = JSON.parse(usuarioString);
+            const usuario = JSON.parse(usuarioString);/* 
             console.log("El rol de este usuario es:", usuario.rol);
-            console.log("Sus localidades son:", usuario.localidades); // Ej: [1, 3]
+            console.log("Sus localidades son:", usuario.localidades); // Ej: [1, 3] */
         } else {
             // Si no hay datos, significa que no se ha logueado, lo regresamos al login
             window.location.href = '/index.html';
         }
         const usuario = JSON.parse(usuarioJson);
         document.getElementById('user-name').innerText = usuario.nombre;
+
+        const btnHistorial = document.getElementById('btn-ver-historial');
+
+        btnHistorial.addEventListener('click', () => {
+            abrirModalHistorial(usuario.id, usuario.nombre);
+        });
         
 
         // 2. Lógica de Roles: Mostrar sección de admin si rol_id es 2
@@ -700,10 +814,12 @@
             // Verificamos si es el nuevo rol de Supervisor (ID: 3)
             if (usuario.rol === 3) {
                 const btnNuevo = document.getElementById('btn-nuevo-cliente');
+                const modalActionsAdmin = document.getElementById('modal-actions-admin');
+
                 if (btnNuevo) {
                     // Eliminamos el botón para que no exista en el DOM del Supervisor
                     btnNuevo.remove(); 
-                    console.log("Interfaz ajustada: Botón de nuevo cliente oculto para Supervisor.");
+                    modalActionsAdmin.remove();
                 }
                 perfilUsuario = "Administrador Local";
             }else if (usuario.rol === 2){
@@ -714,22 +830,15 @@
             perfilUsuario = "Recepcionista"
         }
         document.getElementById('perfil').innerText = perfilUsuario;
-        if (usuario.rol === 2) {
-            document.getElementById('btn-supervision-cortes').classList.remove('hidden');
-        }
         // 3. Función para cerrar sesión
         function logout() {
             sessionStorage.clear();
             window.location.href = 'index.html';
         }
         let idCobrador = usuario.id
-        let clienteDetalleActualId = null;
-        let suspensionServicioActual = null;
-        let estadoCuentaDetalleActual = null;
-        cargarWidgetCorte();
-        const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3;
+        const puedeGestionarGastos = usuario.rol === 2 || usuario.rol === 3 || usuario.rol === 1; // Solo administradores y supervisores pueden gestionar gastos
         document.getElementById('seccion-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
-        document.getElementById('resumen-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
+        //document.getElementById('resumen-gastos-corte').classList.toggle('hidden', !puedeGestionarGastos);
 
         function renderizarHistorial(pagosCliente) {
             return meses.map((mes, index) => {
@@ -1007,155 +1116,234 @@
             aplicarFiltros();
             // Primero, cargamos los clientes al iniciar la página
             cargarVistaAdminClientes();
+
+            // LÓGICA DEL BUSCADOR EN TIEMPO REAL
+            inputBuscador.addEventListener('input', function(e) {
+                // Obtenemos el texto que escribió el usuario en minúsculas
+                const terminoBusqueda = e.target.value.toLowerCase();
+                
+                // Seleccionamos todas las tarjetas que están en pantalla
+                const tarjetas = document.querySelectorAll('.cliente-card');
+
+                tarjetas.forEach(tarjeta => {
+                    // Buscamos el nombre específico dentro de esa tarjeta
+                    const nombreCliente = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+
+                    // Si el nombre incluye lo que escribimos, mostramos la tarjeta, si no, la ocultamos
+                    if (nombreCliente.includes(terminoBusqueda)) {
+                        tarjeta.classList.remove('hidden'); 
+                    } else {
+                        tarjeta.classList.add('hidden');
+                    }
+                });
+            });
         });
 
-        
+        // 1. Dibuja las tarjetas en la pantalla principal  
+        // 1. Dibuja las tarjetas en la pantalla principal       
+        async function cargarSupervisionCobradores() {
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
+                if (!usuarioActual || usuarioActual.rol !== 2) return; 
 
-        function obtenerOpcionesFiltroLocalidad() {
-            return Array.from(selectLocalidad.options || []);
-        }
+                const response = await fetch(`/api/admin/supervision-cortes/${usuarioActual.id}`);
+                const cobradores = await response.json();
 
-        function obtenerOpcionesLocalidadReales() {
-            return obtenerOpcionesFiltroLocalidad().filter(opcion => opcion.value !== 'todas');
-        }
+                const contenedor = document.getElementById('lista-supervision-cobradores');
+                contenedor.innerHTML = ''; 
 
-        function obtenerLocalidadesSeleccionadas() {
-            return obtenerOpcionesLocalidadReales()
-                .filter(opcion => opcion.selected)
-                .map(opcion => String(opcion.value));
-        }
-
-        function actualizarSeleccionTodasLocalidades() {
-            const opcionTodas = selectLocalidad.querySelector('option[value="todas"]');
-            const opcionesReales = obtenerOpcionesLocalidadReales();
-            if (!opcionTodas) return;
-
-            const todasSeleccionadas = opcionesReales.length > 0 && opcionesReales.every(opcion => opcion.selected);
-            opcionTodas.selected = todasSeleccionadas;
-            filtroLocalidadTodasSeleccionadoAntes = todasSeleccionadas;
-        }
-
-        function inicializarFiltroTodasLocalidades() {
-            obtenerOpcionesLocalidadReales().forEach(opcion => {
-                opcion.selected = true;
-            });
-            actualizarSeleccionTodasLocalidades();
-        }
-
-        function filtrarTarjetasAdmin() {
-            const textoBusqueda = buscadorInput.value.toLowerCase().trim();
-            const opcionesReales = obtenerOpcionesLocalidadReales();
-            const localidadesSeleccionadas = obtenerLocalidadesSeleccionadas();
-            const filtroLocalidadesListo = opcionesReales.length > 0;
-            const tarjetas = document.querySelectorAll('.cliente-card');
-            let clientesVisibles = 0;
-
-            tarjetas.forEach(tarjeta => {
-                const textoTarjeta = tarjeta.getAttribute('data-busqueda') || tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
-                const idLocalidadTarjeta = String(tarjeta.getAttribute('data-localidad') || '').trim();
-                const coincideBusqueda = !textoBusqueda || textoTarjeta.includes(textoBusqueda);
-                const coincideLocalidad = !filtroLocalidadesListo || localidadesSeleccionadas.includes(idLocalidadTarjeta);
-                const adeudo = parseFloat(tarjeta.getAttribute('data-adeudo')) || 0;
-                const esRenta = tarjeta.getAttribute('data-renta') === '1';
-                const coincideAdeudo = filtrosRapidosAdmin.estadoCuenta === 'con_adeudo'
-                    ? adeudo > 0
-                    : filtrosRapidosAdmin.estadoCuenta === 'al_corriente'
-                        ? adeudo <= 0
-                        : true;
-                const coincideRenta = filtrosRapidosAdmin.renta ? esRenta : true;
-                const paqueteTarjeta = tarjeta.getAttribute('data-paquete') || '';
-                const coincidePaquete = filtrosRapidosAdmin.paquete
-                    ? paqueteTarjeta === filtrosRapidosAdmin.paquete
-                    : true;
-
-                if (coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRenta && coincidePaquete) {
-                    tarjeta.classList.remove('hidden');
-                    clientesVisibles++;
-                } else {
-                    tarjeta.classList.add('hidden');
+                if (cobradores.length === 0) {
+                    contenedor.innerHTML = '<p style="color: #7f8c8d; font-size: 14px; font-style: italic;">No hay usuarios para supervisar.</p>';
+                    return;
                 }
-            });
 
-            document.getElementById('contador-clientes').textContent = clientesVisibles;
-        }
+                const formatear = (num) => parseFloat(num || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        function manejarCambioFiltroLocalidad() {
-            buscadorInput.value = '';
+                cobradores.forEach(cobrador => {
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = 'tarjeta-cobrador';
+                    
+                    // Al dar clic se abre el modal de corte
+                    tarjeta.onclick = async () => {
+                        await cargarWidgetCorte(cobrador.cobrador_id, true, cobrador.cobrador_nombre);
+                        document.getElementById('modal-corte').classList.remove('hidden');
+                    };
+                    
+                    tarjeta.innerHTML = `
+                        <div class="tarjeta-header">
+                            <div>
+                                <h4>${cobrador.cobrador_nombre}</h4>
+                                <span style="font-size: 12px; color: #64748b;">💳 ${cobrador.total_cobros} cobros realizados</span>
+                            </div>
+                            <button onclick="event.stopPropagation(); abrirModalHistorial(${cobrador.cobrador_id}, '${cobrador.cobrador_nombre}')" class="btn-historial-mini" title="Ver cortes anteriores">🕒</button>
+                        </div>
 
-            const opcionTodas = selectLocalidad.querySelector('option[value="todas"]');
-            const opcionesReales = obtenerOpcionesLocalidadReales();
-            const todasSeleccionadaAhora = Boolean(opcionTodas?.selected);
+                        <div class="tarjeta-desglose">
+                            <div class="desglose-item">
+                                <span>Saldo Inicial:</span>
+                                <strong>$${formatear(cobrador.saldo_inicial)}</strong>
+                            </div>
+                            <div class="desglose-item positivo">
+                                <span>+ Mensualidades:</span>
+                                <strong>$${formatear(cobrador.total_recaudado)}</strong>
+                            </div>
+                            <div class="desglose-item positivo">
+                                <span>+ Ingresos Extra:</span>
+                                <strong>$${formatear(cobrador.total_ingresos_extra)}</strong>
+                            </div>
+                            <div class="desglose-item negativo">
+                                <span>- Gastos:</span>
+                                <strong>-$${formatear(cobrador.total_gastos)}</strong>
+                            </div>
+                        </div>
 
-            if (opcionTodas && todasSeleccionadaAhora !== filtroLocalidadTodasSeleccionadoAntes) {
-                opcionesReales.forEach(opcion => {
-                    opcion.selected = todasSeleccionadaAhora;
+                        <div class="tarjeta-footer">
+                            <span>Total en Caja Física:</span>
+                            <span style="color: #2563eb;">$${formatear(cobrador.caja_fisica)}</span>
+                        </div>
+                    `;
+                    
+                    contenedor.appendChild(tarjeta);
                 });
-                filtroLocalidadTodasSeleccionadoAntes = todasSeleccionadaAhora;
-            } else {
-                actualizarSeleccionTodasLocalidades();
+
+            } catch (error) {
+                console.error("Error al cargar supervisión de cobradores:", error);
             }
-
-            filtrarTarjetasAdmin();
         }
+        
+/*         async function cargarSupervisionCobradores() {
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual'));
+                if (!usuarioActual || usuarioActual.rol !== 2) return; 
 
-        function actualizarChipsFiltrosRapidos() {
-            document.querySelectorAll('.chip-filtro-admin').forEach(chip => {
-                const filtro = chip.dataset.filtroRapido;
-                const activo = filtro === 'renta'
-                    ? filtrosRapidosAdmin.renta
-                    : filtro.startsWith('paquete_')
-                        ? filtrosRapidosAdmin.paquete === filtro.replace('paquete_', '')
-                        : filtrosRapidosAdmin.estadoCuenta === filtro;
-                chip.classList.toggle('activo', activo);
-            });
-        }
+                const response = await fetch(`/api/admin/supervision-cortes/${usuarioActual.id}`);
+                const cobradores = await response.json();
 
-        function manejarFiltroRapidoAdmin(filtro) {
-            if (filtro === 'renta') {
-                filtrosRapidosAdmin.renta = !filtrosRapidosAdmin.renta;
-            } else if (filtro.startsWith('paquete_')) {
-                const paquete = filtro.replace('paquete_', '');
-                filtrosRapidosAdmin.paquete = filtrosRapidosAdmin.paquete === paquete ? null : paquete;
-            } else {
-                filtrosRapidosAdmin.estadoCuenta = filtrosRapidosAdmin.estadoCuenta === filtro ? null : filtro;
+                const contenedor = document.getElementById('lista-supervision-cobradores');
+                contenedor.innerHTML = ''; 
+
+                if (cobradores.length === 0) {
+                    contenedor.innerHTML = '<p style="color: #7f8c8d; font-size: 14px; font-style: italic;">No hay cobros pendientes de otros usuarios.</p>';
+                    return;
+                }
+
+               cobradores.forEach(cobrador => {
+                    const totalFormateado = parseFloat(cobrador.total_recaudado).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+                    
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = 'tarjeta-cobrador';
+                    
+                    // Al dar clic se llama a la función exacta sin alterar los estilos internos
+                    tarjeta.onclick = async () => {
+                        await cargarWidgetCorte(cobrador.cobrador_id, true, cobrador.cobrador_nombre);
+                        document.getElementById('modal-corte').classList.remove('hidden');
+                    };
+                    
+                    tarjeta.innerHTML = `
+                        <div class="tarjeta-cobrador-info">
+                            <h4>${cobrador.cobrador_nombre}</h4>
+                            <p>💳 ${cobrador.total_cobros} cobros pendientes</p>
+                        </div>
+                        <div class="tarjeta-cobrador-monto" style="display: flex; align-items: center;">
+                            $${totalFormateado}
+                            <button onclick="event.stopPropagation(); abrirModalHistorial(${cobrador.cobrador_id}, '${cobrador.cobrador_nombre}')" class="btn-historial-mini" title="Ver cortes anteriores">🕒</button>
+                        </div>
+                    `;                    contenedor.appendChild(tarjeta);
+                });
+
+            } catch (error) {
+                console.error("Error al cargar supervisión de cobradores:", error);
             }
-
-            actualizarChipsFiltrosRapidos();
-            filtrarTarjetasAdmin();
-        }
-
+        } */
+    
         function aplicarFiltros(){
-            buscadorInput.addEventListener('input', function() {
-                filtrarTarjetasAdmin();
-            });
+            // 1. Creamos la variable que llevará la cuenta
+            
+            // 1. EVENTO: CUANDO ESCRIBES UN NOMBRE
+             buscadorInput.addEventListener('input', function(e) {
+                    // Resetear el filtro de localidad a "todas"
+                    selectLocalidad.value = 'todas';
+                    
+                    const textoBusqueda = e.target.value.toLowerCase().trim();
+                    const tarjetas = document.querySelectorAll('.cliente-card');
+                    let clientesVisibles = 0;
 
-            selectLocalidad.addEventListener('change', manejarCambioFiltroLocalidad);
-            selectEstadoServicio.addEventListener('change', function() {
+                    tarjetas.forEach(tarjeta => {
+                        const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+                        
+                        // Filtramos SOLO por el nombre
+                        if (nombre.includes(textoBusqueda)) {
+                            tarjeta.classList.remove('hidden');
+                            clientesVisibles++;
+                        } else {
+                            tarjeta.classList.add('hidden');
+                        }
+                    });
+                     // 3. Imprimimos el total final en nuestro nuevo elemento HTML
+                    document.getElementById('contador-clientes').textContent = clientesVisibles;
+                });
+
+            // 2. EVENTO: CUANDO SELECCIONAS UNA LOCALIDAD
+            selectLocalidad.addEventListener('change', function(e) {
+                // Limpiar el texto del buscador de nombre
                 buscadorInput.value = '';
-                cargarVistaAdminClientes();
-            });
-            document.querySelectorAll('.chip-filtro-admin').forEach(chip => {
-                chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido));
+                
+                            // NUEVO: En lugar de un solo valor, obtenemos una lista (Array) de todo lo seleccionado
+                // Convertimos las opciones seleccionadas a un arreglo y extraemos solo su "value"
+                const opcionesSeleccionadas = Array.from(e.target.selectedOptions).map(opcion => opcion.value);
+                
+               // const localidadSeleccionada = String(e.target.value).trim();
+                const tarjetas = document.querySelectorAll('.cliente-card');
+                let clientesVisibles = 0;
+
+                tarjetas.forEach(tarjeta => {
+                    let idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
+                    idLocalidadTarjeta = idLocalidadTarjeta ? String(idLocalidadTarjeta).trim() : 'null';
+
+                    // LÓGICA DE FILTRADO MÚLTIPLE:
+                    // 1. ¿El usuario seleccionó "todas"? o ¿desmarcó todo (lista vacía)?
+                    const mostrarTodas = opcionesSeleccionadas.includes("todas") || opcionesSeleccionadas.length === 0;
+                    
+                    // 2. ¿El ID de la localidad de esta tarjeta está dentro de la lista que eligió el usuario?
+                    const coincideLocalidad = opcionesSeleccionadas.includes(idLocalidadTarjeta);
+
+                    // Si cumple cualquiera de las dos condiciones, mostramos la tarjeta
+                    if (mostrarTodas || coincideLocalidad) {
+                        tarjeta.classList.remove('hidden');
+                        clientesVisibles++;
+                    } else {
+                        tarjeta.classList.add('hidden');
+                    }
+                });
+                // 3. Imprimimos el total final en nuestro nuevo elemento HTML
+                document.getElementById('contador-clientes').textContent = clientesVisibles;
             });
             activarScrollSincronizado();
         }
               
-        function aplicarOrdenAdminClientes() {
-            const criterio = document.getElementById('select-ordenar').value || 'corte_asc';
+        // EVENTO: ORDENAR TARJETAS
+        document.getElementById('select-ordenar').addEventListener('change', function(e) {
+            const criterio = e.target.value;
             const contenedor = document.getElementById('admin-clientes-container');
             
             // Obtenemos todas las tarjetas y las convertimos en un Array para poder ordenarlas
             const tarjetas = Array.from(contenedor.querySelectorAll('.cliente-card'));
 
+            // Si vuelve a la opción por defecto, no hacemos nada (o podrías recargar)
+            if (criterio === "defecto") return;
+
             tarjetas.sort((a, b) => {
                 let valA, valB;
 
                 switch(criterio) {
+                    case "id_asc":
+                        return parseInt(a.getAttribute('data-id')) - parseInt(b.getAttribute('data-id'));
+                    
                     case "corte_asc":
                         return parseInt(a.getAttribute('data-corte')) - parseInt(b.getAttribute('data-corte'));
 
-                    case "adeudo_desc":
-                        return (parseFloat(b.getAttribute('data-adeudo')) || 0) - (parseFloat(a.getAttribute('data-adeudo')) || 0);
+                    case "corte_desc": // NUEVO CASO: Orden descendente del 31 al 1
+                        return parseInt(b.getAttribute('data-corte')) - parseInt(a.getAttribute('data-corte'));
                     
                     case "nombre_asc":
                         valA = a.getAttribute('data-nombre').toLowerCase();
@@ -1167,11 +1355,6 @@
                         valB = b.getAttribute('data-ip');
                         // localeCompare con numeric: true ordena excelente tanto números (172) como IPs completas
                         return valA.localeCompare(valB, undefined, {numeric: true}); 
-
-                    case "localidad_asc":
-                        valA = (a.getAttribute('data-localidad-nombre') || '').toLowerCase();
-                        valB = (b.getAttribute('data-localidad-nombre') || '').toLowerCase();
-                        return valA.localeCompare(valB, 'es', { numeric: true });
                     
                     case "fecha_asc":
                         return new Date(a.getAttribute('data-fecha')) - new Date(b.getAttribute('data-fecha'));
@@ -1188,10 +1371,7 @@
             // (JavaScript automáticamente las mueve de posición, no las duplica)
             tarjetas.forEach(tarjeta => contenedor.appendChild(tarjeta));
             activarScrollSincronizado();
-        }
-
-        // EVENTO: ORDENAR TARJETAS
-        document.getElementById('select-ordenar').addEventListener('change', aplicarOrdenAdminClientes);
+        });
 
         // Funciones para el Modal------------
         function mostrarFormularioCliente() {
@@ -1216,6 +1396,8 @@
             document.getElementById('fecha_ins').setAttribute('max', hoy);
             cargarVistaAdminClientes();
             //cargarClientes(); // Tu función existente
+            cargarSupervisionCobradores();
+            CargarWidgetCorteDashboard();
         };
 
         async function cargarLocalidades() {
@@ -1253,7 +1435,6 @@
 
                
             });
-            inicializarFiltroTodasLocalidades();
         }
 
         // Ejecuta esta función al cargar el panel
@@ -1411,9 +1592,7 @@
             if(paquete === '16M') costoInput.value = 600;
         }
 
-        let clienteSeleccionado = null;
-        let estadoCuentaResultadoActual = null;
-        let suspensionResultadoActual = null;
+        
 
         // 1. Controlador inteligente de búsqueda (Alterna entre Nombre e IP)
         async function controladorBusqueda(tipo) {
@@ -1466,56 +1645,18 @@
                         <strong>${c.nombre_completo}</strong> - IP: ${c.direccion_ip}
                     </div>
                 `).join('');
-                console.log("Clientes cargados:", clientes);
+                /* console.log("Clientes cargados:", clientes); */
             } catch (error) {
                 console.error("Error al buscar:", error);
             }
         }
 
         // 2. Al hacer clic en un cliente de la lista
-        function configurarEstadoServicioResultado(cliente, servicio) {
-            const badge = document.getElementById('res-estado-servicio');
-            const estadoServicio = (cliente.estado_servicio || '').toLowerCase();
-            const suspensionActiva = servicio?.suspension_activa || null;
-            const tipoSuspension = suspensionActiva?.tipo_evento || null;
-
-            badge.className = 'badge-servicio-resultado';
-
-            if (estadoServicio === 'suspendido' || suspensionActiva) {
-                if (tipoSuspension === 'decision_usuario') {
-                    badge.textContent = 'Suspendido: Decisión del Usuario';
-                    badge.classList.add('servicio-decision-usuario');
-                } else if (tipoSuspension === 'falta_pago') {
-                    badge.textContent = 'Suspendido: Falta de Pago';
-                    badge.classList.add('servicio-falta-pago');
-                } else {
-                    badge.textContent = 'Suspendido';
-                    badge.classList.add('servicio-falta-pago');
-                }
-                return;
-            }
-
-            badge.textContent = 'Activo';
-            badge.classList.add('servicio-activo');
-        }
-
-        function configurarBotonPagoResultado() {
-            const boton = document.getElementById('btn-preparar-pago');
-            if (!boton) return;
-
-            const esSuspensionFaltaPago = suspensionResultadoActual?.tipo_evento === 'falta_pago';
-            boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Seleccionar Mes a Pagar';
-        }
-
         async function seleccionarCliente(cliente) {
             
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
-            clienteSeleccionado = cliente;
-            estadoCuentaResultadoActual = null;
-            suspensionResultadoActual = null;
-            configurarBotonPagoResultado();
-            
+            clienteSeleccionado = cliente;            
             // Limpiar las listas flotantes
             document.getElementById('sugerenciasNombre').innerHTML = '';
             document.getElementById('sugerenciasIP').innerHTML = '';
@@ -1526,7 +1667,6 @@
             } else {
                 document.getElementById('buscarIP').value = cliente.direccion_ip;
             }
-            console.log("Alias del cliente" + cliente.alias_cliente)//-----------------------------------------------------
 
             try {
                 // Consultamos el estado de cuenta calculado desde el servidor
@@ -1534,8 +1674,6 @@
                 if (!response.ok) throw new Error("Error al consultar estado de cuenta");
                 const data = await response.json();
                 const estadoCuenta = data.estado_cuenta;
-                estadoCuentaResultadoActual = estadoCuenta;
-                suspensionResultadoActual = estadoCuenta?.servicio?.suspension_activa || null;
 
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
@@ -1543,8 +1681,6 @@
                 const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 document.getElementById('res-costo').innerText = costoFormateado;
                 document.getElementById('res-dia').textContent = cliente.dia_pago;
-                configurarEstadoServicioResultado(data.cliente || cliente, estadoCuenta.servicio);
-                configurarBotonPagoResultado();
 
                 document.getElementById('btn-ver-pagos').onclick = function() {
                     abrirHistorial(cliente.id, cliente.nombre_completo);
@@ -1561,11 +1697,7 @@
                     const mesesTexto = mesesPendientes.length > 0
                         ? `<br><span style="color: #555; font-size: 0.9em;">Meses pendientes: ${mesesPendientes.map(item => {
                             const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                            const ajustePendiente = parseFloat(item.monto_ajuste_pendiente) || 0;
-                            const ajusteTexto = ajustePendiente > 0
-                                ? ` (saldo a favor -$${Math.floor(ajustePendiente).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })})`
-                                : '';
-                            return `${item.mes} $${pendiente}${ajusteTexto}`;
+                            return `${item.mes} $${pendiente}`;
                         }).join(', ')}</span>`
                         : '';
                     msgUltimoPago.innerHTML = `
@@ -1717,73 +1849,9 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
 
         
         // 3. Abrir el modal de pago
-        function esResultadoSuspendidoPorFaltaPago() {
-            return suspensionResultadoActual?.tipo_evento === 'falta_pago';
-        }
-
-        async function cobrarReactivacionDesdeResultado() {
-            if (!clienteSeleccionado) return;
-
-            const adeudoMensual = parseFloat(estadoCuentaResultadoActual?.adeudo_mensual) || parseFloat(estadoCuentaResultadoActual?.adeudo_actual) || 0;
-            const minimoReactivacion = adeudoMensual;
-            const minimoTexto = minimoReactivacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-            if (minimoReactivacion <= 0) {
-                alert('El cliente no tiene adeudo pendiente para cobrar desde esta vista.');
-                return;
-            }
-
-            const montoTexto = prompt(
-                `Monto recibido para reactivar el servicio.\n\nMínimo requerido: $${minimoTexto}`,
-                minimoReactivacion.toFixed(2)
-            );
-
-            if (montoTexto === null) return;
-
-            const montoRecibido = parseFloat(montoTexto.replace(/[^0-9.]/g, ''));
-            if (!montoRecibido || montoRecibido <= 0) {
-                alert('Captura un monto válido para reactivar.');
-                return;
-            }
-
-            if (montoRecibido < minimoReactivacion) {
-                alert(`Para reactivar el servicio debes cobrar al menos $${minimoTexto}.`);
-                return;
-            }
-
-            try {
-                const response = await fetch(`${urlBase}/api/clientes/${clienteSeleccionado.id}/reactivar-con-pago`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        usuarioId: idCobrador,
-                        montoRecibido
-                    })
-                });
-                const result = await response.json();
-
-                if (!response.ok || !result.success) {
-                    alert(result.error || 'No se pudo reactivar el servicio.');
-                    return;
-                }
-
-                document.getElementById('resultado-busqueda').classList.add('hidden');
-                mostrarResumenPagoExitoso(result.detalle || []);
-                cargarVistaAdminClientes();
-            } catch (error) {
-                console.error('Error reactivando servicio desde resultado:', error);
-                alert('No se pudo conectar con el servidor.');
-            }
-        }
-
         function prepararPago() {
 
             if (!clienteSeleccionado) return;
-
-            if (esResultadoSuspendidoPorFaltaPago()) {
-                cobrarReactivacionDesdeResultado();
-                return;
-            }
 
             document.getElementById('modal-nombre-cliente').innerText = clienteSeleccionado.nombre_completo;
             
@@ -1895,9 +1963,6 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                                         <i class="fas fa-eye">✏️</i>
                                     </button>
                         `;
-                
-
-
 
                 mostrarResumenPagoExitoso(resultado.detalle);
                 detallePago = resultado.detalle
@@ -1925,17 +1990,11 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
             // 2. CALCULAMOS TOTALES Y ARMAMOS LAS FILAS
             const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
             const detalleHtml = detalle.map(item => {
-                const tipoLabel = item.tipo === 'reconexion' ? 'Reconexión' : item.tipo === 'abono' ? 'Abono' : 'Mensualidad';
-                const concepto = item.tipo === 'reconexion' ? 'Reconexión' : item.mes;
-                const subtitulo = item.tipo === 'reconexion' ? '' : ` <small>${tipoLabel}</small>`;
+                const tipoLabel = item.tipo === 'abono' ? 'Abono' : 'Mensualidad';
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const ajusteAplicado = parseFloat(item.ajuste_aplicado) || 0;
-                const ajusteHtml = ajusteAplicado > 0
-                    ? `<small>Saldo a favor aplicado: $${Math.floor(ajusteAplicado).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</small>`
-                    : '';
                 return `
                     <div class="resumen-pago-fila">
-                        <span>${concepto}${subtitulo}${ajusteHtml}</span>
+                        <span>${item.mes} <small>${tipoLabel}</small></span>
                         <strong>$${montoFormateado}</strong>
                     </div>
                 `;
@@ -1993,11 +2052,7 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
             const emojiTiempo = hora < 12 ? '☀️' : hora < 19 ? '🌇' : '🌜';
            
             const pagosTexto = detalle
-                .map(p => {
-                    const ajusteAplicado = parseFloat(p.ajuste_aplicado) || 0;
-                    const ajusteTexto = ajusteAplicado > 0 ? `\n   Saldo a favor aplicado: $${Math.floor(ajusteAplicado)}` : '';
-                    return `${emojiMes} *${p.mes}:* $${p.monto}${ajusteTexto}`;
-                })
+                .map(p => `${emojiMes} *${p.mes}:* $${p.monto}`)
                 .join('\n');
             const totalFormateadoWA = total.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
             const mensajeWhatsapp =
@@ -2213,7 +2268,7 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
  */
         // 2. Función que crea el ticket visual
         function generarTicketImpresion(detalle) {
-            console.log(detalle)
+            //console.log(detalle)
             if (!detalle || detalle.length === 0) {
                 alert("Error: No hay datos para el ticket. El pago se registró pero el desglose falló.");
                 location.reload();
@@ -2226,23 +2281,15 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             // Generamos las filas de la tabla del ticket
             let filasTicket = detalle.map(item => {
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const ajusteAplicado = parseFloat(item.ajuste_aplicado) || 0;
-                const ajusteTexto = ajusteAplicado > 0
-                    ? `<br><small>Saldo a favor aplicado: $${Math.floor(ajusteAplicado).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</small>`
-                    : '';
-                const concepto = item.tipo === 'reconexion'
-                    ? 'Reconexión'
-                    : `${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}`.trim();
                 return `
                 <tr>
-                    <td style="padding: 5px 0;">${concepto}${ajusteTexto}</td>
+                    <td style="padding: 5px 0;">${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}</td>
                     <td align="right" style="padding: 5px 0;">$${montoFormateado}</td>
                 </tr>
             `;
             }).join('');
 
             const total = detalle.reduce((acc, item) => acc + parseFloat(item.monto), 0);
-            const totalFormateado = total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             // Escribimos el HTML del ticket (Estilo Recibo Térmico)
             ventana.document.write(`
@@ -2331,13 +2378,283 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             const mesesDeuda = meses < 0 ? 0 : meses;
             const montoTotal = mesesDeuda * costoMensual;
 
-            console.log("meses deuda: "+ mesesDeuda + "montoTotal: " + montoTotal)
+            //console.log("meses deuda: "+ mesesDeuda + "montoTotal: " + montoTotal)
 
             return {
                 mesesDeuda,
                 montoTotal
             };
         }
+ 
+        // Función para abrir el modal y cargar desde Node.js
+        async function abrirDetallesCliente(idCliente) {
+            // 1. Mostrar el Modal primero y poner un mensaje de carga
+            document.getElementById('modal-detalles-cliente').classList.remove('hidden');
+            document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
+
+            try {
+                const respuestaEstadoCuenta = await fetch(`/api/clientes/${idCliente}/estado-cuenta-completo`);
+
+                if (!respuestaEstadoCuenta.ok) throw new Error("Error cargando estado de cuenta del cliente");
+
+                const dataCompleto = await respuestaEstadoCuenta.json();
+                const cliente = dataCompleto.cliente;
+                const pagos = dataCompleto.historial_pagos || [];
+                const estadoCuenta = dataCompleto.estado_cuenta;
+
+                const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
+                        EditarBoxAlias.innerHTML = `
+                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
+                                        <i class="fas fa-eye">Alias: ${cliente.alias_cliente} ✏️</i>
+                                    </p>
+                        `;
+
+                // 3. Inyectar datos en la FICHA TÉCNICA
+                document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
+                document.getElementById('detalle-direccion').textContent = cliente.direccion || 'Sin dirección';
+                const observaciones = (cliente.observaciones || '').trim();
+                const grupoObservaciones = document.getElementById('detalle-observaciones-grupo');
+                document.getElementById('detalle-observaciones').textContent = observaciones;
+                grupoObservaciones.classList.toggle('hidden', !observaciones);
+                
+                // Formatear la fecha para que se vea bonita (opcional)
+                let fechaInst = cliente.fecha_instalacion ? new Date(cliente.fecha_instalacion).toLocaleDateString() : 'N/A';
+                document.getElementById('detalle-fecha-inst').textContent = fechaInst;
+                
+                document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
+                document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
+                document.getElementById('detalle-ip').href = cliente.url_portal || '#'; 
+                document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
+                
+                // Ahora usamos los nombres reales que trajimos del servidor
+                const loc = cliente.localidad_nombre || 'Sin localidad';
+                const paq = cliente.paquete || 'Sin paquete';
+                document.getElementById('detalle-localidad-paquete').textContent = `${loc} | Paquete: ${paq}`;
+
+                // 4. Configurar WhatsApp
+                const tel = cliente.telefono || '';
+                document.getElementById('detalle-telefono').textContent = tel || 'Sin teléfono';
+                const btnWhatsapp = document.getElementById('btn-whatsapp');
+
+                if (tel) {
+                    const telLimpio = tel.replace(/\D/g,''); 
+                    btnWhatsapp.href = `https://wa.me/${telLimpio}`;
+                    btnWhatsapp.style.display = 'inline-block';
+                    const EditarBox = document.getElementById('editar-box')
+                        EditarBox.innerHTML = `
+                        
+                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},1)'>
+                                        <i class="fas fa-eye">✏️</i>
+                                    </button>
+                        `;
+                } else {
+                    btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
+                }
+
+                // 5. Configurar Badge de Estado
+                const badge = document.getElementById('detalle-badge-estado');
+                const badgeRenta = document.getElementById('detalle-badge-renta');
+                badge.className = 'badge-estado'; 
+                badgeRenta.classList.toggle('hidden', Number(cliente.es_renta) !== 1);
+                
+                if(cliente.estado_servicio == 'activo') {
+                    badge.textContent = 'Activo';
+                    badge.classList.add('estado-activo');
+                } else if (cliente.estado == 'suspendido') {
+                    badge.textContent = 'Suspendido';
+                    badge.classList.add('estado-suspendido');
+                } else {
+                    badge.textContent = 'Retirado';
+                    badge.classList.add('estado-retirado');
+                }
+
+                // --- INICIO FASE 2: FINANZAS ---
+                const tbodyPagos = document.getElementById('detalle-tabla-pagos');
+                tbodyPagos.innerHTML = ''; // Limpiamos la tabla de clientes anteriores
+                
+                let totalPagado = 0;
+                let totalPendiente = 0;
+
+                if (pagos.length === 0) {
+                    tbodyPagos.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:#7f8c8d;">No hay historial de pagos registrados para este cliente.</td></tr>';
+                } else {
+                    pagos.forEach(pago => {
+                        const monto = parseFloat(pago.monto) || 0;
+                        const montoFormateado = monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        let badgeHTML = '';
+                        const fechaObj = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+                        // Dibujamos la fila (Usamos el ID de pago como "Folio")
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${fechaObj}</td>
+                            <td><b>${pago.mes_pagado}</b></td>
+                            <td>$${montoFormateado}</td>
+                            <td>${pago.cobrador_nombre || 'Desconocido'}</td>
+                            <td>${pago.tipo_pago}</td>
+                        `;
+                        tbodyPagos.appendChild(tr);
+                    });
+                }
+
+                const adeudoPendiente = parseFloat(estadoCuenta.adeudo_actual) || 0;
+                const saldoFavor = parseFloat(estadoCuenta.saldo_favor) || 0;
+                const totalPagadoHistoricoNume = parseFloat(estadoCuenta.total_pagado_historico) || 0;
+                const mesesPendientes = estadoCuenta.meses_adeudados || [];
+
+                const adeudoFormateado = adeudoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const saldoFormateado = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const pagadoFormateado = totalPagadoHistoricoNume.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('detalle-total-pendiente').textContent = adeudoPendiente > 0 ? `$${adeudoFormateado}` : `$0.00`;
+                document.getElementById('detalle-total-pagado').textContent = `$${pagadoFormateado}`;
+
+                const mesesPendientesBox = document.getElementById('detalle-meses-pendientes-box');
+                const mesesPendientesTexto = mesesPendientes.map(item => {
+                    const pendiente = parseFloat(item.pendiente || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    return `${item.mes} $${pendiente}`;
+                }).join(', ');
+                document.getElementById('detalle-meses-pendientes').textContent = mesesPendientesTexto || '-';
+                mesesPendientesBox.classList.toggle('hidden', mesesPendientes.length === 0);
+                const notifcarBox = document.getElementById('notificar-box')
+                notifcarBox.innerHTML = `
+                            <button class="btn-registrar-pago" 
+                                onclick='seleccionarClienteDirecto(${JSON.stringify(cliente).replace(/'/g, "&apos;")})'>
+                                <i class="fas fa-dollar-sign">💵</i> Registrar Pago
+                            </button>
+                            <button class="btn-detalles-slim" onclick='notificarCliente(${idCliente})'>
+                                <i class="fas fa-eye">🔔</i>
+                            </button>
+                `;
+                // Actualizamos la lógica amarilla/gris de la tarjeta pendiente
+                const tarjetaPendiente = document.getElementById('tarjeta-pendientes');
+                if (adeudoPendiente > 0) {
+                    tarjetaPendiente.querySelector('span').textContent = 'Adeudo Pendiente';
+                    tarjetaPendiente.classList.add('alerta');
+                    tarjetaPendiente.style.borderLeftColor = '#f1c40f'; // Amarillo
+                } else if (saldoFavor > 0) {
+                    tarjetaPendiente.querySelector('span').textContent = 'Saldo a Favor';
+                    document.getElementById('detalle-total-pendiente').textContent = `$${saldoFormateado}`;
+                    tarjetaPendiente.classList.remove('alerta');
+                    tarjetaPendiente.style.borderLeftColor = '#1a73e8';
+                } else {
+                    tarjetaPendiente.querySelector('span').textContent = 'Adeudo Pendiente';
+                    tarjetaPendiente.classList.remove('alerta');
+                    tarjetaPendiente.style.borderLeftColor = '#bdc3c7'; // Gris de "paz mental, cliente al corriente"
+                }
+                // --- FIN FASE 2 ---
+                     window.datosActualesPDF = {
+                        cliente: cliente,
+                        pagos: pagos,
+                        totalPagado: totalPagadoHistoricoNume,
+                        adeudo: adeudoPendiente
+                    };  
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('detalle-nombre-cliente').textContent = "Error al cargar los datos";
+            }
+             // Guardamos los datos globalmente para que el botón del PDF los pueda usar
+                   
+        }
+        async function modificaTelefonoCliente(idCliente,bandera) {
+            // 1. Mostramos una ventana emergente nativa para pedir el nuevo número
+            let nuevoTelefono = prompt("Por favor, ingresa el nuevo número de teléfono (solo números):");
+
+            // 2. CICLO DE VALIDACIÓN: Se repite si se equivoca, se detiene si presiona Cancelar (null)
+            while (nuevoTelefono !== null) {
+                // Quitamos espacios en blanco al inicio o al final por si se le fue un espacio sin querer
+                nuevoTelefono = nuevoTelefono.trim();
+                
+                // EL CANDADO: Evaluamos si cumple exactamente con 10 números
+                if (/^\d{10}$/.test(nuevoTelefono)) {
+                    break; // El número es perfecto, rompemos el ciclo y continuamos
+                } else {
+                    // Si tiene letras, le faltan o le sobran números, volvemos a preguntar
+                    nuevoTelefono = prompt("⚠️ Número inválido.\n\nDebes ingresar EXACTAMENTE 10 dígitos, sin espacios ni letras.\n\nInténtalo de nuevo:");
+                }
+            }
+            
+            // 3. Si el usuario presionó "Cancelar", detenemos todo el proceso
+            if (nuevoTelefono === null) {
+                return; 
+            }
+            // 4. Validamos que el usuario no haya presionado "Cancelar" y que no esté vacío
+            try {
+                // 3. Enviamos la petición al servidor usando fetch
+                const response = await fetch(`/api/clientes/${idCliente}/telefono`, {
+                    method: 'PUT', // Usamos PUT porque estamos modificando un dato existente
+                    headers: {
+                        'Content-Type': 'application/json'
+                   },
+                    // Convertimos los datos a formato JSON para enviarlos
+                    body: JSON.stringify({ nuevoTelefono: nuevoTelefono.trim() }) 
+                });
+
+                const data = await response.json();
+
+                // 4. Revisamos si el servidor respondió con éxito
+                if (response.ok) {
+                    alert("¡El teléfono se ha actualizado correctamente!");
+                    if (bandera==1){
+                        abrirDetallesCliente(idCliente); 
+                    }else if (bandera ==2){
+                            
+                        clienteSeleccionado.telefono = nuevoTelefono
+                        mostrarResumenPagoExitoso(detallePago);
+                    }
+                        
+                } else {
+                    // Si hubo un error (ej. el servidor falló), lo mostramos
+                    alert("Hubo un problema: " + data.error);
+                }
+
+            } catch (error) {
+               console.error("Error en la comunicación con el servidor:", error);
+                alert("Ocurrió un error al intentar comunicar con el servidor.");
+            }
+        }
+
+        async function modificaAliasCliente(idCliente,bandera) {
+            // 1. Mostramos una ventana emergente nativa para pedir el nuevo número
+            //const nuevoTelefono = prompt("Por favor, ingresa el nuevo Alias para el cliente:");
+            const nuevoAlias = prompt("Por favor, ingresa el nuevo Alias para el cliente:");
+
+            // 2. Validamos que el usuario no haya presionado "Cancelar" y que no esté vacío
+            if (nuevoAlias !== null && nuevoAlias.trim() !== "") {
+                
+                try {
+                    // 3. Enviamos la petición al servidor usando fetch
+                    const response = await fetch(`/api/clientes/${idCliente}/alias`, {
+                        method: 'PUT', // Usamos PUT porque estamos modificando un dato existente
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        // Convertimos los datos a formato JSON para enviarlos
+                        body: JSON.stringify({ nuevoAlias: nuevoAlias.trim() }) 
+                    });
+
+                    const data = await response.json();
+
+                    // 4. Revisamos si el servidor respondió con éxito
+                    if (response.ok) {
+                        if (bandera==1){
+                            abrirDetallesCliente(idCliente); 
+                        }else{
+                            clienteSeleccionado.alias_cliente = nuevoAlias
+                            mostrarResumenPagoExitoso(detallePago);
+                        }
+                    } else {
+                        // Si hubo un error (ej. el servidor falló), lo mostramos
+                        alert("Hubo un problema: " + data.error);
+                    }
+
+                } catch (error) {
+                    console.error("Error en la comunicación con el servidor:", error);
+                    alert("Ocurrió un error al intentar comunicar con el servidor.");
+                }
+            } else if (nuevoAlias === "") {
+                alert("El nuevo Alias no puede estar vacío.");
+            } 
+            // Si es null, significa que el usuario presionó "Cancelar", así que no hacemos nada.
+        } 
 
         function actualizarFormularioSuspension() {
             const tipo = document.getElementById('select-tipo-suspension').value;
@@ -2873,13 +3190,6 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 clienteSeleccionado = cliente;
                 estadoCuentaDetalleActual = estadoCuenta;
 
-                const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
-                        EditarBoxAlias.innerHTML = `
-                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">Alias: ${cliente.alias_cliente} ✏️</i>
-                                    </p>
-                        `;
-
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
                 document.getElementById('detalle-direccion').textContent = cliente.direccion || 'Sin dirección';
@@ -2894,7 +3204,7 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 
                 document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
-                document.getElementById('detalle-ip').href = cliente.url_portal || '#'; 
+                document.getElementById('detalle-ip').href = cliente.url_portal || '#';
                 document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
                 
                 // Ahora usamos los nombres reales que trajimos del servidor
@@ -2911,13 +3221,6 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                     const telLimpio = tel.replace(/\D/g,''); 
                     btnWhatsapp.href = `https://wa.me/${telLimpio}`;
                     btnWhatsapp.style.display = 'inline-block';
-                    const EditarBox = document.getElementById('editar-box')
-                        EditarBox.innerHTML = `
-                        
-                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">✏️</i>
-                                    </button>
-                        `;
                 } else {
                     btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
                 }
@@ -2998,10 +3301,7 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 mesesPendientesBox.classList.toggle('hidden', mesesPendientes.length === 0);
                 const notifcarBox = document.getElementById('notificar-box')
                 notifcarBox.innerHTML = `
-                            <button class="btn-registrar-pago" 
-                                onclick='seleccionarClienteDirecto(${JSON.stringify(cliente).replace(/'/g, "&apos;")})'>
-                                <i class="fas fa-dollar-sign">💵</i> Registrar Pago
-                            </button>
+                
                             <button class="btn-detalles-slim" onclick='notificarCliente(${idCliente})'>
                                 <i class="fas fa-eye">🔔</i>
                             </button>
@@ -3036,118 +3336,7 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
              // Guardamos los datos globalmente para que el botón del PDF los pueda usar
                    
         }
-        async function modificaTelefonoCliente(idCliente,bandera) {
-            // 1. Mostramos una ventana emergente nativa para pedir el nuevo número
-            let nuevoTelefono = prompt("Por favor, ingresa el nuevo número de teléfono (solo números):");
-
-            // 2. CICLO DE VALIDACIÓN: Se repite si se equivoca, se detiene si presiona Cancelar (null)
-            while (nuevoTelefono !== null) {
-                // Quitamos espacios en blanco al inicio o al final por si se le fue un espacio sin querer
-                nuevoTelefono = nuevoTelefono.trim();
-                
-                // EL CANDADO: Evaluamos si cumple exactamente con 10 números
-                if (/^\d{10}$/.test(nuevoTelefono)) {
-                    break; // El número es perfecto, rompemos el ciclo y continuamos
-                } else {
-                    // Si tiene letras, le faltan o le sobran números, volvemos a preguntar
-                    nuevoTelefono = prompt("⚠️ Número inválido.\n\nDebes ingresar EXACTAMENTE 10 dígitos, sin espacios ni letras.\n\nInténtalo de nuevo:");
-                }
-            }
-
-            // 3. Si el usuario presionó "Cancelar", detenemos todo el proceso
-            if (nuevoTelefono === null) {
-                return; 
-            }
-
-            // 4. Si el código llega hasta aquí, estamos 100% seguros de que es un número de 10 dígitos
-       
-                try {
-                    // 3. Enviamos la petición al servidor usando fetch
-                    const response = await fetch(`/api/clientes/${idCliente}/telefono`, {
-                        method: 'PUT', // Usamos PUT porque estamos modificando un dato existente
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        // Convertimos los datos a formato JSON para enviarlos
-                        body: JSON.stringify({ nuevoTelefono: nuevoTelefono.trim() }) 
-                    });
-
-                    const data = await response.json();
-
-                    // 4. Revisamos si el servidor respondió con éxito
-                    if (response.ok) {
-                        alert("¡El teléfono se ha actualizado correctamente!");
-                        if (bandera==1){
-                            abrirDetallesCliente(idCliente); 
-                        }else if (bandera ==2){
-                            
-                            clienteSeleccionado.telefono = nuevoTelefono
-                            mostrarResumenPagoExitoso(detallePago);
-                        }
-                        
-                        
-                    } else {
-                        // Si hubo un error (ej. el servidor falló), lo mostramos
-                        alert("Hubo un problema: " + data.error);
-                    }
-
-                } catch (error) {
-                    console.error("Error en la comunicación con el servidor:", error);
-                    alert("Ocurrió un error al intentar comunicar con el servidor.");
-                }
-            /* } else if (nuevoTelefono === "") {
-                alert("El número de teléfono no puede estar vacío.");
-            }else if (nuevoTelefono.length !== 10){
-                alert("El Teléfono debe tener exactamente 10 dígitos.");
-            }
-            // Si es null, significa que el usuario presionó "Cancelar", así que no hacemos nada. */
-        } 
-
-        async function modificaAliasCliente(idCliente,bandera) {
-            // 1. Mostramos una ventana emergente nativa para pedir el nuevo número
-            //const nuevoTelefono = prompt("Por favor, ingresa el nuevo Alias para el cliente:");
-            const nuevoAlias = prompt("Por favor, ingresa el nuevo Alias para el cliente:");
-
-            // 2. Validamos que el usuario no haya presionado "Cancelar" y que no esté vacío
-            if (nuevoAlias !== null && nuevoAlias.trim() !== "") {
-                
-                try {
-                    // 3. Enviamos la petición al servidor usando fetch
-                    const response = await fetch(`/api/clientes/${idCliente}/alias`, {
-                        method: 'PUT', // Usamos PUT porque estamos modificando un dato existente
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        // Convertimos los datos a formato JSON para enviarlos
-                        body: JSON.stringify({ nuevoAlias: nuevoAlias.trim() }) 
-                    });
-
-                    const data = await response.json();
-
-                    // 4. Revisamos si el servidor respondió con éxito
-                    if (response.ok) {
-                        if (bandera==1){
-                            abrirDetallesCliente(idCliente); 
-                        }else{
-                            clienteSeleccionado.alias_cliente = nuevoAlias
-                            console.log("ok, el alias ahora es "+clienteSeleccionado.alias_cliente);
-                            mostrarResumenPagoExitoso(detallePago);
-                        }
-                    } else {
-                        // Si hubo un error (ej. el servidor falló), lo mostramos
-                        alert("Hubo un problema: " + data.error);
-                    }
-
-                } catch (error) {
-                    console.error("Error en la comunicación con el servidor:", error);
-                    alert("Ocurrió un error al intentar comunicar con el servidor.");
-                }
-            } else if (nuevoAlias === "") {
-                alert("El nuevo Alias no puede estar vacío.");
-            } 
-            // Si es null, significa que el usuario presionó "Cancelar", así que no hacemos nada.
-        } 
-
+        
         function generarPDFEstadoCuenta() {
             // 1. Verificamos que tengamos datos cargados
             if (!window.datosActualesPDF) {
@@ -3246,141 +3435,252 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
         function cerrarModalDetalles() {
             document.getElementById('modal-detalles-cliente').classList.add('hidden');
         }
-        async function cargarWidgetCorte() {
 
-            if (!idCobrador) return;
+
+        // 1. NUEVA FUNCIÓN: Abre el modal y dibuja la lista de cortes pasados
+        async function abrirModalHistorial(usuarioId, nombreUsuario) {
+            document.getElementById('titulo-modal-historial').innerText = `Historial de: ${nombreUsuario}`;
+            const contenedor = document.getElementById('lista-historial-contenedor');
+            contenedor.innerHTML = '<p style="text-align:center;">Cargando historial...</p>';
+            
+            document.getElementById('modal-historial').classList.remove('hidden');
 
             try {
-                const response = await fetch(`${urlBase}/api/corte-caja/${idCobrador}`);
+                const response = await fetch(`/api/historico-cortes/${usuarioId}`);
+                const cortes = await response.json();
+
+                if (cortes.length === 0) {
+                    contenedor.innerHTML = '<p style="text-align:center; color: #7f8c8d;">No hay cortes autorizados en el historial.</p>';
+                    return;
+                }
+
+                contenedor.innerHTML = '';
+                cortes.forEach(corte => {
+                    const fecha = new Date(corte.fecha_corte).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+                    
+                    const div = document.createElement('div');
+                    div.className = 'item-historial';
+                    // Al hacer clic en un corte histórico, llamamos a la Máquina del Tiempo
+                    div.onclick = () => {
+                        document.getElementById('modal-historial').classList.add('hidden'); // Cerramos la lista
+                        cargarWidgetCorte(usuarioId, true, nombreUsuario, corte.id); // ¡Magia!
+                        abrirModalCorte(); // Abrimos tu modal de siempre
+                    };
+
+                    div.innerHTML = `
+                        <div class="item-historial-datos">
+                            <strong>Folio #${corte.id}</strong>
+                            <span>${fecha}</span>
+                        </div>
+                        <div class="item-historial-monto">
+                            $${parseFloat(corte.total_entregado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        </div>
+                    `;
+                    contenedor.appendChild(div);
+                });
+            } catch (error) {
+                console.error("Error al cargar historial:", error);
+                contenedor.innerHTML = '<p style="text-align:center; color: red;">Error al cargar el historial.</p>';
+            }
+        }
+
+        // ========================================================
+        // PRECARGA DE CONTENEDOR DE CORTE EN EL DASHBOARD
+        // ========================================================
+        async function CargarWidgetCorteDashboard() {
+            // Verificamos que tengamos el ID del cobrador logueado en tu variable global
+            if (typeof idCobrador === 'undefined' || !idCobrador) {
+                console.warn("CargarWidgetCorteDashboard: idCobrador no definido aún.");
+                return;
+            }
+
+            try {
+                // Consultamos la API optimizada en el Paso 3
+                const response = await fetch(`/api/corte-caja/${idCobrador}`);
+                if (!response.ok) throw new Error("Error en la respuesta del servidor");
+                
+                const data = await response.json();
+                
+                if (data && data.resumen) {
+                    const r = data.resumen;
+                    
+                    // Función interna para dar formato de moneda limpio
+                    const fmt = (num) => parseFloat(num || 0).toLocaleString('es-MX', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                    });
+
+                    // 1. Inyectamos los datos del Bloque Principal
+                    document.getElementById('lbl-caja-total').innerText = fmt(r.total_neto);
+                    document.getElementById('lbl-caja-cobros').innerText = r.total_cobros;
+                    
+                    // 2. Inyectamos los datos del Micro Desglose Rápido
+                    document.getElementById('lbl-widget-inicial').innerText = `$${fmt(r.saldo_inicial)}`;
+                    document.getElementById('lbl-widget-mensualidades').innerText = `$${fmt(r.total_dinero)}`;
+                    document.getElementById('lbl-widget-extras').innerText = `+$${fmt(r.total_ingresos_extra)}`;
+                    document.getElementById('lbl-widget-gastos').innerText = `-$${fmt(r.total_gastos)}`;
+                }
+            } catch (error) {
+                console.error("Error al inicializar la vista previa del widget:", error);
+            }
+        }
+
+        // 2. FUNCIÓN ACTUALIZADA: cargarWidgetCorte (Añadido soporte Histórico)
+        async function cargarWidgetCorte(usuarioEvaluarId = idCobrador, esSupervision = false, nombreCobrador = '', corteHistoricoId = null) {
+            if (!usuarioEvaluarId) return;
+
+            // Si pasamos un ID histórico, forzamos la vista a Modo Solo Lectura (Supervisión)
+            if (corteHistoricoId !== null) esSupervision = true;
+
+            try {
+                // DECISIÓN DE URL: ¿Leemos del día de hoy o leemos de la máquina del tiempo?
+                const urlFetch = corteHistoricoId 
+                    ? `${urlBase}/api/corte-caja-historico/${corteHistoricoId}` 
+                    : `${urlBase}/api/corte-caja/${usuarioEvaluarId}`;
+
+                const response = await fetch(urlFetch);
                 const data = await response.json();
 
-                // Actualizamos los resúmenes del widget (esto lo mantengo igual)
-                document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
+                console.log("Datos del corte:", data);
+                console.log("URL?", urlFetch);
+                console.log("Es supervisión?", esSupervision);
 
-                // --- NUEVA LÓGICA PARA LLENAR EL REPORTE CON DIVS RESPONSIVOS ---
-                
-                // Buscamos el nuevo contenedor del cuerpo del reporte
+                if (!esSupervision) {
+                    document.getElementById('lbl-caja-total').innerText = parseFloat(data.resumen.total_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    document.getElementById('lbl-caja-cobros').innerText = data.resumen.total_cobros || 0;
+                }
+
                 const reporteBody = document.getElementById('tabla-corte-body');
-                const lblTotalModal = document.getElementById('lbl-corte-total-modal');
-                const lblBrutoModal = document.getElementById('lbl-corte-bruto-modal');
-                const lblGastosModal = document.getElementById('lbl-corte-gastos-modal');
-                const lblSaldoInicial = document.getElementById('lbl-corte-saldo-inicial');
-                const lblIngresosModal = document.getElementById('lbl-corte-ingresos-modal');
                 const listaGastosCorte = document.getElementById('lista-gastos-corte');
-                const listaIngresosExtra = document.getElementById('lista-ingresos-extra');
-                const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
-                const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
-                const lblBrutoPrint = document.getElementById('lbl-autorizado-bruto-print');
-                const lblGastosPrint = document.getElementById('lbl-autorizado-gastos-print');
+                //const lblTotalPrint = document.getElementById('lbl-autorizado-total-print');
+                //const lblBrutoPrint = document.getElementById('lbl-autorizado-bruto-print');
+                //const lblGastosPrint = document.getElementById('lbl-autorizado-gastos-print');
+                
+               const reporteAuthBodyPrint = document.getElementById('tabla-autorizado-body-print');
                 const gastosBodyPrint = document.getElementById('tabla-gastos-body-print');
+                const ingresosExtraBodyPrint = document.getElementById('tabla-ingresos-extra-body-print'); // NUEVO
+
                 reporteAuthBodyPrint.innerHTML = '';
                 gastosBodyPrint.innerHTML = '';
+                ingresosExtraBodyPrint.innerHTML = ''; // NUEVO
                 listaGastosCorte.innerHTML = '';
-                listaIngresosExtra.innerHTML = '';
-                lblSaldoInicial.textContent = (parseFloat(data.resumen.saldo_inicial) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-                lblIngresosModal.textContent = (parseFloat(data.resumen.total_ingresos_extra) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-                let totalImpresion = 0;
-                document.getElementById('print-cobrador').innerText = usuario.nombre;
-                document.getElementById('print-fecha-larga').innerText = ObtenerFecha();
                 
-                reporteBody.innerHTML = ''; // Limpiamos tabla
+                document.getElementById('print-cobrador').innerText = esSupervision ? nombreCobrador : usuario.nombre;
+                
+                // Si es histórico, imprimimos la fecha en que se cerró, si no, la fecha actual.
+                document.getElementById('print-fecha-larga').innerText = corteHistoricoId 
+                    ? new Date(data.resumen.fecha_corte).toLocaleString('es-MX') 
+                    : ObtenerFecha();
+                
+                reporteBody.innerHTML = ''; 
                 let totalModal = 0;
 
-                // Usamos pagosReceived si ese es tu arreglo de datos
-                // data.detalles.forEach(pago => { 
-                data.detalles.forEach(pago => { 
-                    // 1. Formateamos la fecha (respetando tu formato original)
-                    const fechaString = new Date(pago.fecha_pago).toLocaleString('es-MX', {
-                        year: 'numeric', month: 'numeric', day: 'numeric',
-                        hour: 'numeric', minute: 'numeric', second: 'numeric',
-                        hour12: false
-                    });
-                    // 2. Lógica de estados para diseño y suma
-                    let claseEstado = '';
-                    let nombreEstado = ''; // Por defecto Completado
-                    let mostrarBoton = false;
+                 // ✂️ 1. OCULTAR ENCABEZADO DE ACCIÓN EN MODO SUPERVISIÓN
+                const headerAccion = document.querySelector('.reporte-grid-header div:last-child');
+                if (headerAccion) {
+                    headerAccion.style.display = esSupervision ? 'none' : '';
+                }
+                const headerEtado = document.querySelector('.reporte-grid-header .estado-borrar');
+                if (headerEtado) {
+                    headerEtado.style.display = esSupervision ? 'none' : '';
+                }
 
-                    // Convertimos a número por seguridad
+                const gridContainer = document.querySelector('.reporte-grid-container');
+                if (gridContainer) {
+                    gridContainer.classList.toggle('sin-accion', esSupervision);
+                }
+
+                // LÓGICA DE DETALLES
+                data.detalles.forEach(pago => { 
+                    const fechaString = new Date(pago.fecha_pago).toLocaleString('es-MX', {
+                        year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false
+                    });
+
+                    // Lógica de estados dinámica (Entiende estados del pasado y del presente)
                     const estado = parseInt(pago.estado_corte);
+                    const esHistorico = corteHistoricoId !== null;
+                    const estadoActivo = esHistorico ? 1 : 0;
+                    const estadoCancelado = esHistorico ? 4 : 3;
+
+                    let claseEstado = '';
+                    let nombreEstado = ''; 
+                    let mostrarBoton = false;
                     
-                    if (estado === 3) {
+                    if (estado === estadoCancelado) {
                         claseEstado = 'estado-cancelado';
                         nombreEstado = 'Cancelado'
-                        mostrarBoton = false; // No se muestra si ya está cancelado
-                    } else if (estado === 0) {
-                        claseEstado = 'estado-pendiente';
-                        nombreEstado = 'Pendiente'
-                        mostrarBoton = true;  // ACTIVO solo en pendiente
+                        mostrarBoton = false;
+                    } else if (estado === estadoActivo) {
+                        claseEstado = esHistorico ? 'estado-cerrado' : 'estado-pendiente';
+                        nombreEstado = esHistorico ? 'Cerrado' : 'Pendiente';
+                        mostrarBoton = !esSupervision; 
                         totalModal += parseFloat(pago.monto) || 0;
                     }
-                    console.log("clase: "+claseEstado +" nombre "+nombreEstado )
-                    // 3. Creamos el contenedor de la tarjeta/fila (reporte-item-pago)
-                    const itemPago = document.createElement('div');
-                    itemPago.className = 'reporte-item-pago'; // <-- Clase clave para el CSS Grid
-
-                    // Generamos el HTML del botón de basura
-                    // Usamos FontAwesome (fa-trash-alt). Si no lo tienes, puedes usar el texto "❌"
-                    // Generamos el HTML del botón usando un SVG nativo
-                    const htmlBoton = mostrarBoton 
-                        ? `<button  class="btn-eliminar-pago" title="Cancelar Pago" onclick="cancelarPago(${pago.id})">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>
-                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3V2h11v1h-11Z"/>
-                            </svg>
-                        </button>`
-                        : '';
                     
-                    // 4. Inyectamos la estructura responsiva con las etiquetas para móvil
+                    const itemPago = document.createElement('div');
+                    itemPago.className = 'reporte-item-pago';
+
+                    const htmlBoton = mostrarBoton 
+                        ? `<button class="btn-eliminar-pago" title="Cancelar Pago" onclick="cancelarPago(${pago.id})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3V2h11v1h-11Z"/></svg>
+                        </button>` : '';
+                    
                     itemPago.innerHTML = `
                         <div class="col-fecha"><span class="label-movil">Fecha: </span>${fechaString}</div>
                         <div class="col-cliente"><span class="label-movil">Cliente: </span>${pago.cliente} / ${pago.ip}</div>
                         <div class="col-mes"><span class="label-movil">Mes Pagado: </span>${pago.mes_pagado}</div>
-                        <div class = "monto-estado">
+                        <div class="monto-estado">
                             <div class="col-monto">$${parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                            <div class="col-estado ${claseEstado}">${nombreEstado}</div>
+                            <div class="col-estado ${claseEstado} estado-borrar">${nombreEstado}</div>
                         </div>
                         <div class="col-accion">${htmlBoton}</div>
                     `;
                     
+                    // ✂️ 2. OCULTAR CELDA DE ACCIÓN EN MODO SUPERVISIÓN
+                    if (esSupervision) {
+                        const colAccion = itemPago.querySelector('.col-accion');
+                        if (colAccion) colAccion.style.display = 'none';
+                        const estadoBorrar = itemPago.querySelector('.estado-borrar');
+                        if (estadoBorrar) estadoBorrar.style.display = 'none';
+                    }
+                    
                     reporteBody.appendChild(itemPago);
 
                     const tr = document.createElement('tr');
-                    
-                    // Inyectamos <td> clásicos en lugar de los divs responsivos
                     tr.innerHTML = `
                         <td>${fechaString}</td>
                         <td>${pago.cliente}</td>
                         <td>${pago.mes_pagado}</td>
                         <td>$${parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     `;
-                    
                     reporteAuthBodyPrint.appendChild(tr);
                 });
 
+                // LÓGICA DE GASTOS
                 let totalGastos = 0;
                 const gastos = data.gastos || [];
                 if (gastos.length === 0) {
                     listaGastosCorte.innerHTML = '<div class="gasto-vacio">Sin gastos registrados.</div>';
                     gastosBodyPrint.innerHTML = '<tr><td colspan="3">Sin gastos registrados.</td></tr>';
                 } else {
+                    const esHistorico = corteHistoricoId !== null;
+                    const estadoActivo = esHistorico ? 1 : 0;
+                    const estadoCancelado = esHistorico ? 4 : 3;
+
                     gastos.forEach(gasto => {
                         const estado = parseInt(gasto.estado_corte);
                         const montoGasto = parseFloat(gasto.monto) || 0;
-                        const fechaGasto = new Date(gasto.fecha_gasto).toLocaleString('es-MX', {
-                            year: 'numeric', month: 'numeric', day: 'numeric',
-                            hour: 'numeric', minute: 'numeric',
-                            hour12: false
-                        });
-                        const claseGasto = estado === 3 ? ' gasto-cancelado' : '';
-                        const botonGasto = estado === 0
-                            ? `<button class="btn-eliminar-pago" title="Cancelar gasto" onclick="cancelarGasto(${gasto.id})">×</button>`
-                            : '';
+                        const fechaGasto = new Date(gasto.fecha_gasto).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false });
+                        
+                        
+                        const claseGasto = estado === estadoCancelado ? ' gasto-cancelado' : '';
+                        const botonGasto = (estado === estadoActivo && !esSupervision)
+                            ? `<button class="btn-eliminar-pago" title="Cancelar gasto" onclick="cancelarGasto(${gasto.id})">×</button>` : '';
 
-                        if (estado === 0) totalGastos += montoGasto;
+                        if (estado === estadoActivo) totalGastos += montoGasto;
 
                         const itemGasto = document.createElement('div');
-                        itemGasto.className = `gasto-corte-item${claseGasto}`;
+                        itemGasto.className = `corte-item${claseGasto}`;
                         itemGasto.innerHTML = `
                             <div>
                                 <strong>${gasto.descripcion}</strong>
@@ -3391,78 +3691,218 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                         `;
                         listaGastosCorte.appendChild(itemGasto);
 
-                        if (estado === 0) {
+                        if (estado === estadoActivo) {
                             const trGasto = document.createElement('tr');
-                            trGasto.innerHTML = `
-                                <td>${fechaGasto}</td>
-                                <td>${gasto.descripcion}</td>
-                                <td>$${montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            `;
+                            trGasto.innerHTML = `<td>${fechaGasto}</td><td>${gasto.descripcion}</td><td>$${montoGasto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
                             gastosBodyPrint.appendChild(trGasto);
                         }
                     });
+                }
+                // 1. INYECTAR LA LISTA DE INGRESOS EXTRAS AL DOM
+                const listaIngresosUI = document.getElementById('lista-ingresos-extra');
+                if (listaIngresosUI) {
+                    listaIngresosUI.innerHTML = '';
+                    const ingresos = data.ingresos_extra || [];
+                    
+                    if (ingresos.length === 0) {
+                        listaIngresosUI.innerHTML = '<div style="color: #7f8c8d; font-size: 12px;">Sin ingresos extra registrados.</div>';
+                    } else {
+                        // Definimos los estados igual que en gastos para mantener consistencia
+                        const esHistorico = corteHistoricoId !== null;
+                        const estadoActivo = esHistorico ? 1 : 0;
+                        const estadoCancelado = esHistorico ? 4 : 3;
 
-                    if (!gastos.some(gasto => parseInt(gasto.estado_corte) === 0)) {
-                        gastosBodyPrint.innerHTML = '<tr><td colspan="3">Sin gastos activos.</td></tr>';
+                        ingresos.forEach(ing => {
+                            const estado = parseInt(ing.estado_corte);
+                            const montoIngreso = parseFloat(ing.monto) || 0;
+                            const fechaIngreso = new Date(ing.fecha_ingreso).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false });
+                            
+                            // Asignamos la clase de cancelado si corresponde (asumiendo que 'gasto-cancelado' aplica estilos como line-through y opacidad)
+                            const claseIngreso = estado === estadoCancelado ? ' gasto-cancelado' : '';
+                            
+                            // El botón solo se muestra si el estado es activo (0 si es corte actual) y no es supervisión
+                            const botonIngreso = (estado === estadoActivo && !esSupervision)
+                                ? `<button onclick="cancelarIngresoExtra(${ing.id})" class="btn-eliminar-pago" title="Cancelar ingreso extra">×</button>` 
+                                : '';
+
+                            // Si tienes una variable totalIngresosExtra que se sume aquí, asegúrate de hacerlo solo si está activo.
+                            // if (estado === estadoActivo) totalIngresosExtra += montoIngreso; 
+
+                            if (estado === estadoActivo) {
+                                // ESTA ES LA LÍNEA NUEVA PARA INYECTAR EN LA TABLA DEL PDF
+                                const trIngreso = document.createElement('tr');
+                                trIngreso.innerHTML = `<td>${fechaIngreso}</td><td>${ing.descripcion}</td><td>$${montoIngreso.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
+                                ingresosExtraBodyPrint.appendChild(trIngreso);
+                            }
+
+                            const div = document.createElement('div');
+                            div.className = `corte-item${claseIngreso}`; // Aplicamos la clase base y la de cancelado si es el caso
+                            div.innerHTML = `
+                                <div>
+                                    <strong>${ing.descripcion}</strong>
+                                    <span>${fechaIngreso}</span>
+                                </div>
+                                <div class="item-historial-monto">
+                                    $${montoIngreso.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </div>
+                                <div>${botonIngreso}</div>
+                            `;
+                            listaIngresosUI.appendChild(div);
+                        });
                     }
                 }
 
-                const ingresosExtra = data.ingresos_extra || [];
-                if (ingresosExtra.length === 0) {
-                    listaIngresosExtra.innerHTML = '<div class="gasto-vacio">Sin ingresos extra registrados.</div>';
-                } else {
-                    ingresosExtra.forEach(ingreso => {
-                        const montoIngreso = parseFloat(ingreso.monto) || 0;
-                        const estadoIngreso = parseInt(ingreso.estado_corte) === 3 ? 'Cancelado' : 'Pendiente';
-                        const botonIngreso = parseInt(ingreso.estado_corte) === 0
-                            ? `<button class="btn-eliminar-pago" title="Cancelar ingreso" onclick="cancelarIngresoExtra(${ingreso.id})">×</button>`
-                            : estadoIngreso;
-                        const itemIngreso = document.createElement('div');
-                        itemIngreso.className = 'gasto-corte-item';
-                        itemIngreso.innerHTML = `
-                            <div><strong>${ingreso.descripcion}</strong><span>${new Date(ingreso.fecha_ingreso).toLocaleString('es-MX')}</span></div>
-                            <div class="gasto-corte-monto">+$${montoIngreso.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
-                            <div>${botonIngreso}</div>`;
-                        listaIngresosExtra.appendChild(itemIngreso);
-                    });
+                /* // 2. ACTUALIZAR TODOS LOS TOTALES DEL RESUMEN
+                const r = data.resumen;
+                const formatear = (num) => parseFloat(num || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                document.getElementById('lbl-saldo-inicial').innerText = `$${formatear(r.saldo_inicial)}`;
+                document.getElementById('lbl-mensualidades').innerText = `$${formatear(r.total_dinero)}`;
+                document.getElementById('lbl-ingresos-extra').innerText = `$${formatear(r.total_ingresos_extra)}`;
+                document.getElementById('lbl-gastos-totales').innerText = `-$${formatear(r.total_gastos)}`;
+                document.getElementById('lbl-caja-fisica').innerText = `$${formatear(r.total_neto)}`;
+ */
+
+                // 2. ACTUALIZAR TODOS LOS TOTALES DEL RESUMEN
+                const r = data.resumen;
+                const formatear = (num) => parseFloat(num || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                const entregado = parseFloat(r.monto_entregado) || 0;
+                const totalNeto = parseFloat(r.total_neto) || 0;
+                const fondoCaja = totalNeto - entregado; // Lo que quedó de fondo para el día siguiente
+
+                console.log("Total Neto:", totalNeto, "Entregado:", entregado, "Fondo Caja:", fondoCaja);
+                console.log("Resumen:", r);
+
+                // === ACTUALIZA EL MODAL EN PANTALLA ===
+                document.getElementById('lbl-saldo-inicial').innerText = `$${formatear(r.saldo_inicial)}`;
+                document.getElementById('lbl-mensualidades').innerText = `$${formatear(r.total_dinero)}`;
+                document.getElementById('lbl-ingresos-extra').innerText = `$${formatear(r.total_ingresos_extra)}`;
+                document.getElementById('lbl-gastos-totales').innerText = `-$${formatear(r.total_gastos)}`;
+                document.getElementById('lbl-caja-fisica').innerText = `$${formatear(totalNeto)}`;
+                if (typeof actualizarCandadoGastos === "function") actualizarCandadoGastos(totalNeto);
+
+                // === ACTUALIZA LOS PIES DE TABLA DEL PDF ===
+                document.getElementById('lbl-suma-mensualidades-print').innerText = formatear(r.total_dinero);
+                document.getElementById('lbl-suma-ingresos-extra-print').innerText = formatear(r.total_ingresos_extra);
+                document.getElementById('lbl-suma-gastos-print').innerText = formatear(r.total_gastos);
+
+                // === ACTUALIZA EL RESUMEN FINAL DEL PDF ===
+                document.getElementById('lbl-saldo-inicial-print').innerText = `$${formatear(r.saldo_inicial)}`;
+                document.getElementById('lbl-mensualidades-print').innerText = `$${formatear(r.total_dinero)}`;
+                document.getElementById('lbl-ingresos-extra-print').innerText = `$${formatear(r.total_ingresos_extra)}`;
+                document.getElementById('lbl-gastos-totales-print').innerText = `-$${formatear(r.total_gastos)}`;
+                document.getElementById('lbl-caja-fisica-print').innerText = `$${formatear(totalNeto)}`;
+                document.getElementById('lbl-entregado-admin-print').innerText = `$${formatear(entregado)}`;
+                document.getElementById('lbl-saldo-en-caja-print').innerText = `$${formatear(fondoCaja)}`;
+
+                // NOTA: Si tenías código viejo apuntando a lbl-autorizado-bruto-print o lbl-autorizado-gastos-print, elimínalo, ya que esos IDs ya no existen en el nuevo HTML.
+                // (Haz lo mismo para los IDs terminados en '-print' para que salga en el PDF)
+
+                if (typeof actualizarCandadoGastos === "function") actualizarCandadoGastos(totalNeto);
+
+                //lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                //lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                //lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
+
+
+
+                // ==============================================================
+                // 🌟 NUEVO: INYECTAR BANNER HISTÓRICO DE RESUMEN Y REIMPRESIÓN
+                // ==============================================================
+                let bannerHistorico = document.getElementById('banner-info-historica');
+                if (!bannerHistorico) {
+                    // Si no existe, lo creamos dinámicamente y lo ponemos abajo del título del modal
+                    bannerHistorico = document.createElement('div');
+                    bannerHistorico.id = 'banner-info-historica';
+                    const tituloModalElement = document.getElementById('area-imprimible-corte-titulo');
+                    if (tituloModalElement && tituloModalElement.parentNode) {
+                        tituloModalElement.parentNode.insertBefore(bannerHistorico, tituloModalElement.nextSibling);
+                    }
                 }
 
-                const saldoInicial = parseFloat(data.resumen.saldo_inicial) || 0;
-                const totalIngresosExtra = parseFloat(data.resumen.total_ingresos_extra) || 0;
-                const totalNeto = saldoInicial + totalModal + totalIngresosExtra - totalGastos;
-                actualizarCandadoGastos(totalNeto);
+                if (corteHistoricoId !== null) {
+                    // Cálculos
+                    const fechaFormat = new Date(r.fecha_corte).toLocaleString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                    const entregado = parseFloat(r.monto_entregado) || 0;
+                    const fondoCaja = totalNeto - entregado; // Lo que quedó de fondo para el día siguiente
 
-                // 5. Actualizamos el total en el modal con la suma corregida
-                lblBrutoModal.textContent = totalModal.toLocaleString('en-US', { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
-                });
-                lblGastosModal.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
-                lblTotalModal.textContent = totalNeto.toLocaleString('en-US', { 
-                    minimumFractionDigits: 0, 
-                    maximumFractionDigits: 0 
-                });
-                lblBrutoPrint.textContent = totalModal.toLocaleString('en-US', { minimumFractionDigits: 0 });
-                lblGastosPrint.textContent = totalGastos.toLocaleString('en-US', { minimumFractionDigits: 0 });
-                lblTotalPrint.textContent = totalNeto.toLocaleString('en-US', { minimumFractionDigits: 0 });
+                    // Diseñamos el banner (HTML y estilos inyectados directamente)
+                   bannerHistorico.innerHTML = `
+                        <div class="banner-historico-container">
+                            <div class="banner-historico-info">
+                                <div>
+                                    <div class="banner-item-label">📅 Fecha del corte</div>
+                                    <div class="banner-item-value">${fechaFormat}</div>
+                                </div>
+                                <div>
+                                    <div class="banner-item-label">🧾 Cobros</div>
+                                    <div class="banner-item-value">${r.total_cobros} pagos</div>
+                                </div>
+                                <div>
+                                    <div class="banner-item-label">💵 Entregado Admin</div>
+                                    <div class="banner-item-value success">$${entregado.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
+                                </div>
+                                <div>
+                                    <div class="banner-item-label">🏦 Quedó en Caja</div>
+                                    <div class="banner-item-value warning">$${fondoCaja.toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <button onclick="imprimirReporte()" class="btn-reimprimir-historico" title="Reimprimir este corte">
+                                    🖨️
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    bannerHistorico.style.display = 'block';
+
+                    // 🚨 IMPORTANTÍSIMO: Rellenamos el autorizador para que al imprimir el PDF,
+                    // aparezca el nombre de quien autorizó originalmente y no un espacio en blanco.
+                    const printAdmin = document.getElementById('print-admin');
+                    if (printAdmin) printAdmin.innerText = (r.autorizador || 'ADMINISTRADOR').toUpperCase();
+
+                } else {
+                    // Si es un corte actual/en vivo, ocultamos el banner
+                    bannerHistorico.style.display = 'none';
+                }
+                // ==============================================================
+
+
+                // TÍTULOS Y CONTROLES VISUALES
+                const tituloModal = document.getElementById('area-imprimible-corte-titulo');
+                const btnSolicitarCierre = document.querySelector('.btn-solicitar-cierre');
+                const formGastoCorte = document.querySelector('.form-gasto-corte');
+                const formIngresoExtra = document.querySelector('.form-ingreso-extra');
+
+                if (esSupervision) {
+                    if (tituloModal) tituloModal.innerText = corteHistoricoId ? `Histórico de Corte #${corteHistoricoId}: ${nombreCobrador}` : `Supervisión de Corte: ${nombreCobrador}`;
+                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'none';
+                    if (formGastoCorte) formGastoCorte.style.display = 'none'; 
+                    if (formIngresoExtra) formIngresoExtra.style.display = 'none';
+                } else {
+                    if (tituloModal) tituloModal.innerText = `Reporte de Corte de Caja`;
+                    if (btnSolicitarCierre) btnSolicitarCierre.style.display = 'block';
+                    if (formGastoCorte) formGastoCorte.style.display = ''; 
+                    if (formIngresoExtra) formIngresoExtra.style.display = ''; 
+                }
 
             } catch (error) {
-                console.error('Error en cargarWidgetCorte:', error);
-                // Opcional: mostrar un mensaje de error en la tabla
-                document.getElementById('tabla-corte-body').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error al cargar el reporte.</div>';
+                console.error('Error al cargar datos del corte:', error);
             }
+            abrirModalCorte();
         }
-
+        
         function actualizarCandadoGastos(efectivoDisponible) {
             const montoInput = document.getElementById('gasto-monto');
             const descripcionInput = document.getElementById('gasto-descripcion');
             const btnAgregar = document.querySelector('.btn-agregar-gasto');
-            const bloquear = efectivoDisponible <= 0 || !(usuario.rol === 2 || usuario.rol === 3);
+            const bloquear = efectivoDisponible <= 0 || !(usuario.rol === 2 || usuario.rol === 3 || usuario.rol === 1);
 
             montoInput.disabled = bloquear;
             descripcionInput.disabled = bloquear;
             btnAgregar.disabled = bloquear;
-            btnAgregar.textContent = bloquear ? 'Sin efectivo' : 'Agregar gasto';
+            btnAgregar.textContent = bloquear ? 'Sin efectivo' : 'Añadir';
         }
 
         async function registrarGastoCorte() {
@@ -3470,10 +3910,10 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             const descripcionInput = document.getElementById('gasto-descripcion');
             const monto = parseFloat(montoInput.value);
             const descripcion = descripcionInput.value.trim();
-            const totalCajaLabel = document.getElementById('lbl-corte-total-modal');
-            const totalCaja = parseFloat(totalCajaLabel.textContent.replace(/,/g, '')) || 0;
+            const totalCajaLabel = document.getElementById('lbl-caja-fisica');
+            const totalCaja = parseFloat(totalCajaLabel.textContent.replace("$", '').replace(/,/g, "")) || 0;
             
-            if (!(usuario.rol === 2 || usuario.rol === 3)) {
+            if (!(usuario.rol === 2 || usuario.rol === 3 || usuario.rol === 1)) {
                 alert("Tu rol no tiene permisos para registrar gastos.");
                 return;
             }
@@ -3495,7 +3935,7 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             }
 
             if (!descripcion) {
-                alert("Ingresa una descripción para el gasto.");
+                alert("Ingresa un Concepto para el gasto.");
                 return;
             }
 
@@ -3519,57 +3959,6 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             } catch (error) {
                 console.error("Error al registrar gasto:", error);
                 alert("No se pudo conectar con el servidor.");
-            }
-        }
-
-        async function registrarIngresoExtra() {
-            const montoInput = document.getElementById('ingreso-extra-monto');
-            const descripcionInput = document.getElementById('ingreso-extra-descripcion');
-            const monto = parseFloat(montoInput.value);
-            const descripcion = descripcionInput.value.trim();
-
-            if (!monto || monto <= 0 || !descripcion) {
-                alert('Ingresa un monto y una descripción válidos.');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${urlBase}/api/ingreso-extra`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuarioId: idCobrador, monto, descripcion })
-                });
-                const result = await response.json();
-                if (!response.ok || !result.success) {
-                    alert('Error al registrar ingreso: ' + (result.error || 'No se pudo guardar.'));
-                    return;
-                }
-                montoInput.value = '';
-                descripcionInput.value = '';
-                cargarWidgetCorte();
-            } catch (error) {
-                console.error('Error al registrar ingreso extra:', error);
-                alert('No se pudo conectar con el servidor.');
-            }
-        }
-
-        async function cancelarIngresoExtra(idIngreso) {
-            if (!confirm('¿Estás seguro de que deseas cancelar este ingreso?')) return;
-            try {
-                const response = await fetch(`${urlBase}/api/cancelar-ingreso-extra/${idIngreso}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuarioId: idCobrador })
-                });
-                const result = await response.json();
-                if (!response.ok || !result.success) {
-                    alert('Error al cancelar ingreso: ' + (result.message || 'No se pudo cancelar.'));
-                    return;
-                }
-                cargarWidgetCorte();
-            } catch (error) {
-                console.error('Error al cancelar ingreso extra:', error);
-                alert('No se pudo conectar con el servidor.');
             }
         }
 
@@ -3597,10 +3986,53 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             }
         }
 
+        // ==========================================
+        // LÓGICA DE INGRESOS EXTRA
+        // ==========================================
+        async function agregarIngresoExtra() {
+            const desc = document.getElementById('desc-ingreso').value.trim();
+            const monto = parseFloat(document.getElementById('monto-ingreso').value);
+
+            if (!desc || isNaN(monto) || monto <= 0) {
+                alert("Ingresa un concepto y un monto válido.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/ingreso-extra', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuarioId: idCobrador, descripcion: desc, monto: monto })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('desc-ingreso').value = '';
+                    document.getElementById('monto-ingreso').value = '';
+                    cargarWidgetCorte(); // Recargamos para actualizar las matemáticas
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Error de red al guardar el ingreso.");
+            }
+        }
+
+        async function cancelarIngresoExtra(id) {
+            if (!confirm("¿Seguro que deseas cancelar este ingreso extra?")) return;
+            try {
+                const res = await fetch(`/api/cancelar-ingreso-extra/${id}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) cargarWidgetCorte();
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
         async function cancelarPago(idPago) {
         // Confirmación antes de borrar
         const confirmar = confirm("¿Estás seguro de que deseas cancelar este pago?");
-        console.log("is pago:"+ idPago)
+        //console.log("is pago:"+ idPago)
         if (confirmar) {
             try {
                 const response = await fetch(`/api/cancelar-pago/${idPago}`, {
@@ -3628,55 +4060,20 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             document.getElementById('modal-corte').classList.remove('hidden');
         }
 
-        async function mostrarHistorialCortes() {
-            const panel = document.getElementById('panel-historial-cortes');
-            const lista = document.getElementById('lista-historial-cortes');
-            panel.classList.remove('hidden');
-            try {
-                const response = await fetch(`${urlBase}/api/historico-cortes/${idCobrador}`);
-                const cortes = await response.json();
-                lista.innerHTML = cortes.length ? cortes.map(corte => `
-                    <div class="gasto-corte-item">
-                        <div><strong>Folio #${corte.id}</strong><span>${new Date(corte.fecha_corte).toLocaleString('es-MX')}</span></div>
-                        <div>$${Number(corte.total_entregado || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
-                        <div>Retenido: $${Number(corte.monto_retenido || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
-                    </div>`).join('') : '<div class="gasto-vacio">Sin cortes registrados.</div>';
-            } catch (error) {
-                lista.innerHTML = '<div class="gasto-vacio">No se pudo cargar el historial.</div>';
-            }
-        }
-
-        async function mostrarSupervisionCortes() {
-            const panel = document.getElementById('panel-supervision-cortes');
-            const lista = document.getElementById('lista-supervision-cobradores');
-            panel.classList.remove('hidden');
-            try {
-                const response = await fetch(`${urlBase}/api/admin/supervision-cortes/${idCobrador}`);
-                const cobradores = await response.json();
-                lista.innerHTML = cobradores.map(cobrador => `
-                    <div class="gasto-corte-item">
-                        <div><strong>${cobrador.cobrador_nombre}</strong><span>${cobrador.total_cobros} cobros pendientes</span></div>
-                        <div>$${Number(cobrador.caja_fisica || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
-                        <div>Ingresos: $${Number(cobrador.total_ingresos_extra || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
-                    </div>`).join('') || '<div class="gasto-vacio">Sin movimientos pendientes.</div>';
-            } catch (error) {
-                lista.innerHTML = '<div class="gasto-vacio">No se pudo cargar la supervisión.</div>';
-            }
-        }
-
         function cerrarModalCorte() {
             document.getElementById('modal-corte').classList.add('hidden');
+            CargarWidgetCorteDashboard();
         }
 
         function abrirModalAdmin() {
-            const lblBrutoModal = document.getElementById('lbl-corte-bruto-modal');
+            const lblSaldoInicial = document.getElementById('lbl-saldo-inicial');
+            const lblIngresesosExtra = document.getElementById('lbl-ingresos-extra');
+            const lblMensualidades = document.getElementById('lbl-mensualidades');
     
-            if (parseFloat(lblBrutoModal.textContent.replace(/,/g, '')) <= 0) {
-                alert("⚠️ No se puede realizar el corte: No hay pagos pendientes para autorizar.");
+            if (parseFloat(lblSaldoInicial.textContent.replace("$", '')) <= 0 && parseFloat(lblIngresesosExtra.textContent.replace("$", '')) <= 0  && parseFloat(lblMensualidades.textContent.replace("$", '')) <= 0) {
+                alert("⚠️ No se puede realizar el corte: No hay movimientos.");
                 return; // Detiene la ejecución aquí mismo
             }
-            const totalCaja = document.getElementById('lbl-corte-total-modal').textContent.replace(/,/g, '');
-            document.getElementById('monto-entregado').value = totalCaja;
             document.getElementById('modal-admin').classList.remove('hidden');
         }
 
@@ -3685,40 +4082,64 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             const user = document.getElementById('admin-user').value;
             const pass = document.getElementById('admin-pass').value;
             
-
-            if(!user || !pass) {
-                alert("El administrador debe ingresar sus datos.");
+            // 2. Obtener el monto total disponible (deberías tener una variable global o extraerla del DOM)
+            // Supongamos que tienes una variable 'totalCajaDisponible' calculada previamente
+            const totalCajaDisponible = parseFloat(document.getElementById('lbl-caja-total').innerText.replace(/[^0-9.-]+/g,"")) || 0;
+            
+            // NUEVO: Capturar cuánto dinero entrega
+            const montoEntregarInput = document.getElementById('input-monto-entregar').value;
+            const montoEntregado = parseFloat(montoEntregarInput) || 0;
+            const lblSaldoEnCajaPrint = document.getElementById('lbl-saldo-en-caja-print');
+            const lblEntregadoAdminPrint = document.getElementById('lbl-entregado-admin-print');
+            
+            // --- VALIDACIONES DE SEGURIDAD ---
+            if (!user || !pass) {
+                alert("⚠️ El administrador debe ingresar sus datos.");
                 return;
             }
-            
 
+            // Validación: Obligar a ingresar un monto
+            if (isNaN(montoEntregado) || montoEntregado <= 0) {
+                alert("⚠️ Por favor, ingresa un monto válido a entregar.");
+                return;
+            }
+
+            // Validación: No puede entregar más de lo que hay en caja
+            if (montoEntregado > totalCajaDisponible) {
+                alert(`❌ Error: El monto a entregar ($${montoEntregado.toFixed(2)}) excede el total disponible en caja ($${totalCajaDisponible.toFixed(2)}).`);
+                return;
+            }
+            // ---------------------------------lbl-saldo-en-caja-print , lbl-entregado-admin-print
+            
             try {
-                const response = await fetch(`${urlBase}/api/procesar-corte-completo`, {
+                const response = await fetch(`${urlBase}/api/procesar-corte`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        usuarioId: idCobrador,
-                        adminUser: user,
+                    //body: JSON.stringify({ usuarioId: idCobrador, adminUser: user, adminPassword: pass })
+                    // NUEVO: Agregamos montoEntregado al JSON
+                    body: JSON.stringify({ 
+                        usuarioId: idCobrador, 
+                        adminUser: user, 
                         adminPassword: pass,
-                        montoEntregado: parseFloat(document.getElementById('monto-entregado').value) || 0
+                        montoEntregado: montoEntregado 
                     })
                 });
                 
                 const data = await response.json();
 
                 if (response.ok) {
-                    // ¡El admin autorizó! Primero imprimimos el PDF
-                    alert("✅ Corte autorizado. Generando reporte PDF...");
+                    lblSaldoEnCajaPrint.innerText = `$${(totalCajaDisponible - montoEntregado).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    lblEntregadoAdminPrint.innerText = `$${montoEntregado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    
+                    alert("✅ Corte autorizado. \nFolio: #" + data.corte_id + "\nEl dinero se transfirió al sistema.");
                     document.getElementById('print-admin').innerText = user.toUpperCase();
-                    document.getElementById('area-imprimible-corte-titulo').textContent = `Reporte de Corte de Caja #${data.corte_id}`;
-                   
+                    //usuarioId, true, nombreUsuario, corte.id
                     imprimirReporte();
                 } else {
                     alert("❌ Error: " + data.error);
                 }
             } catch (error) {
                 console.error("Error al procesar corte:", error);
-                alert("No se pudo procesar el corte: " + error.message);
             }
         }
         
@@ -3833,6 +4254,69 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 ventana.close();
                 location.reload();  // Cierra la pestaña automáticamente al terminar (opcional, pero muy útil)
             }, 250);
+        }
+        function obtenerOpcionesFiltroLocalidad() {
+            return Array.from(selectLocalidad.options || []);
+        }
+
+        function obtenerOpcionesLocalidadReales() {
+            return obtenerOpcionesFiltroLocalidad().filter(opcion => opcion.value !== 'todas');
+        }
+
+        function obtenerLocalidadesSeleccionadas() {
+            return obtenerOpcionesLocalidadReales().filter(opcion => opcion.selected).map(opcion => String(opcion.value));
+        }
+
+        function actualizarSeleccionTodasLocalidades() {
+            const opcionTodas = selectLocalidad.querySelector('option[value="todas"]');
+            const opcionesReales = obtenerOpcionesLocalidadReales();
+            if (!opcionTodas) return;
+            const todasSeleccionadas = opcionesReales.length > 0 && opcionesReales.every(opcion => opcion.selected);
+            opcionTodas.selected = todasSeleccionadas;
+            filtroLocalidadTodasSeleccionadoAntes = todasSeleccionadas;
+        }
+
+        function filtrarTarjetasAdmin() {
+            const textoBusqueda = buscadorInput.value.toLowerCase().trim();
+            const opcionesReales = obtenerOpcionesLocalidadReales();
+            const localidadesSeleccionadas = obtenerLocalidadesSeleccionadas();
+            const tarjetas = document.querySelectorAll('.cliente-card');
+            let clientesVisibles = 0;
+            tarjetas.forEach(tarjeta => {
+                const textoTarjeta = tarjeta.getAttribute('data-busqueda') || tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+                const coincideBusqueda = !textoBusqueda || textoTarjeta.includes(textoBusqueda);
+                const coincideLocalidad = opcionesReales.length === 0 || localidadesSeleccionadas.includes(String(tarjeta.getAttribute('data-localidad') || '').trim());
+                const adeudo = parseFloat(tarjeta.getAttribute('data-adeudo')) || 0;
+                const coincideAdeudo = filtrosRapidosAdmin.estadoCuenta === 'con_adeudo' ? adeudo > 0 : filtrosRapidosAdmin.estadoCuenta === 'al_corriente' ? adeudo <= 0 : true;
+                const coincideRenta = !filtrosRapidosAdmin.renta || tarjeta.getAttribute('data-renta') === '1';
+                const coincidePaquete = !filtrosRapidosAdmin.paquete || tarjeta.getAttribute('data-paquete') === filtrosRapidosAdmin.paquete;
+                const visible = coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRenta && coincidePaquete;
+                tarjeta.classList.toggle('hidden', !visible);
+                if (visible) clientesVisibles++;
+            });
+            document.getElementById('contador-clientes').textContent = clientesVisibles;
+        }
+
+        function manejarFiltroRapidoAdmin(filtro) {
+            if (filtro === 'renta') filtrosRapidosAdmin.renta = !filtrosRapidosAdmin.renta;
+            else if (filtro.startsWith('paquete_')) {
+                const paquete = filtro.replace('paquete_', '');
+                filtrosRapidosAdmin.paquete = filtrosRapidosAdmin.paquete === paquete ? null : paquete;
+            } else filtrosRapidosAdmin.estadoCuenta = filtrosRapidosAdmin.estadoCuenta === filtro ? null : filtro;
+            filtrarTarjetasAdmin();
+        }
+
+        function aplicarFiltros() {
+            buscadorInput.addEventListener('input', filtrarTarjetasAdmin);
+            selectLocalidad.addEventListener('change', () => {
+                actualizarSeleccionTodasLocalidades();
+                filtrarTarjetasAdmin();
+            });
+            selectEstadoServicio.addEventListener('change', () => {
+                buscadorInput.value = '';
+                cargarVistaAdminClientes();
+            });
+            document.querySelectorAll('.chip-filtro-admin').forEach(chip => chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido)));
         }
     </script>
 </body>

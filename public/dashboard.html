@@ -4288,21 +4288,62 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             const textoBusqueda = buscadorInput.value.toLowerCase().trim();
             const opcionesReales = obtenerOpcionesLocalidadReales();
             const localidadesSeleccionadas = obtenerLocalidadesSeleccionadas();
+            const filtroLocalidadesListo = opcionesReales.length > 0;
             const tarjetas = document.querySelectorAll('.cliente-card');
             let clientesVisibles = 0;
             tarjetas.forEach(tarjeta => {
                 const textoTarjeta = tarjeta.getAttribute('data-busqueda') || tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
+                const idLocalidadTarjeta = String(tarjeta.getAttribute('data-localidad') || '').trim();
                 const coincideBusqueda = !textoBusqueda || textoTarjeta.includes(textoBusqueda);
-                const coincideLocalidad = opcionesReales.length === 0 || localidadesSeleccionadas.includes(String(tarjeta.getAttribute('data-localidad') || '').trim());
+                const coincideLocalidad = !filtroLocalidadesListo || localidadesSeleccionadas.includes(idLocalidadTarjeta);
                 const adeudo = parseFloat(tarjeta.getAttribute('data-adeudo')) || 0;
-                const coincideAdeudo = filtrosRapidosAdmin.estadoCuenta === 'con_adeudo' ? adeudo > 0 : filtrosRapidosAdmin.estadoCuenta === 'al_corriente' ? adeudo <= 0 : true;
-                const coincideRenta = !filtrosRapidosAdmin.renta || tarjeta.getAttribute('data-renta') === '1';
-                const coincidePaquete = !filtrosRapidosAdmin.paquete || tarjeta.getAttribute('data-paquete') === filtrosRapidosAdmin.paquete;
-                const visible = coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRenta && coincidePaquete;
-                tarjeta.classList.toggle('hidden', !visible);
-                if (visible) clientesVisibles++;
+                const esRenta = tarjeta.getAttribute('data-renta') === '1';
+                const coincideAdeudo = filtrosRapidosAdmin.estadoCuenta === 'con_adeudo'
+                    ? adeudo > 0
+                    : filtrosRapidosAdmin.estadoCuenta === 'al_corriente'
+                        ? adeudo <= 0
+                        : true;
+                const coincideRenta = filtrosRapidosAdmin.renta ? esRenta : true;
+                const paqueteTarjeta = tarjeta.getAttribute('data-paquete') || '';
+                const coincidePaquete = filtrosRapidosAdmin.paquete
+                    ? paqueteTarjeta === filtrosRapidosAdmin.paquete
+                    : true;
+                if (coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRenta && coincidePaquete) {
+                    tarjeta.classList.remove('hidden');
+                    clientesVisibles++;
+                } else {
+                    tarjeta.classList.add('hidden');
+                }
             });
             document.getElementById('contador-clientes').textContent = clientesVisibles;
+        }
+
+        function manejarCambioFiltroLocalidad() {
+            buscadorInput.value = '';
+            const opcionTodas = selectLocalidad.querySelector('option[value="todas"]');
+            const opcionesReales = obtenerOpcionesLocalidadReales();
+            const todasSeleccionadaAhora = Boolean(opcionTodas?.selected);
+            if (opcionTodas && todasSeleccionadaAhora !== filtroLocalidadTodasSeleccionadoAntes) {
+                opcionesReales.forEach(opcion => {
+                    opcion.selected = todasSeleccionadaAhora;
+                });
+                filtroLocalidadTodasSeleccionadoAntes = todasSeleccionadaAhora;
+            } else {
+                actualizarSeleccionTodasLocalidades();
+            }
+            filtrarTarjetasAdmin();
+        }
+
+        function actualizarChipsFiltrosRapidos() {
+            document.querySelectorAll('.chip-filtro-admin').forEach(chip => {
+                const filtro = chip.dataset.filtroRapido;
+                const activo = filtro === 'renta'
+                    ? filtrosRapidosAdmin.renta
+                    : filtro.startsWith('paquete_')
+                        ? filtrosRapidosAdmin.paquete === filtro.replace('paquete_', '')
+                        : filtrosRapidosAdmin.estadoCuenta === filtro;
+                chip.classList.toggle('activo', activo);
+            });
         }
 
         function manejarFiltroRapidoAdmin(filtro) {
@@ -4312,14 +4353,12 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 filtrosRapidosAdmin.paquete = filtrosRapidosAdmin.paquete === paquete ? null : paquete;
             } else filtrosRapidosAdmin.estadoCuenta = filtrosRapidosAdmin.estadoCuenta === filtro ? null : filtro;
             filtrarTarjetasAdmin();
+            actualizarChipsFiltrosRapidos();
         }
 
         function aplicarFiltros() {
             buscadorInput.addEventListener('input', filtrarTarjetasAdmin);
-            selectLocalidad.addEventListener('change', () => {
-                actualizarSeleccionTodasLocalidades();
-                filtrarTarjetasAdmin();
-            });
+            selectLocalidad.addEventListener('change', manejarCambioFiltroLocalidad);
             selectEstadoServicio.addEventListener('change', () => {
                 buscadorInput.value = '';
                 cargarVistaAdminClientes();

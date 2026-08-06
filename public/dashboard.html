@@ -57,10 +57,18 @@
 
         <div id="admin-section" class="admin-only">
             
-            <div id="modal-actions-admin" class="actions">
-                <button id="btn-nuevo-cliente" class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
-                <div id="lista-supervision-cobradores" class="supervision-container">
-                
+            <div id="modal-actions-admin" class="actions admin-actions-panel seccion-colapsada">
+                <div class="admin-actions-header">
+                    <h3>Acciones de Administración</h3>
+                    <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('modal-actions-admin', this)" aria-label="Expandir sección" aria-expanded="false" title="Expandir sección">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="seccion-colapsable-contenido admin-actions-contenido">
+                    <button id="btn-nuevo-cliente" class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
+                    <div id="lista-supervision-cobradores" class="supervision-container">
+                    
+                    </div>
                 </div>
             </div>
 

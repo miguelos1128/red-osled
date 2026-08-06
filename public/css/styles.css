@@ -414,31 +414,13 @@ td {
 }
 
 
-#filtro-localidad {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 25px; /* Para que haga juego con el buscador */
-    font-size: 0.95rem;
-    outline: none;
-    background-color: white;
-    cursor: pointer;
-}
+
 #select-ordenar:hover {
     border-color: #3b82f6; /* Color azul al pasar el mouse */
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-#select-ordenar {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 25px; /* Para que haga juego con el buscador */
-    font-size: 0.95rem;
-    outline: none;
-    background-color: white;
-    cursor: pointer;
-}
+
 
 #filtro-localidad:hover {
     border-color: #3b82f6; /* Color azul al pasar el mouse */
@@ -446,9 +428,9 @@ td {
 }
 
 /* Estilizar el select múltiple nativo */
-#filtro-localidad {
+.filtro-localidad-wrapper  select {
     width: 100%;
-    min-width: 220px;
+    min-width: 200px;
     border:  1px solid #ddd;
     border-radius: 25px;
     padding: 12px;
@@ -458,6 +440,7 @@ td {
     background-color: white;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
+    cursor: pointer;
     /* Evita que se vea el borde azul tosco al hacer clic */
 }
 

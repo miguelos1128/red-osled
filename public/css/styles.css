@@ -2365,6 +2365,11 @@ td {
 
 .chip-filtro-admin.activo {
     border-color: #1a73e8;
+    background: #e8f1ff;
+    color: #0b57d0;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
 .cliente-badge-renta {
     display: inline-flex;
     align-items: center;
@@ -2401,6 +2406,17 @@ td {
 
 .cliente-badge-baja {
     display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #fde2df;
+    color: #b42318;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
 .seccion-colapsada .seccion-colapsable-contenido {
     display: none;
 }

@@ -655,9 +655,8 @@
                         </div>
                         
                     </div>
-                </div>
 
-                                    <div id="gestion-servicio-box" class="gestion-servicio-box">
+                    <div id="gestion-servicio-box" class="gestion-servicio-box">
                         <div class="gestion-servicio-header">
                             <h3>Gestión de Servicio</h3>
                             <span id="servicio-estado-texto">-</span>
@@ -686,8 +685,63 @@
                             <button class="button btn-baja-servicio hidden" onclick="darBajaClienteSuspendido()">Dar de baja</button>
                         </div>
                     </div>
+                </div>
 
-                                <div id="seccion-bitacora-servicio" class="seccion-detalle">
+                <div id="seccion-finanzas" class="seccion-detalle">
+                    <div class="finanzas-header">
+                        <h3>💰 Historial Financiero</h3>
+                        <div class="seccion-header-acciones">
+                            <button class="btn-descarga-pdf" onclick="generarPDFEstadoCuenta()">
+                                <i class="fas fa-file-pdf"></i> Descargar PDF
+                            </button>
+                            <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('seccion-finanzas', this)" aria-label="Contraer historial financiero" aria-expanded="true" title="Contraer sección">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="seccion-colapsable-contenido">
+                        <div class="finanzas-resumen">
+                            <div class="tarjeta-resumen verde">
+                                <span>Total Pagado Histórico</span>
+                                <h4 id="detalle-total-pagado">$0.00</h4>
+                            </div>
+                            <div class="tarjeta-resumen alerta" id="tarjeta-pendientes">
+                                <span>Adeudo Pendiente</span>
+                                <h4 id="detalle-total-pendiente">$0.00</h4>
+                            </div>
+                        </div>
+
+                        <div id="detalle-meses-pendientes-box" class="meses-pendientes-box hidden">
+                            <div>
+                                <span>Meses pendientes</span>
+                                <p id="detalle-meses-pendientes">-</p>
+                            </div>
+                            <div id="notificar-box" class="cliente-acciones-group">
+
+                            </div>
+                        </div>
+
+                        <div class="tabla-contenedor">
+                            <table class="tabla-pagos">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Mes pagado</th>
+                                        <th>Monto</th>
+                                        <th>Cobrador</th>
+                                        <th>Tipo de Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detalle-tabla-pagos">
+                                
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="seccion-bitacora-servicio" class="seccion-detalle">
                     <div class="bitacora-servicio-header">
                         <h3>Historial de Servicio</h3>
                         <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('seccion-bitacora-servicio', this)" aria-label="Contraer historial de servicio" aria-expanded="true" title="Contraer sección">
@@ -698,52 +752,6 @@
                         <div id="detalle-bitacora-servicio" class="bitacora-servicio-lista">
                             <p class="bitacora-vacia">No hay eventos de servicio registrados.</p>
                         </div>
-                    </div>
-                </div>
-<div id="seccion-finanzas" class="seccion-detalle">
-                    <div class="finanzas-header">
-                        <h3>💰 Historial Financiero</h3>
-                        <button class="btn-descarga-pdf" onclick="generarPDFEstadoCuenta()">
-                            <i class="fas fa-file-pdf"></i> Descargar PDF
-                        </button>
-                    </div>
-
-                    <div class="finanzas-resu   men">
-                        <div class="tarjeta-resumen verde">
-                            <span>Total Pagado Histórico</span>
-                            <h4 id="detalle-total-pagado">$0.00</h4>
-                        </div>
-                        <div class="tarjeta-resumen alerta" id="tarjeta-pendientes">
-                            <span>Adeudo Pendiente</span>
-                            <h4 id="detalle-total-pendiente">$0.00</h4>
-                        </div>
-                    </div>
-
-                    <div id="detalle-meses-pendientes-box" class="meses-pendientes-box hidden">
-                        <div>
-                            <span>Meses pendientes</span>
-                            <p id="detalle-meses-pendientes">-</p>
-                        </div>
-                        <div id="notificar-box" class="cliente-acciones-group">
-
-                        </div>
-                    </div>
-
-                    <div class="tabla-contenedor">
-                        <table class="tabla-pagos">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Mes pagado</th>
-                                    <th>Monto</th>
-                                    <th>Cobrador</th>
-                                    <th>Tipo de Pago</th>
-                                </tr>
-                            </thead>
-                            <tbody id="detalle-tabla-pagos">
-                            
-                            </tbody>
-                        </table>
                     </div>
                 </div>
                 

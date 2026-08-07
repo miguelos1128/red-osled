@@ -3121,6 +3121,13 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 clienteSeleccionado = cliente;
                 estadoCuentaDetalleActual = estadoCuenta;
 
+                const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
+                        EditarBoxAlias.innerHTML = `
+                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
+                                        <i class="fas fa-eye">Alias: ${cliente.alias_cliente} ✏️</i>
+                                    </p>
+                        `;
+
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
                 document.getElementById('detalle-direccion').textContent = cliente.direccion || 'Sin dirección';
@@ -3152,6 +3159,13 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                     const telLimpio = tel.replace(/\D/g,''); 
                     btnWhatsapp.href = `https://wa.me/${telLimpio}`;
                     btnWhatsapp.style.display = 'inline-block';
+                    const EditarBox = document.getElementById('editar-box')
+                        EditarBox.innerHTML = `
+
+                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},1)'>
+                                        <i class="fas fa-eye">✏️</i>
+                                    </button>
+                        `;
                 } else {
                     btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
                 }
@@ -3233,6 +3247,10 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 const notifcarBox = document.getElementById('notificar-box')
                 notifcarBox.innerHTML = `
                 
+                            <button class="btn-registrar-pago"
+                                onclick='seleccionarClienteDirecto(${JSON.stringify(cliente).replace(/'/g, "&apos;")})'>
+                                <i class="fas fa-dollar-sign">💵</i> Registrar Pago
+                            </button>
                             <button class="btn-detalles-slim" onclick='notificarCliente(${idCliente})'>
                                 <i class="fas fa-eye">🔔</i>
                             </button>

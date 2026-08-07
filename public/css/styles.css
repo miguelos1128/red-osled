@@ -417,7 +417,6 @@ td {
 #buscador-nombre {
     width: 100%;
     max-width: 400px;
-    padding: 12px 12px 12px 40px; /* Espacio extra a la izquierda para la lupa */
     border: 1px solid #ddd;
     border-radius: 25px; /* Bordes redondeados modernos */
     font-size: 1rem;

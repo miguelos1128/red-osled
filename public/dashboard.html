@@ -79,7 +79,6 @@
 
                 <div class="admin-controles-busqueda">
                     <div class="input-busqueda-wrapper">
-                        <i class="fas fa-search"></i>
                         <input type="text" id="buscador-nombre" placeholder="Buscar por nombre, IP, teléfono, localidad, RENTA u observaciones...">
                     </div>
                     <div class="filtro-localidad-wrapper">
@@ -1132,27 +1131,6 @@
             aplicarFiltros();
             // Primero, cargamos los clientes al iniciar la página
             cargarVistaAdminClientes();
-
-            // LÓGICA DEL BUSCADOR EN TIEMPO REAL
-            inputBuscador.addEventListener('input', function(e) {
-                // Obtenemos el texto que escribió el usuario en minúsculas
-                const terminoBusqueda = e.target.value.toLowerCase();
-                
-                // Seleccionamos todas las tarjetas que están en pantalla
-                const tarjetas = document.querySelectorAll('.cliente-card');
-
-                tarjetas.forEach(tarjeta => {
-                    // Buscamos el nombre específico dentro de esa tarjeta
-                    const nombreCliente = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
-
-                    // Si el nombre incluye lo que escribimos, mostramos la tarjeta, si no, la ocultamos
-                    if (nombreCliente.includes(terminoBusqueda)) {
-                        tarjeta.classList.remove('hidden'); 
-                    } else {
-                        tarjeta.classList.add('hidden');
-                    }
-                });
-            });
         });
 
         // 1. Dibuja las tarjetas en la pantalla principal  
@@ -1272,94 +1250,22 @@
             }
         } */
     
-        function aplicarFiltros(){
-            // 1. Creamos la variable que llevará la cuenta
-            
-            // 1. EVENTO: CUANDO ESCRIBES UN NOMBRE
-             buscadorInput.addEventListener('input', function(e) {
-                    // Resetear el filtro de localidad a "todas"
-                    selectLocalidad.value = 'todas';
-                    
-                    const textoBusqueda = e.target.value.toLowerCase().trim();
-                    const tarjetas = document.querySelectorAll('.cliente-card');
-                    let clientesVisibles = 0;
-
-                    tarjetas.forEach(tarjeta => {
-                        const nombre = tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
-                        
-                        // Filtramos SOLO por el nombre
-                        if (nombre.includes(textoBusqueda)) {
-                            tarjeta.classList.remove('hidden');
-                            clientesVisibles++;
-                        } else {
-                            tarjeta.classList.add('hidden');
-                        }
-                    });
-                     // 3. Imprimimos el total final en nuestro nuevo elemento HTML
-                    document.getElementById('contador-clientes').textContent = clientesVisibles;
-                });
-
-            // 2. EVENTO: CUANDO SELECCIONAS UNA LOCALIDAD
-            selectLocalidad.addEventListener('change', function(e) {
-                // Limpiar el texto del buscador de nombre
-                buscadorInput.value = '';
-                
-                            // NUEVO: En lugar de un solo valor, obtenemos una lista (Array) de todo lo seleccionado
-                // Convertimos las opciones seleccionadas a un arreglo y extraemos solo su "value"
-                const opcionesSeleccionadas = Array.from(e.target.selectedOptions).map(opcion => opcion.value);
-                
-               // const localidadSeleccionada = String(e.target.value).trim();
-                const tarjetas = document.querySelectorAll('.cliente-card');
-                let clientesVisibles = 0;
-
-                tarjetas.forEach(tarjeta => {
-                    let idLocalidadTarjeta = tarjeta.getAttribute('data-localidad');
-                    idLocalidadTarjeta = idLocalidadTarjeta ? String(idLocalidadTarjeta).trim() : 'null';
-
-                    // LÓGICA DE FILTRADO MÚLTIPLE:
-                    // 1. ¿El usuario seleccionó "todas"? o ¿desmarcó todo (lista vacía)?
-                    const mostrarTodas = opcionesSeleccionadas.includes("todas") || opcionesSeleccionadas.length === 0;
-                    
-                    // 2. ¿El ID de la localidad de esta tarjeta está dentro de la lista que eligió el usuario?
-                    const coincideLocalidad = opcionesSeleccionadas.includes(idLocalidadTarjeta);
-
-                    // Si cumple cualquiera de las dos condiciones, mostramos la tarjeta
-                    if (mostrarTodas || coincideLocalidad) {
-                        tarjeta.classList.remove('hidden');
-                        clientesVisibles++;
-                    } else {
-                        tarjeta.classList.add('hidden');
-                    }
-                });
-                // 3. Imprimimos el total final en nuestro nuevo elemento HTML
-                document.getElementById('contador-clientes').textContent = clientesVisibles;
-            });
-            activarScrollSincronizado();
-        }
-              
-        // EVENTO: ORDENAR TARJETAS
-        document.getElementById('select-ordenar').addEventListener('change', function(e) {
-            const criterio = e.target.value;
+        function aplicarOrdenAdminClientes() {
+            const criterio = document.getElementById('select-ordenar').value || 'corte_asc';
             const contenedor = document.getElementById('admin-clientes-container');
             
             // Obtenemos todas las tarjetas y las convertimos en un Array para poder ordenarlas
             const tarjetas = Array.from(contenedor.querySelectorAll('.cliente-card'));
 
-            // Si vuelve a la opción por defecto, no hacemos nada (o podrías recargar)
-            if (criterio === "defecto") return;
-
             tarjetas.sort((a, b) => {
                 let valA, valB;
 
                 switch(criterio) {
-                    case "id_asc":
-                        return parseInt(a.getAttribute('data-id')) - parseInt(b.getAttribute('data-id'));
-                    
                     case "corte_asc":
                         return parseInt(a.getAttribute('data-corte')) - parseInt(b.getAttribute('data-corte'));
 
-                    case "corte_desc": // NUEVO CASO: Orden descendente del 31 al 1
-                        return parseInt(b.getAttribute('data-corte')) - parseInt(a.getAttribute('data-corte'));
+                    case "adeudo_desc":
+                        return (parseFloat(b.getAttribute('data-adeudo')) || 0) - (parseFloat(a.getAttribute('data-adeudo')) || 0);
                     
                     case "nombre_asc":
                         valA = a.getAttribute('data-nombre').toLowerCase();
@@ -1371,6 +1277,11 @@
                         valB = b.getAttribute('data-ip');
                         // localeCompare con numeric: true ordena excelente tanto números (172) como IPs completas
                         return valA.localeCompare(valB, undefined, {numeric: true}); 
+
+                    case "localidad_asc":
+                        valA = (a.getAttribute('data-localidad-nombre') || '').toLowerCase();
+                        valB = (b.getAttribute('data-localidad-nombre') || '').toLowerCase();
+                        return valA.localeCompare(valB, 'es', { numeric: true });
                     
                     case "fecha_asc":
                         return new Date(a.getAttribute('data-fecha')) - new Date(b.getAttribute('data-fecha'));
@@ -1387,7 +1298,10 @@
             // (JavaScript automáticamente las mueve de posición, no las duplica)
             tarjetas.forEach(tarjeta => contenedor.appendChild(tarjeta));
             activarScrollSincronizado();
-        });
+        }
+
+        // EVENTO: ORDENAR TARJETAS
+        document.getElementById('select-ordenar').addEventListener('change', aplicarOrdenAdminClientes);
 
         // Funciones para el Modal------------
         function mostrarFormularioCliente() {

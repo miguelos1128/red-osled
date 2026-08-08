@@ -1983,37 +1983,71 @@ app.get('/api/localidades', async (req, res) => {
 
 app.post('/api/cancelar-pago/:id', async (req, res) => {
     const idPago = req.params.id;
+    const connection = await db.getConnection();
 
     try {
-        // 1. Preparamos la consulta SQL
-        // IMPORTANTE: Verifica que los nombres de tu tabla ('pagos') 
-        // y tus columnas ('id_estado', 'id_pago') coincidan con tu base de datos real.
-        const query = `UPDATE pagos SET estado_corte = 3 WHERE id = ?`;
-        console.log('Query '+ query+ 'id: '+ idPago )
-        
-        // 2. Ejecutamos la consulta (Ejemplo usando un 'pool' de mysql2 con promesas)
-        const [result] = await db.query(query, [idPago]);
+        await connection.beginTransaction();
 
-        // 3. Verificamos si realmente se modificó algún registro
-        if (result.affectedRows > 0) {
-            res.json({ 
-                success: true, 
-                message: 'Pago cancelado correctamente.' 
-            });
-        } else {
-            // Si affectedRows es 0, significa que el ID no existe
-            res.status(404).json({ 
-                success: false, 
-                message: 'No se encontró el pago especificado.' 
+        const [pagos] = await connection.query(
+            'SELECT id FROM pagos WHERE id = ? AND estado_corte = 0 FOR UPDATE',
+            [idPago]
+        );
+
+        if (pagos.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontro el pago pendiente especificado.'
             });
         }
 
-    } catch (error) {
-        console.error('Error en el servidor al cancelar pago:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error interno del servidor al procesar la solicitud.' 
+        const [ajustes] = await connection.query(
+            `SELECT COALESCE(SUM(monto_aplicado), 0) AS monto_liberado,
+                    COUNT(*) AS total_ajustes
+             FROM aplicaciones_ajustes_servicio
+             WHERE pago_id = ?`,
+            [idPago]
+        );
+
+        const montoLiberado = parseFloat(ajustes[0]?.monto_liberado) || 0;
+        const totalAjustes = parseInt(ajustes[0]?.total_ajustes) || 0;
+
+        if (totalAjustes > 0) {
+            await connection.query(
+                'DELETE FROM aplicaciones_ajustes_servicio WHERE pago_id = ?',
+                [idPago]
+            );
+        }
+
+        const [result] = await connection.query(
+            'UPDATE pagos SET estado_corte = 3 WHERE id = ? AND estado_corte = 0',
+            [idPago]
+        );
+
+        if (result.affectedRows === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontro el pago pendiente especificado.'
+            });
+        }
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: 'Pago cancelado correctamente.',
+            monto_ajuste_liberado: montoLiberado
         });
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error en el servidor al cancelar pago:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al procesar la solicitud.'
+        });
+    } finally {
+        connection.release();
     }
 });
 // Ruta para actualizar el teléfono de un cliente

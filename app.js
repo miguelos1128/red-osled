@@ -831,13 +831,33 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
             return res.status(404).json({ error: 'Cliente no encontrado' });
         }
 
+        const columnaObservaciones = await obtenerColumnaObservacionesBitacora(db);
+        const selectObservacionesAjuste = columnaObservaciones
+            ? `GROUP_CONCAT(NULLIF(TRIM(b.${escaparIdentificadorMysql(columnaObservaciones)}), '') ORDER BY b.fecha_inicio, b.id SEPARATOR ' | ') AS observaciones_ajuste`
+            : 'NULL AS observaciones_ajuste';
+
         const [pagos] = await db.query(
-            `SELECT p.*, u.nombre AS cobrador_nombre
+            `SELECT p.*, u.nombre AS cobrador_nombre,
+                    COALESCE(aj.monto_ajuste_aplicado, 0) AS monto_ajuste_aplicado,
+                    aj.tipos_ajuste,
+                    aj.dias_compensados_ajuste,
+                    aj.observaciones_ajuste
              FROM pagos p
              LEFT JOIN usuarios u ON p.usuario_id = u.id
+             LEFT JOIN (
+                SELECT a.pago_id,
+                       SUM(a.monto_aplicado) AS monto_ajuste_aplicado,
+                       GROUP_CONCAT(b.tipo_evento ORDER BY b.fecha_inicio, b.id SEPARATOR ',') AS tipos_ajuste,
+                       GROUP_CONCAT(b.dias_compensados ORDER BY b.fecha_inicio, b.id SEPARATOR ',') AS dias_compensados_ajuste,
+                       ${selectObservacionesAjuste}
+                FROM aplicaciones_ajustes_servicio a
+                JOIN bitacora_servicio b ON b.id = a.bitacora_id
+                WHERE a.cliente_id = ? AND a.pago_id IS NOT NULL
+                GROUP BY a.pago_id
+             ) aj ON aj.pago_id = p.id
              WHERE p.cliente_id = ? AND p.estado_corte < 3
              ORDER BY p.id DESC`,
-            [clienteId]
+            [clienteId, clienteId]
         );
 
         const bitacora = await consultarBitacoraServicio(db, clienteId);

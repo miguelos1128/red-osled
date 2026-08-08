@@ -2046,6 +2046,25 @@ td {
 .tabla-pagos th, .tabla-pagos td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
 .tabla-pagos th { background: #f8f9fa; color: #34495e; font-size: 0.9rem; text-transform: uppercase;}
 .tabla-pagos tbody tr:hover { background-color: #f1f2f6; }
+.pago-monto-principal,
+.pago-tipo-principal {
+    display: block;
+}
+.pago-ajuste-detalle {
+    display: block;
+    margin-top: 4px;
+    color: #1e8e3e;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+.pago-ajuste-motivo {
+    display: block;
+    margin-top: 4px;
+    color: #5f6b7a;
+    font-size: 0.78rem;
+    line-height: 1.3;
+}
 
 /* Badges de la tabla */
 .badge-pago { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: white; }

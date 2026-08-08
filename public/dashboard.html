@@ -2524,31 +2524,10 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
 
                 // --- INICIO FASE 2: FINANZAS ---
                 const tbodyPagos = document.getElementById('detalle-tabla-pagos');
-                tbodyPagos.innerHTML = ''; // Limpiamos la tabla de clientes anteriores
+                renderizarHistorialPagosDetalle(pagos, tbodyPagos);
                 
                 let totalPagado = 0;
                 let totalPendiente = 0;
-
-                if (pagos.length === 0) {
-                    tbodyPagos.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:#7f8c8d;">No hay historial de pagos registrados para este cliente.</td></tr>';
-                } else {
-                    pagos.forEach(pago => {
-                        const monto = parseFloat(pago.monto) || 0;
-                        const montoFormateado = monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        let badgeHTML = '';
-                        const fechaObj = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
-                        // Dibujamos la fila (Usamos el ID de pago como "Folio")
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td>${fechaObj}</td>
-                            <td><b>${pago.mes_pagado}</b></td>
-                            <td>$${montoFormateado}</td>
-                            <td>${pago.cobrador_nombre || 'Desconocido'}</td>
-                            <td>${pago.tipo_pago}</td>
-                        `;
-                        tbodyPagos.appendChild(tr);
-                    });
-                }
 
                 const adeudoPendiente = parseFloat(estadoCuenta.adeudo_actual) || 0;
                 const saldoFavor = parseFloat(estadoCuenta.saldo_favor) || 0;
@@ -2892,6 +2871,70 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        function obtenerDetalleAjustePago(pago) {
+            const montoAjuste = parseFloat(pago?.monto_ajuste_aplicado) || 0;
+            if (montoAjuste <= 0) return null;
+
+            const tipos = String(pago?.tipos_ajuste || '')
+                .split(',')
+                .map(tipo => tipo.trim())
+                .filter(Boolean);
+            const etiquetas = tipos.map(tipo => {
+                if (tipo === 'falla_tecnica') return 'Bonificación por falla técnica';
+                if (tipo === 'decision_usuario') return 'Bonificación por decisión del usuario';
+                return `Bonificación por ${formatearTipoEventoServicio(tipo)}`;
+            });
+            const dias = String(pago?.dias_compensados_ajuste || '')
+                .split(',')
+                .map(valor => parseInt(valor, 10))
+                .filter(valor => valor > 0);
+            const totalDias = dias.reduce((total, valor) => total + valor, 0);
+            const observaciones = String(pago?.observaciones_ajuste || '').trim();
+            const motivo = etiquetas.length > 0 ? [...new Set(etiquetas)].join(' / ') : 'Bonificación aplicada';
+            const partes = [motivo];
+
+            if (totalDias > 0) partes.push(`${totalDias} días compensados`);
+            if (observaciones) partes.push(observaciones);
+
+            return {
+                monto: montoAjuste,
+                montoFormateado: montoAjuste.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                descripcion: partes.join(' | ')
+            };
+        }
+
+        function renderizarHistorialPagosDetalle(pagos, tbodyPagos) {
+            tbodyPagos.innerHTML = '';
+
+            if (pagos.length === 0) {
+                tbodyPagos.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:#7f8c8d;">No hay historial de pagos registrados para este cliente.</td></tr>';
+                return;
+            }
+
+            pagos.forEach(pago => {
+                const monto = parseFloat(pago.monto) || 0;
+                const montoFormateado = monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const ajuste = obtenerDetalleAjustePago(pago);
+                const ajusteMontoHtml = ajuste
+                    ? `<span class="pago-ajuste-detalle">+ $${ajuste.montoFormateado} bonificación</span>`
+                    : '';
+                const ajusteMotivoHtml = ajuste
+                    ? `<span class="pago-ajuste-motivo">${escaparHtml(ajuste.descripcion)}</span>`
+                    : '';
+                const fechaObj = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+                    <td>${escaparHtml(fechaObj)}</td>
+                    <td><b>${escaparHtml(pago.mes_pagado || '-')}</b></td>
+                    <td><span class="pago-monto-principal">$${montoFormateado}</span>${ajusteMontoHtml}</td>
+                    <td>${escaparHtml(pago.cobrador_nombre || 'Desconocido')}</td>
+                    <td><span class="pago-tipo-principal">${escaparHtml(pago.tipo_pago || '-')}</span>${ajusteMotivoHtml}</td>
+                `;
+                tbodyPagos.appendChild(tr);
+            });
         }
 
         function formatearFechaBitacora(fecha) {
@@ -3319,31 +3362,10 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);
                 // --- INICIO FASE 2: FINANZAS ---
                 const tbodyPagos = document.getElementById('detalle-tabla-pagos');
-                tbodyPagos.innerHTML = ''; // Limpiamos la tabla de clientes anteriores
+                renderizarHistorialPagosDetalle(pagos, tbodyPagos);
                 
                 let totalPagado = 0;
                 let totalPendiente = 0;
-
-                if (pagos.length === 0) {
-                    tbodyPagos.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:#7f8c8d;">No hay historial de pagos registrados para este cliente.</td></tr>';
-                } else {
-                    pagos.forEach(pago => {
-                        const monto = parseFloat(pago.monto) || 0;
-                        const montoFormateado = monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        let badgeHTML = '';
-                        const fechaObj = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
-                        // Dibujamos la fila (Usamos el ID de pago como "Folio")
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td>${fechaObj}</td>
-                            <td><b>${pago.mes_pagado}</b></td>
-                            <td>$${montoFormateado}</td>
-                            <td>${pago.cobrador_nombre || 'Desconocido'}</td>
-                            <td>${pago.tipo_pago}</td>
-                        `;
-                        tbodyPagos.appendChild(tr);
-                    });
-                }
 
                 const adeudoPendiente = parseFloat(estadoCuenta.adeudo_actual) || 0;
                 const saldoFavor = parseFloat(estadoCuenta.saldo_favor) || 0;
@@ -3465,13 +3487,20 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
 
                 const fechaFormat = new Date(pago.fecha_pago).toLocaleDateString('es-MX');
                 const montoFormateado = parseFloat(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const ajuste = obtenerDetalleAjustePago(pago);
+                const montoPdf = ajuste
+                    ? `$${montoFormateado}\n+ $${ajuste.montoFormateado} bonificación`
+                    : `$${montoFormateado}`;
+                const tipoPdf = ajuste
+                    ? `${pago.tipo_pago || '-'}\n${ajuste.descripcion}`
+                    : `${pago.tipo_pago || '-'}`;
                
                 return [
                     fechaFormat, 
                     `${pago.mes_pagado}`, 
-                    `$${montoFormateado}`, 
+                    montoPdf,
                     pago.cobrador_nombre || '-', 
-                    `${pago.tipo_pago}`
+                    tipoPdf
                 ];
             });
 
@@ -3482,7 +3511,7 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
                 body: filasTabla,
                 theme: 'striped',
                 headStyles: { fillColor: [41, 128, 185] }, // Cabecera azul
-                styles: { fontSize: 10, cellPadding: 3 },
+                styles: { fontSize: 9, cellPadding: 3 },
                 didParseCell: function(data) {
                     // Pintar de verde o amarillo/naranja la columna de estado
                     if (data.section === 'body' && data.column.index === 4) {

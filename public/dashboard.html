@@ -2034,9 +2034,13 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
             const detalleHtml = detalle.map(item => {
                 const tipoLabel = item.tipo === 'abono' ? 'Abono' : 'Mensualidad';
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const ajusteAplicado = parseFloat(item.ajuste_aplicado) || 0;
+                const ajusteHtml = ajusteAplicado > 0
+                    ? `<small>Saldo a favor aplicado: $${Math.floor(ajusteAplicado).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</small>`
+                    : '';
                 return `
                     <div class="resumen-pago-fila">
-                        <span>${item.mes} <small>${tipoLabel}</small></span>
+                        <span>${item.mes} <small>${tipoLabel}</small>${ajusteHtml}</span>
                         <strong>$${montoFormateado}</strong>
                     </div>
                 `;
@@ -2094,7 +2098,11 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
             const emojiTiempo = hora < 12 ? '☀️' : hora < 19 ? '🌇' : '🌜';
            
             const pagosTexto = detalle
-                .map(p => `${emojiMes} *${p.mes}:* $${p.monto}`)
+                .map(p => {
+                    const ajusteAplicado = parseFloat(p.ajuste_aplicado) || 0;
+                    const ajusteTexto = ajusteAplicado > 0 ? `\n   Saldo a favor aplicado: $${Math.floor(ajusteAplicado)}` : '';
+                    return `${emojiMes} *${p.mes}:* $${p.monto}${ajusteTexto}`;
+                })
                 .join('\n');
             const totalFormateadoWA = total.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
             const mensajeWhatsapp =
@@ -2323,9 +2331,13 @@ Este saldo a favor se aplicará en tu siguiente mensualidad.
             // Generamos las filas de la tabla del ticket
             let filasTicket = detalle.map(item => {
                 const montoFormateado = parseFloat(item.monto).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const ajusteAplicado = parseFloat(item.ajuste_aplicado) || 0;
+                const ajusteTexto = ajusteAplicado > 0
+                    ? `<br><small>Saldo a favor aplicado: $${Math.floor(ajusteAplicado).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</small>`
+                    : '';
                 return `
                 <tr>
-                    <td style="padding: 5px 0;">${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}</td>
+                    <td style="padding: 5px 0;">${item.mes} ${item.tipo === 'abono' ? '(Abono)' : ''}${ajusteTexto}</td>
                     <td align="right" style="padding: 5px 0;">$${montoFormateado}</td>
                 </tr>
             `;

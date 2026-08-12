@@ -2058,6 +2058,10 @@ td {
     font-weight: 700;
     line-height: 1.25;
 }
+
+.pago-ajuste-detalle.cargo {
+    color: #c2410c;
+}
 .pago-ajuste-motivo {
     display: block;
     margin-top: 4px;
@@ -2799,6 +2803,11 @@ td {
 .bitacora-evento.falla-tecnica {
     border-left-color: #1a73e8;
     background: #f8fbff;
+}
+
+.bitacora-evento.cambio-fecha {
+    border-left-color: #7c3aed;
+    background: #fbfaff;
 }
 
 .bitacora-evento-header {

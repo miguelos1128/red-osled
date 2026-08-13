@@ -58,9 +58,9 @@
         <div id="admin-section" class="admin-only">
             
             <div id="modal-actions-admin" class="actions admin-actions-panel seccion-colapsada">
-                <div class="admin-actions-header">
+                <div class="admin-actions-header" role="button" tabindex="0" onclick="toggleHeaderColapsable(event, 'modal-actions-admin')" onkeydown="manejarTeclaHeaderColapsable(event, 'modal-actions-admin')">
                     <h3>Acciones de Administración</h3>
-                    <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('modal-actions-admin', this)" aria-label="Expandir sección" aria-expanded="false" title="Expandir sección">
+                    <button type="button" class="btn-colapsar-seccion" aria-label="Expandir sección" aria-expanded="false" title="Expandir sección">
                         <i class="fas fa-chevron-down"></i>
                     </button>
                 </div>
@@ -374,6 +374,13 @@
                 <h2 id="area-imprimible-corte-titulo">Reporte de Corte de Caja</h2>
                 <span class="cerrar-x-modal" onclick="cerrarModalCorte()">&times;</span>
             </div>
+
+            <div class="corte-mensualidades-header" role="button" tabindex="0" onclick="toggleHeaderColapsable(event, 'modal-corte')" onkeydown="manejarTeclaHeaderColapsable(event, 'modal-corte')">
+                <h3>Mensualidades:</h3>
+                <button type="button" class="btn-colapsar-seccion" aria-label="Contraer mensualidades" aria-expanded="true" aria-controls="tabla-corte-body" title="Contraer mensualidades">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
             
             <div id="banner-info-historica">
 
@@ -392,7 +399,7 @@
                         <div>Acción</div>
                     </div>
 
-                    <div id="tabla-corte-body" class="reporte-grid-body">
+                    <div id="tabla-corte-body" class="reporte-grid-body seccion-colapsable-contenido">
                         
                     </div>
                 </div>
@@ -714,13 +721,13 @@
                 </div>
 
                 <div id="seccion-finanzas" class="seccion-detalle">
-                    <div class="finanzas-header">
+                    <div class="finanzas-header" role="button" tabindex="0" onclick="toggleHeaderColapsable(event, 'seccion-finanzas')" onkeydown="manejarTeclaHeaderColapsable(event, 'seccion-finanzas')">
                         <h3>💰 Historial Financiero</h3>
                         <div class="seccion-header-acciones">
                             <button class="btn-descarga-pdf" onclick="generarPDFEstadoCuenta()">
                                 <i class="fas fa-file-pdf"></i> Descargar PDF
                             </button>
-                            <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('seccion-finanzas', this)" aria-label="Contraer historial financiero" aria-expanded="true" title="Contraer sección">
+                            <button type="button" class="btn-colapsar-seccion" aria-label="Contraer historial financiero" aria-expanded="true" title="Contraer sección">
                                 <i class="fas fa-chevron-up"></i>
                             </button>
                         </div>
@@ -768,9 +775,9 @@
                 </div>
 
                 <div id="seccion-bitacora-servicio" class="seccion-detalle">
-                    <div class="bitacora-servicio-header">
+                    <div class="bitacora-servicio-header" role="button" tabindex="0" onclick="toggleHeaderColapsable(event, 'seccion-bitacora-servicio')" onkeydown="manejarTeclaHeaderColapsable(event, 'seccion-bitacora-servicio')">
                         <h3>Historial de Servicio</h3>
-                        <button type="button" class="btn-colapsar-seccion" onclick="toggleSeccionDetalle('seccion-bitacora-servicio', this)" aria-label="Contraer historial de servicio" aria-expanded="true" title="Contraer sección">
+                        <button type="button" class="btn-colapsar-seccion" aria-label="Contraer historial de servicio" aria-expanded="true" title="Contraer sección">
                             <i class="fas fa-chevron-up"></i>
                         </button>
                     </div>
@@ -3439,6 +3446,28 @@ Este cambio aplicara en tus siguientes pagos.
             actualizarBotonColapsarSeccion(boton, colapsada);
         }
 
+        function clickHeaderColapsableDebeIgnorarse(event) {
+            const controlInteractivo = event.target.closest('button, a, input, select, textarea');
+            return controlInteractivo
+                && controlInteractivo !== event.currentTarget
+                && !controlInteractivo.classList.contains('btn-colapsar-seccion');
+        }
+
+        function toggleHeaderColapsable(event, idSeccion) {
+            if (clickHeaderColapsableDebeIgnorarse(event)) return;
+
+            const boton = event.currentTarget.querySelector('.btn-colapsar-seccion');
+            toggleSeccionDetalle(idSeccion, boton);
+        }
+
+        function manejarTeclaHeaderColapsable(event, idSeccion) {
+            if (!['Enter', ' '].includes(event.key)) return;
+            if (event.target !== event.currentTarget) return;
+
+            event.preventDefault();
+            toggleHeaderColapsable(event, idSeccion);
+        }
+
         function restaurarSeccionesDetalleAbiertas() {
             ['seccion-finanzas', 'seccion-bitacora-servicio'].forEach(idSeccion => {
                 const seccion = document.getElementById(idSeccion);
@@ -4348,7 +4377,10 @@ Este cambio aplicara en tus siguientes pagos.
         }
 
         function cerrarModalCorte() {
-            document.getElementById('modal-corte').classList.add('hidden');
+            const modalCorte = document.getElementById('modal-corte');
+            modalCorte.classList.add('hidden');
+            modalCorte.classList.remove('seccion-colapsada');
+            actualizarBotonColapsarSeccion(document.querySelector('.corte-mensualidades-header .btn-colapsar-seccion'), false);
             CargarWidgetCorteDashboard();
         }
 

@@ -119,12 +119,34 @@ button {
     justify-content: space-between;
     gap: 12px;
     padding: 2px 0 8px;
+    cursor: pointer;
+    border-radius: 6px;
 }
 
 .admin-actions-header h3 {
     margin: 0;
     color: #1f2937;
     font-size: 1.05rem;
+}
+
+.admin-actions-header:hover,
+.admin-actions-header:focus-visible {
+    background: rgba(17, 24, 39, 0.04);
+    outline: none;
+}
+
+.finanzas-header,
+.bitacora-servicio-header {
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.finanzas-header:hover,
+.finanzas-header:focus-visible,
+.bitacora-servicio-header:hover,
+.bitacora-servicio-header:focus-visible {
+    background: rgba(17, 24, 39, 0.04);
+    outline: none;
 }
 
 .admin-actions-contenido {
@@ -808,6 +830,31 @@ td {
     font-size: 1.4rem;
     color: #333;
 }
+
+.corte-mensualidades-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.corte-mensualidades-header h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.05rem;
+}
+
+.corte-mensualidades-header:hover,
+.corte-mensualidades-header:focus-visible {
+    background: rgba(17, 24, 39, 0.04);
+    outline: none;
+}
+
 .cerrar-x-modal {
     font-size: 35px;
     font-weight: bold;

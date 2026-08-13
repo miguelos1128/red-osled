@@ -295,17 +295,26 @@
                 <h2>Nuevo Cliente</h2>
                 <span class="cerrar-x-modal" onclick="cerrarModal()">&times;</span>
             </div>
-            <form id="formCliente">
-                <label>Nombre Completo:</label>
-                <input type="text" id="nom_cli" placeholder="Ej. Juan Pérez" required>
+            <form id="formCliente" class="cliente-form">
+                <div class="cliente-form-field">
+                    <label>Nombre Completo:</label>
+                    <input type="text" id="nom_cli" placeholder="Ej. Juan Pérez" required>
+                </div>
 
-                <label>Teléfono (10 dígitos):</label>
-                <input type="text" id="tel_cli" placeholder="Ej. 5512345678" maxlength="10" 
-                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                <div class="cliente-form-grid cliente-form-grid-2">
+                    <div class="cliente-form-field">
+                        <label>Teléfono (10 dígitos):</label>
+                        <input type="text" id="tel_cli" placeholder="Ej. 5512345678" maxlength="10"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                    </div>
+                    <div class="cliente-form-field">
+                        <label>Correo Electrónico:</label>
+                        <input type="email" id="cor_cli" placeholder="Correo Electrónico">
+                    </div>
+                </div>
 
-                <input type="email" id="cor_cli" placeholder="Correo Electrónico">
-                <textarea id="dir_cli" placeholder="Dirección completa" required style="width:100%; margin: 10px 0; border: 1px solid #ddd;"></textarea>
-                <textarea id="obs_cli" placeholder="Observaciones (opcional)" style="width:100%; margin: 0 0 10px; border: 1px solid #ddd;"></textarea>
+                <textarea id="dir_cli" placeholder="Dirección completa" required></textarea>
+                <textarea id="obs_cli" placeholder="Observaciones (opcional)"></textarea>
 
                 <div class="fila-localidad-renta mb-3">
                     <div class="campo-localidad">
@@ -321,35 +330,36 @@
                     </label>
                 </div>
 
-                <div style="display:flex; gap:10px;">
-                    <div style="flex:1">
+                <div class="cliente-form-grid cliente-form-grid-3">
+                    <div class="cliente-form-field">
                         <label>Fecha Instalación:</label>
                         <input type="date" id="fecha_ins" required>
                     </div>
-                    <div style="flex:1">
-                        <label>Día de Pago:</label>
-                        <input type="number" id="dia_pago" placeholder="Se llena con la instalacion" min="1" max="31" readonly required>
-                    </div>
-                </div>
-
-                <div style="display:flex; gap:10px;">
-                    <div style="flex:1">
+                    <div class="cliente-form-field">
                         <label>IP:</label>
                         <input type="number" id="ip_cli" placeholder="Ej. 128" min="1" max="254" required>
                     </div>
-                    <div style="flex:1">
+                    <div class="cliente-form-field">
                         <label>Señal (30-90):</label>
                         <input type="number" id="senal_cli" placeholder="Ej. 60" min="30" max="90" required>
                     </div>
                 </div>
 
-                <select id="paquete_cli" onchange="actualizarCosto()" required>
-                    <option value="">Selecciona Paquete</option>
-                    <option value="5M">5 Megas</option>
-                    <option value="8M">8 Megas</option>
-                    <option value="16M">16 Megas</option>
-                </select>
-                <input type="number" id="costo_cli" placeholder="Costo Mensual ($)" required>
+                <div class="cliente-form-grid cliente-form-grid-2">
+                    <div class="cliente-form-field">
+                        <label>Paquete:</label>
+                        <select id="paquete_cli" onchange="actualizarCosto()" required>
+                            <option value="">Selecciona Paquete</option>
+                            <option value="5M">5 Megas</option>
+                            <option value="8M">8 Megas</option>
+                            <option value="16M">16 Megas</option>
+                        </select>
+                    </div>
+                    <div class="cliente-form-field">
+                        <label>Costo Mensual ($):</label>
+                        <input type="number" id="costo_cli" placeholder="Costo Mensual ($)" required>
+                    </div>
+                </div>
 
                 <button class="button" type="submit" style="margin-top:15px;">Guardar Cliente</button>
             </form>
@@ -1324,17 +1334,6 @@
             document.getElementById('formCliente').reset();
         }
 
-        function obtenerDiaDesdeFechaInput(fechaTexto) {
-            const partes = String(fechaTexto || '').split('-');
-            return partes.length === 3 ? parseInt(partes[2], 10) : NaN;
-        }
-
-        function sincronizarDiaPagoAlta() {
-            const fecha = document.getElementById('fecha_ins').value;
-            const dia = obtenerDiaDesdeFechaInput(fecha);
-            document.getElementById('dia_pago').value = Number.isNaN(dia) ? '' : dia;
-        }
-
         function cerrarModalPorFondo(event, modalId, cerrarCallback) {
             if (event.target.id === modalId) {
                 cerrarCallback();
@@ -1346,8 +1345,6 @@
         window.onload = function() {
             const hoy = new Date().toISOString().split('T')[0];
             document.getElementById('fecha_ins').setAttribute('max', hoy);
-            document.getElementById('fecha_ins').addEventListener('change', sincronizarDiaPagoAlta);
-            sincronizarDiaPagoAlta();
             cargarVistaAdminClientes();
             //cargarClientes(); // Tu función existente
             cargarSupervisionCobradores();
@@ -1432,8 +1429,6 @@
             const direccion = document.getElementById('dir_cli').value.trim();
             const observaciones = document.getElementById('obs_cli').value.trim();
             const fecha = document.getElementById('fecha_ins').value;
-            const diaPago = obtenerDiaDesdeFechaInput(fecha);
-            document.getElementById('dia_pago').value = Number.isNaN(diaPago) ? '' : diaPago;
             const ip = parseInt(document.getElementById('ip_cli').value);
             const senal = parseInt(document.getElementById('senal_cli').value);
             const paquete = document.getElementById('paquete_cli').value;
@@ -1452,11 +1447,6 @@
 
             // Validación Teléfono (10 dígitos exactos)
             if (telefono.length !== 10) errores.push("- El Teléfono debe tener exactamente 10 dígitos.");
-            
-            // Validación Día de Pago
-            if (isNaN(diaPago) || diaPago < 1 || diaPago > 31) {
-                errores.push("- El Dia de Pago debe ser entre 1 y 31.");
-            }
 
             // Validación IP (1 a 254)
             if (isNaN(ip) || ip < 1 || ip > 254) {
@@ -1499,7 +1489,6 @@
                 observaciones: observaciones,
                 es_renta: esRenta,
                 fecha_instalacion: fecha,
-                dia_pago: diaPago,
                 direccion_ip: ip,   // Ahora sí enviamos un número limpio
                 señal: senal,       // Número limpio
                 paquete: paquete,

@@ -2533,6 +2533,10 @@ td {
     background-color: #f4f7f6;
 }
 
+.chips-paquetes-admin {
+    display: contents;
+}
+
 .chip-filtro-admin {
     width: auto;
     padding: 8px 13px;

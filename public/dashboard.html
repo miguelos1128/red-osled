@@ -112,9 +112,7 @@
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="con_adeudo">Con adeudo</button>
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="al_corriente">Al corriente</button>
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="renta">RENTA</button>
-                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="paquete_5M">5 Megas</button>
-                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="paquete_8M">8 Megas</button>
-                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="paquete_16M">16 Megas</button>
+                    <span id="chips-paquetes-admin" class="chips-paquetes-admin"></span>
                 </div>
 <div id ="admin-clientes-container" class="admin-clientes-container">
                     <div class="cliente-card" data-localidad="Centro">
@@ -350,9 +348,6 @@
                         <label>Paquete:</label>
                         <select id="paquete_cli" onchange="actualizarCosto()" required>
                             <option value="">Selecciona Paquete</option>
-                            <option value="5M">5 Megas</option>
-                            <option value="8M">8 Megas</option>
-                            <option value="16M">16 Megas</option>
                         </select>
                     </div>
                     <div class="cliente-form-field">
@@ -814,6 +809,7 @@
         const selectEstadoServicio = document.getElementById('filtro-estado-servicio');
         const inputBuscador = document.getElementById('buscador-nombre');
         let configLocalidades = {};
+        let paquetesCatalogo = [];
         let perfilUsuario ="";
         let detallePago;
         let ultimoDetallePago = null;
@@ -903,6 +899,93 @@
             };
 
             return motivos[motivo] || 'No especificado';
+        }
+
+        function formatearNumeroPaquete(valor) {
+            const numero = parseFloat(valor);
+            if (!Number.isFinite(numero)) return '';
+            return Number.isInteger(numero)
+                ? String(numero)
+                : numero.toLocaleString('es-MX', { maximumFractionDigits: 2 });
+        }
+
+        function formatearPaqueteCatalogo(paquete, incluirCosto = false) {
+            const nombre = paquete?.nombre_paquete || 'Paquete';
+            const costo = parseFloat(paquete?.costo) || 0;
+            let texto = nombre;
+
+            if (incluirCosto && costo > 0) {
+                texto += ` - $${costo.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+            }
+
+            return texto;
+        }
+
+        function formatearPaqueteCliente(cliente) {
+            const nombre = cliente?.paquete_nombre || cliente?.paquete_display || cliente?.paquete || 'Sin paquete';
+            const velocidad = formatearNumeroPaquete(cliente?.paquete_velocidad_mbps);
+            const detalles = [nombre];
+
+            if (velocidad) detalles.push(`${velocidad} Mbps`);
+
+            return detalles.join(' | ');
+        }
+
+        function obtenerPaqueteSeleccionado() {
+            const select = document.getElementById('paquete_cli');
+            const paqueteId = select?.value || '';
+            return paquetesCatalogo.find(paquete => String(paquete.id) === String(paqueteId)) || null;
+        }
+
+        function renderizarChipsPaquetesAdmin() {
+            const contenedor = document.getElementById('chips-paquetes-admin');
+            if (!contenedor) return;
+
+            contenedor.innerHTML = '';
+            paquetesCatalogo.forEach(paquete => {
+                const boton = document.createElement('button');
+                boton.type = 'button';
+                boton.className = 'chip-filtro-admin';
+                boton.dataset.filtroRapido = `paquete_${paquete.id}`;
+                boton.textContent = paquete.nombre_paquete || `Paquete ${paquete.id}`;
+                boton.title = formatearPaqueteCatalogo(paquete, true);
+                boton.addEventListener('click', () => manejarFiltroRapidoAdmin(boton.dataset.filtroRapido));
+                contenedor.appendChild(boton);
+            });
+
+            actualizarChipsFiltrosRapidos();
+        }
+
+        async function cargarPaquetes() {
+            try {
+                const response = await fetch('/api/paquetes');
+                if (!response.ok) throw new Error('Error cargando catalogo de paquetes');
+
+                const paquetes = await response.json();
+                paquetesCatalogo = Array.isArray(paquetes) ? paquetes : [];
+
+                const select = document.getElementById('paquete_cli');
+                if (select) {
+                    const valorActual = select.value;
+                    select.innerHTML = '<option value="">Selecciona Paquete</option>';
+
+                    paquetesCatalogo.forEach(paquete => {
+                        const option = document.createElement('option');
+                        option.value = paquete.id;
+                        option.textContent = formatearPaqueteCatalogo(paquete, true);
+                        option.dataset.costo = paquete.costo;
+                        option.dataset.velocidad = paquete.velocidad_mbps;
+                        select.appendChild(option);
+                    });
+
+                    if (valorActual) select.value = valorActual;
+                    actualizarCosto();
+                }
+
+                renderizarChipsPaquetesAdmin();
+            } catch (error) {
+                console.error(error);
+            }
         }
 
         async function cargarVistaAdminClientes() {
@@ -1021,11 +1104,14 @@
                     
                     // AGREGAMOS LOS DATOS OCULTOS PARA EL FILTRO DE ORDEN
                     const localidadNombre = cliente.localidad_nombre || configLocalidades[cliente.localidad_id]?.nombre || '';
+                    const paqueteNombre = cliente.paquete_nombre || cliente.paquete_display || cliente.paquete || '';
+                    const paqueteFiltro = cliente.paquete_id ? String(cliente.paquete_id) : paqueteNombre;
                     const textoBusquedaCombinada = [
                         cliente.nombre_completo,
                         cliente.direccion_ip,
                         cliente.telefono,
                         localidadNombre,
+                        paqueteNombre,
                         cliente.observaciones
                     ].filter(Boolean).join(' ');
                     card.setAttribute('data-id', cliente.id);
@@ -1038,7 +1124,7 @@
                     card.setAttribute('data-tipo-suspension', cliente.tipo_suspension_activa || '');
                     card.setAttribute('data-adeudo', parseFloat(cliente.adeudo_actual) || 0);
                     card.setAttribute('data-renta', Number(cliente.es_renta) === 1 ? '1' : '0');
-                    card.setAttribute('data-paquete', cliente.paquete || '');
+                    card.setAttribute('data-paquete', paqueteFiltro);
                     card.setAttribute('data-busqueda', textoBusquedaCombinada.toLowerCase());
                     const badgeRentaCard = Number(cliente.es_renta) === 1
                         ? '<span class="cliente-badge-renta">RENTA</span>'
@@ -1398,6 +1484,7 @@
 
         // Ejecuta esta función al cargar el panel
         cargarLocalidades();
+        cargarPaquetes();
 
         function activarScrollSincronizado() {
             const contenedoresMeses = document.querySelectorAll('.cliente-historial-pagos');
@@ -1438,7 +1525,8 @@
             const fecha = document.getElementById('fecha_ins').value;
             const ip = parseInt(document.getElementById('ip_cli').value);
             const senal = parseInt(document.getElementById('senal_cli').value);
-            const paquete = document.getElementById('paquete_cli').value;
+            const paqueteId = document.getElementById('paquete_cli').value;
+            const paqueteSeleccionado = obtenerPaqueteSeleccionado();
             const costo = document.getElementById('costo_cli').value;
             const localidad = document.getElementById('selectLocalidad').value;
             const esRenta = document.getElementById('es_renta_cli').checked ? 1 : 0;
@@ -1465,7 +1553,7 @@
                 errores.push("- La Señal debe ser un valor entre 30 y 90.");
             }   
 
-            if (!paquete) errores.push("- Debes seleccionar un Paquete.");
+            if (!paqueteId || !paqueteSeleccionado) errores.push("- Debes seleccionar un Paquete.");
             if (!fecha) errores.push("- La Fecha de Instalación es obligatoria.");
 
             // --- MOSTRAR ERRORES SI EXISTEN ---
@@ -1474,8 +1562,9 @@
                 return; // Detenemos el código aquí, no se envía nada al servidor
             }
             let link_portal= "";
+            const velocidadPaquete = parseFloat(paqueteSeleccionado?.velocidad_mbps) || 0;
 
-            if (paquete=== '16M') {
+            if (velocidadPaquete === 16) {
                 link_portal = "http://192.168.20."+ip+"/";
             }else if (localidad == 1 || localidad == 2 || localidad == 6){
                 link_portal = "http://192.168.7."+ip+"/";
@@ -1498,7 +1587,7 @@
                 fecha_instalacion: fecha,
                 direccion_ip: ip,   // Ahora sí enviamos un número limpio
                 señal: senal,       // Número limpio
-                paquete: paquete,
+                paquete_id: paqueteId,
                 costo_mensual: costo,
                 localidad_id: localidad
             };
@@ -1537,11 +1626,13 @@
         });
 
         function actualizarCosto() {
-            const paquete = document.getElementById('paquete_cli').value;
             const costoInput = document.getElementById('costo_cli');
-            if(paquete === '5M') costoInput.value = 300;
-            if(paquete === '8M') costoInput.value = 400;
-            if(paquete === '16M') costoInput.value = 600;
+            const paquete = obtenerPaqueteSeleccionado();
+            const costo = parseFloat(paquete?.costo);
+
+            costoInput.value = Number.isFinite(costo)
+                ? costo.toFixed(0)
+                : '';
         }
 
         
@@ -2531,7 +2622,7 @@ Este cambio aplicara en tus siguientes pagos.
                 
                 // Ahora usamos los nombres reales que trajimos del servidor
                 const loc = cliente.localidad_nombre || 'Sin localidad';
-                const paq = cliente.paquete || 'Sin paquete';
+                const paq = formatearPaqueteCliente(cliente);
                 document.getElementById('detalle-localidad-paquete').textContent = `${loc} | Paquete: ${paq}`;
 
                 // 4. Configurar WhatsApp
@@ -3525,7 +3616,7 @@ Este cambio aplicara en tus siguientes pagos.
                 
                 // Ahora usamos los nombres reales que trajimos del servidor
                 const loc = cliente.localidad_nombre || 'Sin localidad';
-                const paq = cliente.paquete || 'Sin paquete';
+                const paq = formatearPaqueteCliente(cliente);
                 document.getElementById('detalle-localidad-paquete').textContent = `${loc} | Paquete: ${paq}`;
 
                 // 4. Configurar WhatsApp

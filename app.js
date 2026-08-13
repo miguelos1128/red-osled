@@ -79,10 +79,16 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
                 c.es_renta, c.estado_servicio, bs.tipo_evento AS tipo_suspension_activa,
                 bb.tipo_evento AS motivo_baja, bb.fecha_fin AS fecha_baja,
                 fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
-                l.nombre AS localidad_nombre, c.paquete,
+                c.paquete_id, l.nombre AS localidad_nombre,
+                COALESCE(paq.nombre_paquete, c.paquete) AS paquete,
+                paq.nombre_paquete AS paquete_nombre,
+                paq.velocidad_mbps AS paquete_velocidad_mbps,
+                paq.velocidad_garantizada_mbps AS paquete_velocidad_garantizada_mbps,
+                paq.costo AS paquete_costo,
                 IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
             FROM clientes c
             LEFT JOIN localidades l ON l.id = c.localidad_id
+            LEFT JOIN paquetes paq ON paq.id = c.paquete_id
             LEFT JOIN bitacora_servicio bs ON bs.cliente_id = c.id
                 AND bs.estado = 'Activo'
             LEFT JOIN bitacora_servicio bb ON bb.id = (
@@ -138,7 +144,9 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         query += `
             GROUP BY c.id, c.nombre_completo, c.url_portal, c.alias_cliente, c.telefono, c.observaciones,
                 c.es_renta, c.estado_servicio, bs.tipo_evento, bb.tipo_evento, bb.fecha_fin,
-                c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id, l.nombre, c.paquete
+                c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id, c.paquete_id,
+                l.nombre, c.paquete, paq.nombre_paquete, paq.velocidad_mbps,
+                paq.velocidad_garantizada_mbps, paq.costo
             ORDER BY c.dia_pago;
         `;
 
@@ -212,6 +220,21 @@ app.listen(PORT, () => {
     console.log(`📡 Servidor corriendo en http://localhost:${PORT}`);
 });
 
+async function obtenerPaqueteActivoPorId(paqueteId) {
+    const id = parseInt(paqueteId, 10);
+    if (!id) return null;
+
+    const [rows] = await db.query(
+        `SELECT id, nombre_paquete, velocidad_mbps, velocidad_garantizada_mbps, costo
+         FROM paquetes
+         WHERE id = ? AND activo = 1
+         LIMIT 1`,
+        [id]
+    );
+
+    return rows[0] || null;
+}
+
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
@@ -219,7 +242,7 @@ app.post('/api/clientes', async (req, res) => {
         // 1. Obtenemos los datos del cuerpo de la petición (req.body)
         const { 
             nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta,
-            fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id, rol_usuario
+            fecha_instalacion, dia_pago, direccion_ip, señal, paquete_id, costo_mensual, localidad_id, rol_usuario
         } = req.body;
 
         // 2. VALIDACIÓN DE SEGURIDAD (Bloqueo de Creación)
@@ -239,9 +262,29 @@ app.post('/api/clientes', async (req, res) => {
                 error: 'La fecha de instalacion no es valida.'
             });
         }
+
+        const paqueteSeleccionado = await obtenerPaqueteActivoPorId(paquete_id);
+        if (!paqueteSeleccionado) {
+            return res.status(400).json({
+                success: false,
+                error: 'Selecciona un paquete valido.'
+            });
+        }
+
+        const costoMensual = costo_mensual === undefined || costo_mensual === null || costo_mensual === ''
+            ? parseFloat(paqueteSeleccionado.costo)
+            : parseFloat(costo_mensual);
+
+        if (!Number.isFinite(costoMensual) || costoMensual <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'El costo mensual no es valido.'
+            });
+        }
+
         const query = `INSERT INTO clientes 
-                    (nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                    (nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, paquete_id, costo_mensual, localidad_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         console.log("Query", query);
         console.log("Datos recibidos para el nuevo cliente:", req.body);
     // 2. Abrimos el bloque try/catch
@@ -249,7 +292,8 @@ app.post('/api/clientes', async (req, res) => {
         // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
         const [result] = await db.query(query, [
         nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones || null, es_renta ? 1 : 0,
-        fecha_instalacion, diaPagoAlta, direccion_ip, señal, paquete, costo_mensual,localidad_id
+        fecha_instalacion, diaPagoAlta, direccion_ip, señal, paqueteSeleccionado.nombre_paquete,
+        paqueteSeleccionado.id, costoMensual, localidad_id
         ]);
         // 4a. Si todo sale bien, respondemos aquí
         res.json({ success: true, mensaje: "Cliente creado con éxito" });
@@ -1144,9 +1188,15 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
         await finalizarAusenciasProgramadasVencidas(db, clienteId);
 
         const [clienteRows] = await db.query(
-            `SELECT c.*, l.nombre AS localidad_nombre
+            `SELECT c.*, l.nombre AS localidad_nombre,
+                    paq.nombre_paquete AS paquete_nombre,
+                    paq.velocidad_mbps AS paquete_velocidad_mbps,
+                    paq.velocidad_garantizada_mbps AS paquete_velocidad_garantizada_mbps,
+                    paq.costo AS paquete_costo,
+                    COALESCE(paq.nombre_paquete, c.paquete) AS paquete_display
              FROM clientes c
              LEFT JOIN localidades l ON c.localidad_id = l.id
+             LEFT JOIN paquetes paq ON paq.id = c.paquete_id
              WHERE c.id = ?`,
             [clienteId]
         );
@@ -1211,7 +1261,7 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
         await finalizarAusenciasProgramadasVencidas(db, clienteId);
 
         if (!tiposValidos.includes(tipo_evento)) {
-            return res.status(400).json({ success: false, error: 'Tipo de suspensi�n no valido.' });
+            return res.status(400).json({ success: false, error: 'Tipo de suspension no valido.' });
         }
 
         const [activos] = await db.query(
@@ -1220,7 +1270,7 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
         );
 
         if (activos.length > 0 && tipo_evento !== 'falla_tecnica') {
-            return res.status(400).json({ success: false, error: 'El cliente ya tiene una suspensi�n activa.' });
+            return res.status(400).json({ success: false, error: 'El cliente ya tiene una suspension activa.' });
         }
 
         if (tipo_evento === 'falta_pago') {
@@ -1520,7 +1570,7 @@ app.post('/api/clientes/:id/reactivar-servicio', async (req, res) => {
         );
 
         if (activos.length === 0) {
-            return res.status(404).json({ success: false, error: 'No hay suspensi�n activa para este cliente.' });
+            return res.status(404).json({ success: false, error: 'No hay suspension activa para este cliente.' });
         }
 
         const evento = activos[0];
@@ -1597,7 +1647,7 @@ app.post('/api/clientes/:id/dar-baja', async (req, res) => {
             await connection.rollback();
             return res.status(400).json({
                 success: false,
-                error: 'Solo se puede dar de baja desde una suspensi�n activa por falta de pago.'
+                error: 'Solo se puede dar de baja desde una suspension activa por falta de pago.'
             });
         }
 
@@ -1661,7 +1711,7 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
 
         if (activos.length === 0) {
             await connection.rollback();
-            return res.status(400).json({ success: false, error: 'No hay suspensi�n activa por falta de pago.' });
+            return res.status(400).json({ success: false, error: 'No hay suspension activa por falta de pago.' });
         }
 
         const [pagosExistentes] = await connection.query(
@@ -2459,6 +2509,21 @@ app.get('/api/localidades', async (req, res) => {
 });
 
 
+
+app.get('/api/paquetes', async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            `SELECT id, nombre_paquete, velocidad_mbps, velocidad_garantizada_mbps, costo
+             FROM paquetes
+             WHERE activo = 1
+             ORDER BY costo ASC, velocidad_mbps ASC`
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error("Error al obtener paquetes:", error);
+        res.status(500).json({ error: "Error al cargar catalogo de paquetes" });
+    }
+});
 
 app.post('/api/cancelar-pago/:id', async (req, res) => {
     const idPago = req.params.id;

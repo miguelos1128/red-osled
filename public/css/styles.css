@@ -2759,6 +2759,57 @@ td {
     padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;
 }
 
+.cambio-paquete-box {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #d8dee4;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.cambio-paquete-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.cambio-paquete-header h3 {
+    margin: 0;
+}
+
+.cambio-paquete-header span {
+    color: #5f6b7a;
+    font-weight: 700;
+}
+
+.cambio-paquete-controles {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(140px, auto) minmax(120px, auto) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.cambio-paquete-controles select,
+.cambio-paquete-controles input {
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.btn-cambiar-paquete {
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+}
+
+@media (max-width: 768px) {
+    .cambio-paquete-controles {
+        grid-template-columns: 1fr;
+    }
+}
+
 .gestion-servicio-box {
     margin-top: 18px;
     padding: 14px;

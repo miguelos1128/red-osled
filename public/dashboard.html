@@ -675,6 +675,22 @@
                         
                     </div>
 
+                    <div id="cambio-paquete-box" class="cambio-paquete-box hidden">
+                        <div class="cambio-paquete-header">
+                            <h3>Cambio de paquete</h3>
+                            <span id="cambio-paquete-actual">-</span>
+                        </div>
+                        <div class="cambio-paquete-controles">
+                            <select id="cambio-paquete-select" onchange="actualizarPreviewCambioPaquete(true)">
+                                <option value="">Selecciona paquete</option>
+                            </select>
+                            <input type="date" id="cambio-paquete-fecha" onchange="actualizarPreviewCambioPaquete(false)">
+                            <input type="number" id="cambio-paquete-costo" min="1" step="1" placeholder="Costo mensual" oninput="actualizarPreviewCambioPaquete(false)">
+                            <button type="button" class="button btn-cambiar-paquete" onclick="cambiarPaqueteCliente()">Cambiar paquete</button>
+                        </div>
+                        <p id="preview-cambio-paquete" class="servicio-preview hidden"></p>
+                    </div>
+
                     <div id="gestion-servicio-box" class="gestion-servicio-box">
                         <div class="gestion-servicio-header">
                             <h3>Gestión de Servicio</h3>
@@ -937,6 +953,22 @@
             return paquetesCatalogo.find(paquete => String(paquete.id) === String(paqueteId)) || null;
         }
 
+        function formatearFechaInput(fecha) {
+            const anio = fecha.getFullYear();
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            const dia = String(fecha.getDate()).padStart(2, '0');
+            return `${anio}-${mes}-${dia}`;
+        }
+
+        function obtenerPrimerDiaSiguienteMesInput() {
+            const hoy = new Date();
+            return formatearFechaInput(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1));
+        }
+
+        function obtenerPaquetePorId(paqueteId) {
+            return paquetesCatalogo.find(paquete => String(paquete.id) === String(paqueteId)) || null;
+        }
+
         function renderizarChipsPaquetesAdmin() {
             const contenedor = document.getElementById('chips-paquetes-admin');
             if (!contenedor) return;
@@ -985,6 +1017,131 @@
                 renderizarChipsPaquetesAdmin();
             } catch (error) {
                 console.error(error);
+            }
+        }
+
+        function configurarCambioPaquete(cliente) {
+            const box = document.getElementById('cambio-paquete-box');
+            const select = document.getElementById('cambio-paquete-select');
+            const fechaInput = document.getElementById('cambio-paquete-fecha');
+            const costoInput = document.getElementById('cambio-paquete-costo');
+            const actual = document.getElementById('cambio-paquete-actual');
+            const preview = document.getElementById('preview-cambio-paquete');
+
+            if (!box || !select || !fechaInput || !costoInput || !actual || !preview) return;
+
+            const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
+            const puedeCambiarPaquete = usuarioActual?.rol === 2;
+            box.classList.toggle('hidden', !puedeCambiarPaquete);
+
+            if (!puedeCambiarPaquete) return;
+
+            actual.textContent = formatearPaqueteCliente(cliente);
+            select.innerHTML = '<option value="">Selecciona paquete</option>';
+
+            paquetesCatalogo.forEach(paquete => {
+                const option = document.createElement('option');
+                option.value = paquete.id;
+                option.textContent = formatearPaqueteCatalogo(paquete, true);
+                option.dataset.costo = paquete.costo;
+                select.appendChild(option);
+            });
+
+            select.value = '';
+            fechaInput.value = obtenerPrimerDiaSiguienteMesInput();
+            fechaInput.min = formatearFechaInput(new Date());
+            costoInput.value = '';
+            preview.classList.add('hidden');
+            preview.textContent = '';
+        }
+
+        function actualizarPreviewCambioPaquete(actualizarCosto = false) {
+            const select = document.getElementById('cambio-paquete-select');
+            const fechaInput = document.getElementById('cambio-paquete-fecha');
+            const costoInput = document.getElementById('cambio-paquete-costo');
+            const preview = document.getElementById('preview-cambio-paquete');
+            const paquete = obtenerPaquetePorId(select?.value);
+
+            if (!preview) return;
+
+            if (!paquete) {
+                preview.classList.add('hidden');
+                preview.textContent = '';
+                return;
+            }
+
+            const costoPaquete = parseFloat(paquete.costo) || 0;
+            if (actualizarCosto || !costoInput.value) {
+                costoInput.value = costoPaquete > 0 ? costoPaquete.toFixed(0) : '';
+            }
+
+            const fechaInicio = fechaInput.value || obtenerPrimerDiaSiguienteMesInput();
+            const costo = parseFloat(costoInput.value) || costoPaquete;
+            const costoTexto = costo.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            preview.textContent = `${paquete.nombre_paquete} | Inicio: ${fechaInicio} | Costo: $${costoTexto}`;
+            preview.classList.remove('hidden');
+        }
+
+        async function cambiarPaqueteCliente() {
+            if (!clienteDetalleActualId || !clienteSeleccionado) return;
+
+            const select = document.getElementById('cambio-paquete-select');
+            const fechaInput = document.getElementById('cambio-paquete-fecha');
+            const costoInput = document.getElementById('cambio-paquete-costo');
+            const paquete = obtenerPaquetePorId(select?.value);
+            const fechaInicio = fechaInput?.value;
+            const costoMensual = parseFloat(costoInput?.value);
+
+            if (!paquete) {
+                alert('Selecciona el nuevo paquete.');
+                return;
+            }
+
+            if (String(paquete.id) === String(clienteSeleccionado.paquete_id || '') && costoMensual === parseFloat(clienteSeleccionado.costo_mensual)) {
+                alert('El cliente ya tiene ese paquete y costo.');
+                return;
+            }
+
+            if (!fechaInicio) {
+                alert('Selecciona la fecha de inicio del paquete.');
+                return;
+            }
+
+            if (!Number.isFinite(costoMensual) || costoMensual <= 0) {
+                alert('Captura un costo mensual valido.');
+                return;
+            }
+
+            const confirmar = confirm(`¿Confirmas cambiar a ${paquete.nombre_paquete} desde ${fechaInicio}?`);
+            if (!confirmar) return;
+
+            const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
+
+            try {
+                const response = await fetch(`${urlBase}/api/clientes/${clienteDetalleActualId}/cambiar-paquete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        paquete_id: paquete.id,
+                        costo_mensual: costoMensual,
+                        fecha_inicio: fechaInicio,
+                        usuario_id: usuarioActual.id,
+                        rol_usuario: usuarioActual.rol
+                    })
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert(result.error || 'No se pudo cambiar el paquete.');
+                    return;
+                }
+
+                alert(result.message || 'Paquete actualizado correctamente.');
+                abrirDetallesCliente(clienteDetalleActualId);
+                cargarVistaAdminClientes();
+            } catch (error) {
+                console.error(error);
+                alert('Error al cambiar paquete.');
             }
         }
 
@@ -1597,6 +1754,7 @@
                 const usuario = JSON.parse(usuarioString);
                 // Añadimos el rol al objeto que enviaremos al servidor
                 nuevoCliente.rol_usuario = usuario.rol; 
+                nuevoCliente.usuario_id = usuario.id;
             } else {
                 alert("Error: No hay sesión activa.");
                 return;
@@ -2624,6 +2782,8 @@ Este cambio aplicara en tus siguientes pagos.
                 const loc = cliente.localidad_nombre || 'Sin localidad';
                 const paq = formatearPaqueteCliente(cliente);
                 document.getElementById('detalle-localidad-paquete').textContent = `${loc} | Paquete: ${paq}`;
+                if (!paquetesCatalogo.length) await cargarPaquetes();
+                configurarCambioPaquete(cliente);
 
                 // 4. Configurar WhatsApp
                 const tel = cliente.telefono || '';
@@ -3618,6 +3778,8 @@ Este cambio aplicara en tus siguientes pagos.
                 const loc = cliente.localidad_nombre || 'Sin localidad';
                 const paq = formatearPaqueteCliente(cliente);
                 document.getElementById('detalle-localidad-paquete').textContent = `${loc} | Paquete: ${paq}`;
+                if (!paquetesCatalogo.length) await cargarPaquetes();
+                configurarCambioPaquete(cliente);
 
                 // 4. Configurar WhatsApp
                 const tel = cliente.telefono || '';

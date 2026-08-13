@@ -157,7 +157,8 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
                 [cliente.id]
             );
             const bitacoraCliente = await consultarBitacoraServicio(db, cliente.id);
-            const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagosCliente, bitacoraCliente);
+            const historialPaquetes = await consultarHistorialPaquetes(db, cliente.id);
+            const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagosCliente, bitacoraCliente, historialPaquetes);
 
             return {
                 ...cliente,
@@ -220,11 +221,11 @@ app.listen(PORT, () => {
     console.log(`📡 Servidor corriendo en http://localhost:${PORT}`);
 });
 
-async function obtenerPaqueteActivoPorId(paqueteId) {
+async function obtenerPaqueteActivoPorId(paqueteId, ejecutor = db) {
     const id = parseInt(paqueteId, 10);
     if (!id) return null;
 
-    const [rows] = await db.query(
+    const [rows] = await ejecutor.query(
         `SELECT id, nombre_paquete, velocidad_mbps, velocidad_garantizada_mbps, costo
          FROM paquetes
          WHERE id = ? AND activo = 1
@@ -238,11 +239,13 @@ async function obtenerPaqueteActivoPorId(paqueteId) {
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
+    let connection;
+
     try{
         // 1. Obtenemos los datos del cuerpo de la petición (req.body)
         const { 
             nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta,
-            fecha_instalacion, dia_pago, direccion_ip, señal, paquete_id, costo_mensual, localidad_id, rol_usuario
+            fecha_instalacion, dia_pago, direccion_ip, señal, paquete_id, costo_mensual, localidad_id, rol_usuario, usuario_id
         } = req.body;
 
         // 2. VALIDACIÓN DE SEGURIDAD (Bloqueo de Creación)
@@ -282,6 +285,7 @@ app.post('/api/clientes', async (req, res) => {
             });
         }
 
+        const usuarioIdAlta = parseInt(usuario_id, 10) || null;
         const query = `INSERT INTO clientes 
                     (nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, paquete_id, costo_mensual, localidad_id)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -289,18 +293,40 @@ app.post('/api/clientes', async (req, res) => {
         console.log("Datos recibidos para el nuevo cliente:", req.body);
     // 2. Abrimos el bloque try/catch
     
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
         // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
-        const [result] = await db.query(query, [
+        const [result] = await connection.query(query, [
         nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones || null, es_renta ? 1 : 0,
         fecha_instalacion, diaPagoAlta, direccion_ip, señal, paqueteSeleccionado.nombre_paquete,
         paqueteSeleccionado.id, costoMensual, localidad_id
         ]);
+
+        await connection.query(
+            `INSERT INTO cliente_paquetes_historial
+                (cliente_id, paquete_id, costo_mensual, fecha_inicio, fecha_fin, usuario_id)
+             VALUES (?, ?, ?, ?, NULL, ?)`,
+            [result.insertId, paqueteSeleccionado.id, costoMensual, fecha_instalacion, usuarioIdAlta]
+        );
+
+        await connection.commit();
         // 4a. Si todo sale bien, respondemos aquí
         res.json({ success: true, mensaje: "Cliente creado con éxito" });
     }catch(error){
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir alta de cliente:", rollbackError);
+            }
+        }
+
         // 4b. Si hay un error, el 'catch' lo atrapa automáticamente
         console.error("Error al crear cliente:", error);
         res.status(500).json({ error: "Error al guardar en la BD: " + error.message });
+    } finally {
+        if (connection) connection.release();
     }
 });
 
@@ -404,16 +430,17 @@ app.post('/api/registrar-pago', async (req, res) => {
         });
 
         const bitacora = await consultarBitacoraServicio(db, clienteId);
-        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora);
+        const historialPaquetes = await consultarHistorialPaquetes(db, clienteId);
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora, historialPaquetes);
         const cambiosFechaPago = obtenerCambiosFechaPago(bitacora);
         let ajustePendienteDisponible = parseFloat(estadoCuenta.monto_ajustes_pendientes) || 0;
         const registros = [];
-        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0) => {
+        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0, montoEsperadoMes = costoMensual) => {
             const pagadoAntes = historial[etiquetaMes] || 0;
             const montoAAplicar = Math.min(saldoRestante, pendienteMes);
             let nuevoTipo = (montoAAplicar >= pendienteMes && pagadoAntes === 0) ? 'completo' : 'abono';
 
-            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= costoMensual) nuevoTipo = 'completo';
+            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= montoEsperadoMes) nuevoTipo = 'completo';
 
             const [pagoResult] = await db.query(
                 'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
@@ -485,7 +512,8 @@ app.post('/api/registrar-pago', async (req, res) => {
             await aplicarPagoMes(
                 mesAdeudado.mes,
                 mesAdeudado.pendiente,
-                ajusteAAplicar
+                ajusteAAplicar,
+                parseFloat(mesAdeudado.monto_esperado) || costoMensual
             );
         }
 
@@ -512,8 +540,9 @@ app.post('/api/registrar-pago', async (req, res) => {
 
             const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
             const pagadoEnEsteMes = historial[etiquetaMes] || 0;
-            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMensual - pagadoEnEsteMes, 0));
-            const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes - ajusteAAplicar, 0);
+            const costoMes = obtenerCostoMensualParaMes(historialPaquetes, cursor.anio, cursor.mesIndex, costoMensual);
+            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMes - pagadoEnEsteMes, 0));
+            const pendienteMes = Math.max(costoMes - pagadoEnEsteMes - ajusteAAplicar, 0);
 
             if (pendienteMes <= 0 && ajusteAAplicar > 0) {
                 const ajusteAplicado = await aplicarAjustesPendientes(db, clienteId, etiquetaMes, ajusteAAplicar);
@@ -529,7 +558,7 @@ app.post('/api/registrar-pago', async (req, res) => {
             }
 
             if (pendienteMes > 0) {
-                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar);
+                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar, costoMes);
             }
 
             cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
@@ -628,6 +657,56 @@ function crearFechaLocalDesdeValor(valor) {
     const fecha = new Date(texto);
     if (Number.isNaN(fecha.getTime())) return null;
     return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+}
+
+function formatearFechaSql(fecha) {
+    if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return null;
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+}
+
+function restarDiasFecha(fecha, dias) {
+    const resultado = new Date(fecha);
+    resultado.setDate(resultado.getDate() - dias);
+    return resultado;
+}
+
+async function consultarHistorialPaquetes(ejecutor, clienteId) {
+    const [rows] = await ejecutor.query(
+        `SELECT h.id, h.cliente_id, h.paquete_id, h.costo_mensual, h.fecha_inicio, h.fecha_fin,
+                h.usuario_id, h.fecha_registro,
+                p.nombre_paquete, p.velocidad_mbps, p.velocidad_garantizada_mbps, p.costo AS paquete_costo
+         FROM cliente_paquetes_historial h
+         JOIN paquetes p ON p.id = h.paquete_id
+         WHERE h.cliente_id = ?
+         ORDER BY h.fecha_inicio ASC, h.id ASC`,
+        [clienteId]
+    );
+
+    return rows;
+}
+
+function obtenerCostoMensualParaMes(historialPaquetes = [], anio, mesIndex, costoDefault = 0) {
+    const costoRespaldo = parseFloat(costoDefault) || 0;
+    const mesReferencia = new Date(anio, mesIndex, 1);
+    let periodoSeleccionado = null;
+
+    for (const periodo of historialPaquetes || []) {
+        const fechaInicio = crearFechaLocalDesdeValor(periodo.fecha_inicio);
+        const fechaFin = crearFechaLocalDesdeValor(periodo.fecha_fin);
+
+        if (!fechaInicio) continue;
+        if (fechaInicio <= mesReferencia && (!fechaFin || fechaFin >= mesReferencia)) {
+            periodoSeleccionado = periodo;
+        }
+    }
+
+    const costoHistorial = parseFloat(periodoSeleccionado?.costo_mensual);
+    return Number.isFinite(costoHistorial) && costoHistorial > 0
+        ? costoHistorial
+        : costoRespaldo;
 }
 
 function crearFechaHoraDesdeValor(valor) {
@@ -1068,8 +1147,8 @@ function mesEstaVencido(anio, mesIndex, diaPago, hoy = new Date(), diasCompensad
     return hoy >= obtenerFechaVencimiento(anio, mesIndex, diaPago, diasCompensados);
 }
 
-function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
-    const costoMensual = parseFloat(cliente.costo_mensual) || 0;
+function calcularEstadoCuentaServidor(cliente, pagos, bitacora = [], historialPaquetes = []) {
+    const costoMensualActual = parseFloat(cliente.costo_mensual) || 0;
     const fechaInstalacion = crearFechaLocalDesdeValor(cliente.fecha_instalacion) || new Date();
     const diaPago = normalizarDiaPago(cliente.dia_pago) || obtenerDiaPagoDesdeFechaInstalacion(cliente.fecha_instalacion) || 1;
     const totalPagado = pagos.reduce((total, pago) => total + (parseFloat(pago.monto) || 0), 0);
@@ -1086,6 +1165,7 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
 
     const mesesAdeudados = [];
     const mesesVencidos = [];
+    let totalMensualTeorico = 0;
     let fechaProximoPago = null;
     let cursor = avanzarMesContable(fechaInstalacion.getFullYear(), fechaInstalacion.getMonth(), 1);
     const hoy = new Date();
@@ -1096,20 +1176,22 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
 
         if (!reglaPagoMes.omitir_mes && mesEstaVencido(cursor.anio, cursor.mesIndex, reglaPagoMes.dia_pago, hoy, 0)) {
             const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
+            const costoMensualMes = obtenerCostoMensualParaMes(historialPaquetes, cursor.anio, cursor.mesIndex, costoMensualActual);
             const pagadoEnMes = pagosPorMes[etiquetaMes] || 0;
             const ajusteAplicadoEnMes = ajustesServicio.aplicado_por_mes[etiquetaMes] || 0;
-            const pendienteSinAjuste = Math.max(costoMensual - pagadoEnMes - ajusteAplicadoEnMes, 0);
+            const pendienteSinAjuste = Math.max(costoMensualMes - pagadoEnMes - ajusteAplicadoEnMes, 0);
             const ajustePendienteAplicable = Number(Math.min(saldoAjustePendiente, pendienteSinAjuste).toFixed(2));
             const pendiente = Number(Math.max(pendienteSinAjuste - ajustePendienteAplicable, 0).toFixed(2));
 
             mesesVencidos.push(etiquetaMes);
+            totalMensualTeorico = Number((totalMensualTeorico + costoMensualMes).toFixed(2));
             saldoAjustePendiente = Number(Math.max(saldoAjustePendiente - ajustePendienteAplicable, 0).toFixed(2));
 
             if (pendienteSinAjuste > 0) {
                 mesesAdeudados.push({
                     mes: etiquetaMes,
-                    monto_esperado: costoMensual,
-                    monto_cubierto: Math.min(pagadoEnMes + ajusteAplicadoEnMes, costoMensual),
+                    monto_esperado: costoMensualMes,
+                    monto_cubierto: Math.min(pagadoEnMes + ajusteAplicadoEnMes, costoMensualMes),
                     monto_ajuste_aplicado: ajusteAplicadoEnMes,
                     monto_ajuste_pendiente: ajustePendienteAplicable,
                     pendiente_sin_ajuste: Number(pendienteSinAjuste.toFixed(2)),
@@ -1145,14 +1227,14 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
 
     const mesesTranscurridos = mesesVencidos.length;
     const montoAjustes = resumenServicio.monto_ajustes;
-    const totalTeorico = Math.max((mesesTranscurridos * costoMensual) - ajustesServicio.total_aplicado + cargosServicio.total_generado, 0);
+    const totalTeorico = Math.max(totalMensualTeorico - ajustesServicio.total_aplicado + cargosServicio.total_generado, 0);
     const adeudoMensual = mesesAdeudados
         .filter(mes => mes.tipo !== 'cargo_servicio')
         .reduce((total, mes) => total + mes.pendiente, 0);
     const adeudoCargos = cargosServicio.pendiente;
     const adeudoActual = Number((adeudoMensual + adeudoCargos).toFixed(2));
     const saldoFavor = Number((Math.max(totalPagado - totalTeorico, 0) + saldoAjustePendiente).toFixed(2));
-    const mesesAdeudoDecimal = costoMensual > 0 ? adeudoActual / costoMensual : 0;
+    const mesesAdeudoDecimal = costoMensualActual > 0 ? adeudoActual / costoMensualActual : 0;
 
     return {
         total_pagado_historico: totalPagado,
@@ -1237,18 +1319,185 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
         );
 
         const bitacora = await consultarBitacoraServicio(db, clienteId);
+        const historialPaquetes = await consultarHistorialPaquetes(db, clienteId);
 
-        const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora);
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora, historialPaquetes);
 
         res.json({
             cliente: clienteRows[0],
             historial_pagos: pagos,
+            historial_paquetes: historialPaquetes,
             bitacora_servicio: bitacora,
             estado_cuenta: estadoCuenta
         });
     } catch (error) {
         console.error('Error al calcular estado de cuenta completo:', error);
         res.status(500).json({ error: 'Error al calcular estado de cuenta del cliente' });
+    }
+});
+
+app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
+    const clienteId = req.params.id;
+    const { paquete_id, costo_mensual, fecha_inicio, usuario_id, rol_usuario } = req.body;
+    const connection = await db.getConnection();
+
+    try {
+        if (parseInt(rol_usuario, 10) !== 2) {
+            return res.status(403).json({
+                success: false,
+                error: 'Acceso denegado: solo el administrador puede cambiar paquetes.'
+            });
+        }
+
+        const paqueteSeleccionado = await obtenerPaqueteActivoPorId(paquete_id, connection);
+        if (!paqueteSeleccionado) {
+            return res.status(400).json({ success: false, error: 'Selecciona un paquete valido.' });
+        }
+
+        const costoMensual = costo_mensual === undefined || costo_mensual === null || costo_mensual === ''
+            ? parseFloat(paqueteSeleccionado.costo)
+            : parseFloat(costo_mensual);
+
+        if (!Number.isFinite(costoMensual) || costoMensual <= 0) {
+            return res.status(400).json({ success: false, error: 'El costo mensual no es valido.' });
+        }
+
+        const fechaInicio = crearFechaLocalDesdeValor(fecha_inicio);
+        if (!fechaInicio) {
+            return res.status(400).json({ success: false, error: 'La fecha de inicio no es valida.' });
+        }
+
+        const hoy = new Date();
+        const hoyLocal = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+        if (fechaInicio < hoyLocal) {
+            return res.status(400).json({ success: false, error: 'La fecha de inicio no puede ser anterior a hoy.' });
+        }
+
+        await connection.beginTransaction();
+
+        const [clienteRows] = await connection.query(
+            `SELECT id, paquete_id, paquete, costo_mensual, fecha_instalacion
+             FROM clientes
+             WHERE id = ?
+             FOR UPDATE`,
+            [clienteId]
+        );
+
+        if (clienteRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+        }
+
+        const cliente = clienteRows[0];
+        const fechaInstalacion = crearFechaLocalDesdeValor(cliente.fecha_instalacion);
+        if (fechaInstalacion && fechaInicio < fechaInstalacion) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'La fecha de inicio no puede ser anterior a la instalacion.'
+            });
+        }
+
+        const [historialActivoRows] = await connection.query(
+            `SELECT id, paquete_id, costo_mensual, fecha_inicio
+             FROM cliente_paquetes_historial
+             WHERE cliente_id = ? AND fecha_fin IS NULL
+             ORDER BY fecha_inicio DESC, id DESC
+             LIMIT 1
+             FOR UPDATE`,
+            [clienteId]
+        );
+
+        let historialActivo = historialActivoRows[0] || null;
+        if (!historialActivo && cliente.paquete_id) {
+            const fechaInicioInicial = fechaInstalacion || hoyLocal;
+            const [insertInicial] = await connection.query(
+                `INSERT INTO cliente_paquetes_historial
+                    (cliente_id, paquete_id, costo_mensual, fecha_inicio, fecha_fin, usuario_id)
+                 VALUES (?, ?, ?, ?, NULL, NULL)`,
+                [clienteId, cliente.paquete_id, cliente.costo_mensual, formatearFechaSql(fechaInicioInicial)]
+            );
+
+            historialActivo = {
+                id: insertInicial.insertId,
+                paquete_id: cliente.paquete_id,
+                costo_mensual: cliente.costo_mensual,
+                fecha_inicio: formatearFechaSql(fechaInicioInicial)
+            };
+        }
+
+        if (!historialActivo) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'El cliente no tiene paquete actual para cerrar historial.'
+            });
+        }
+
+        const mismoPaquete = parseInt(historialActivo.paquete_id, 10) === parseInt(paqueteSeleccionado.id, 10);
+        const mismoCosto = Number(parseFloat(historialActivo.costo_mensual).toFixed(2)) === Number(costoMensual.toFixed(2));
+        if (mismoPaquete && mismoCosto) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'El cliente ya tiene ese paquete y costo.' });
+        }
+
+        const fechaInicioActivo = crearFechaLocalDesdeValor(historialActivo.fecha_inicio);
+        if (fechaInicioActivo && fechaInicio <= fechaInicioActivo) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'La fecha de inicio debe ser posterior al inicio del paquete actual.'
+            });
+        }
+
+        const fechaFinAnterior = restarDiasFecha(fechaInicio, 1);
+        await connection.query(
+            'UPDATE cliente_paquetes_historial SET fecha_fin = ? WHERE id = ?',
+            [formatearFechaSql(fechaFinAnterior), historialActivo.id]
+        );
+
+        await connection.query(
+            `INSERT INTO cliente_paquetes_historial
+                (cliente_id, paquete_id, costo_mensual, fecha_inicio, fecha_fin, usuario_id)
+             VALUES (?, ?, ?, ?, NULL, ?)`,
+            [
+                clienteId,
+                paqueteSeleccionado.id,
+                costoMensual,
+                formatearFechaSql(fechaInicio),
+                parseInt(usuario_id, 10) || null
+            ]
+        );
+
+        await connection.query(
+            `UPDATE clientes
+             SET paquete_id = ?, paquete = ?, costo_mensual = ?
+             WHERE id = ?`,
+            [paqueteSeleccionado.id, paqueteSeleccionado.nombre_paquete, costoMensual, clienteId]
+        );
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: 'Paquete actualizado correctamente.',
+            paquete: {
+                id: paqueteSeleccionado.id,
+                nombre_paquete: paqueteSeleccionado.nombre_paquete,
+                costo_mensual: costoMensual,
+                fecha_inicio: formatearFechaSql(fechaInicio)
+            }
+        });
+    } catch (error) {
+        try {
+            await connection.rollback();
+        } catch (rollbackError) {
+            console.error('Error al revertir cambio de paquete:', rollbackError);
+        }
+        console.error('Error al cambiar paquete:', error);
+        res.status(500).json({ success: false, error: error.message });
+    } finally {
+        connection.release();
     }
 });
 
@@ -1288,7 +1537,8 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                 [clienteId]
             );
             const bitacora = await consultarBitacoraServicio(db, clienteId);
-            const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora);
+            const historialPaquetes = await consultarHistorialPaquetes(db, clienteId);
+            const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora, historialPaquetes);
 
             if ((parseFloat(estadoCuenta.adeudo_actual) || 0) <= 0) {
                 return res.status(400).json({
@@ -1350,7 +1600,8 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                     [clienteId]
                 );
                 const bitacora = await consultarBitacoraServicio(connection, clienteId);
-                const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagos, bitacora);
+                const historialPaquetes = await consultarHistorialPaquetes(connection, clienteId);
+                const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagos, bitacora, historialPaquetes);
 
                 if ((parseFloat(estadoCuenta.adeudo_actual) || 0) > 0) {
                     await connection.rollback();
@@ -1487,6 +1738,7 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                 [clienteId]
             );
             const bitacora = await consultarBitacoraServicio(db, clienteId);
+            const historialPaquetes = await consultarHistorialPaquetes(db, clienteId);
             const estadoCuenta = calcularEstadoCuentaServidor(
                 {
                     costo_mensual: clienteRows[0].costo_mensual,
@@ -1494,7 +1746,8 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                     dia_pago: clienteRows[0].dia_pago
                 },
                 pagos,
-                bitacora
+                bitacora,
+                historialPaquetes
             );
 
             if ((parseFloat(estadoCuenta.adeudo_actual) || 0) > 0) {
@@ -1723,7 +1976,8 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
 
         const clienteData = clienteRows[0];
         const costoMensual = parseFloat(clienteData.costo_mensual) || 0;
-        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora);
+        const historialPaquetes = await consultarHistorialPaquetes(connection, clienteId);
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora, historialPaquetes);
         const cambiosFechaPago = obtenerCambiosFechaPago(bitacora);
         const minimoReactivacion = parseFloat(estadoCuenta.adeudo_actual) || 0;
 
@@ -1743,12 +1997,12 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
         let saldoRestante = montoTotalRecibido;
         let ajustePendienteDisponible = parseFloat(estadoCuenta.monto_ajustes_pendientes) || 0;
         const registros = [];
-        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0) => {
+        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0, montoEsperadoMes = costoMensual) => {
             const pagadoAntes = historial[etiquetaMes] || 0;
             const montoAAplicar = Math.min(saldoRestante, pendienteMes);
             let nuevoTipo = (montoAAplicar >= pendienteMes && pagadoAntes === 0) ? 'completo' : 'abono';
 
-            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= costoMensual) nuevoTipo = 'completo';
+            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= montoEsperadoMes) nuevoTipo = 'completo';
 
             const [pagoResult] = await connection.query(
                 'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
@@ -1820,7 +2074,8 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
             await aplicarPagoMes(
                 mesAdeudado.mes,
                 mesAdeudado.pendiente,
-                ajusteAAplicar
+                ajusteAAplicar,
+                parseFloat(mesAdeudado.monto_esperado) || costoMensual
             );
         }
 
@@ -1859,8 +2114,9 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
 
             const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
             const pagadoEnEsteMes = historial[etiquetaMes] || 0;
-            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMensual - pagadoEnEsteMes, 0));
-            const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes - ajusteAAplicar, 0);
+            const costoMes = obtenerCostoMensualParaMes(historialPaquetes, cursor.anio, cursor.mesIndex, costoMensual);
+            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMes - pagadoEnEsteMes, 0));
+            const pendienteMes = Math.max(costoMes - pagadoEnEsteMes - ajusteAAplicar, 0);
 
             if (pendienteMes <= 0 && ajusteAAplicar > 0) {
                 const ajusteAplicado = await aplicarAjustesPendientes(db, clienteId, etiquetaMes, ajusteAAplicar);
@@ -1876,7 +2132,7 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
             }
 
             if (pendienteMes > 0) {
-                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar);
+                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar, costoMes);
             }
 
             cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);

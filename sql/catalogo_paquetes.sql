@@ -36,6 +36,9 @@ PREPARE stmt FROM @add_paquete_id;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+ALTER TABLE clientes
+MODIFY COLUMN paquete VARCHAR(100) NULL;
+
 UPDATE clientes c
 JOIN paquetes p ON (
     (UPPER(TRIM(c.paquete)) IN ('5M', '5 M', 'BASICO') AND p.nombre_paquete = 'Basico')

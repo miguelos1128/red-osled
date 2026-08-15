@@ -234,13 +234,13 @@
 
                 <div class="admin-controles-busqueda">
                     <div class="input-busqueda-wrapper">
-                        <input type="text" id="buscador-nombre" placeholder="Buscar por nombre, IP, teléfono, localidad, RENTA u observaciones...">
+                        <input type="text" id="buscador-nombre" placeholder="Buscar por nombre, número de cliente, teléfono, localidad, RENTA u observaciones...">
                     </div>
                     <div class="filtro-localidad-wrapper">
                         <select id="select-ordenar" >
                             <option value="corte_asc" selected>Día de corte</option>
                             <option value="adeudo_desc">Mayor adeudo</option>
-                            <option value="ip_asc">IP / número de cliente</option>
+                            <option value="codigo_asc">Número de cliente</option>
                             <option value="nombre_asc">Nombre A-Z</option>
                             <option value="localidad_asc">Localidad</option>
                             <option value="fecha_desc">Más Recientes (Fecha Inst)</option>
@@ -280,7 +280,7 @@
                                 </div>
                                 <h3 class="cliente-nombre">Juan Pérez</h3>
                                 <div class="cliente-detalles-tecnicos">
-                                    <span class="cliente-ip"><i class="fas fa-network-wired"></i> 192.168.1.50</span>
+                                    <span class="cliente-codigo"><i class="fas fa-id-card"></i> No. cliente: JU260801</span>
                                     
                                 </div>
                             </div>
@@ -312,7 +312,7 @@
 
         <div class="main-section">
             <h3>Cobro de Mensualidad</h3>
-            <p class="instrucciones">Ingrese el nombre o la dirección IP del cliente para iniciar el cobro.</p>
+            <p class="instrucciones">Ingrese el nombre o número de cliente para iniciar el cobro.</p>
             
             <div class="search-box-container">
                 <div class="search-field">
@@ -325,7 +325,7 @@
 
                 <div class="search-field">
                     <label for="buscarIP">Buscar por Número de Cliente:</label>
-                    <input type="text" id="buscarIP" placeholder="Ej. 201" autocomplete="off" oninput="controladorBusqueda('ip')">
+                    <input type="text" id="buscarIP" placeholder="Ej. BA260801" autocomplete="off" oninput="controladorBusqueda('codigo')">
                     <div id="sugerenciasIP" class="sugerencias-lista"></div>
                 </div>
             </div>
@@ -727,6 +727,11 @@
                         <div class="info-grupo">
                             <label>Día de Pago</label>
                             <p id="detalle-dia-pago" class="resaltado-azul">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Número de Cliente</label>
+                            <p id="detalle-codigo-cliente" class="resaltado-azul">-</p>
                         </div>
 
                         <div class="info-grupo">
@@ -1804,9 +1809,10 @@
                     const localidadNombre = cliente.localidad_nombre || configLocalidades[cliente.localidad_id]?.nombre || '';
                     const paqueteNombre = cliente.paquete_nombre || cliente.paquete_display || cliente.paquete || '';
                     const paqueteFiltro = cliente.paquete_id ? String(cliente.paquete_id) : paqueteNombre;
+                    const codigoCliente = cliente.codigo_cliente || 'Sin codigo';
                     const textoBusquedaCombinada = [
                         cliente.nombre_completo,
-                        cliente.direccion_ip,
+                        cliente.codigo_cliente,
                         cliente.telefono,
                         localidadNombre,
                         paqueteNombre,
@@ -1816,7 +1822,7 @@
                     card.setAttribute('data-id', cliente.id);
                     card.setAttribute('data-nombre', cliente.nombre_completo);
                     card.setAttribute('data-corte', cliente.dia_pago);
-                    card.setAttribute('data-ip', cliente.direccion_ip);
+                    card.setAttribute('data-codigo', cliente.codigo_cliente || '');
                     card.setAttribute('data-fecha', cliente.fecha_instalacion || "2000-01-01");
                     card.setAttribute('data-localidad-nombre', localidadNombre);
                     card.setAttribute('data-estado-servicio', (cliente.estado_servicio || '').toLowerCase());
@@ -1860,7 +1866,8 @@
                                         <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
                                         ${badgeBajaCard}
                                     </div>
-                                    <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
+                                    <p class="cliente-codigo"><i class="fas fa-id-card"></i> No. cliente: ${codigoCliente}</p>
+                                    <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip || 'No asignada'}</p>
                                 </div>
                                 <div class="cliente-baja-adeudo">
                                     <span>Adeudo pendiente</span>
@@ -1899,7 +1906,8 @@
                                     ${badgeSuspendidoCard}
                                     ${badgeBajaCard}
                                 </div>
-                                <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
+                                <p class="cliente-codigo"><i class="fas fa-id-card"></i> No. cliente: ${codigoCliente}</p>
+                                <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip || 'No asignada'}</p>
                             </div>
                             <div class="cliente-pago-dia">
                                 <span class="label">Corte</span>
@@ -2090,10 +2098,9 @@
                         valB = b.getAttribute('data-nombre').toLowerCase();
                         return valA.localeCompare(valB); // Orden alfabético A-Z
                     
-                    case "ip_asc":
-                        valA = a.getAttribute('data-ip');
-                        valB = b.getAttribute('data-ip');
-                        // localeCompare con numeric: true ordena excelente tanto números (172) como IPs completas
+                    case "codigo_asc":
+                        valA = a.getAttribute('data-codigo') || '';
+                        valB = b.getAttribute('data-codigo') || '';
                         return valA.localeCompare(valB, undefined, {numeric: true}); 
 
                     case "localidad_asc":
@@ -2325,7 +2332,10 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert("¡Cliente guardado correctamente!");
+                    const codigoCreado = data.codigo_cliente
+                        ? `\nNúmero de cliente para pagos: ${data.codigo_cliente}`
+                        : '';
+                    alert(`¡Cliente guardado correctamente!${codigoCreado}`);
                     cerrarModal();
                     //cargarClientes();
                     cargarVistaAdminClientes();
@@ -2352,7 +2362,7 @@
 
         
 
-        // 1. Controlador inteligente de búsqueda (Alterna entre Nombre e IP)
+        // 1. Controlador inteligente de búsqueda (Alterna entre nombre y numero de cliente)
         async function controladorBusqueda(tipo) {
             const inputNombre = document.getElementById('buscarNombre');
             const inputIP = document.getElementById('buscarIP');
@@ -2361,7 +2371,7 @@
 
             let query = '';
 
-            // Si escribo en "Nombre", limpio la caja de "IP" y viceversa
+            // Si escribo en "Nombre", limpio la caja de "numero de cliente" y viceversa
             if (tipo === 'nombre') {
                 inputIP.value = '';
                 listaIP.innerHTML = '';
@@ -2400,7 +2410,7 @@
                 // Mostrar los resultados en la lista correspondiente
                 listaActiva.innerHTML = clientes.map(c => `
                     <div class="sugerencia-item" onclick='seleccionarCliente(${JSON.stringify(c).replace(/"/g, "&quot;")})'>
-                        <strong>${c.nombre_completo}</strong> - IP: ${c.direccion_ip}
+                        <strong>${c.nombre_completo}</strong> - No. cliente: ${c.codigo_cliente || 'Sin codigo'}
                     </div>
                 `).join('');
                 /* console.log("Clientes cargados:", clientes); */
@@ -2460,7 +2470,7 @@
             if (document.getElementById('buscarNombre').value !== '') {
                 document.getElementById('buscarNombre').value = cliente.nombre_completo;
             } else {
-                document.getElementById('buscarIP').value = cliente.direccion_ip;
+                document.getElementById('buscarIP').value = cliente.codigo_cliente || '';
             }
 
             try {
@@ -2474,7 +2484,7 @@
 
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
-                document.getElementById('res-ip').innerText = cliente.direccion_ip;
+                document.getElementById('res-ip').innerText = `No. cliente: ${cliente.codigo_cliente || 'Sin codigo'}`;
                 const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 document.getElementById('res-costo').innerText = costoFormateado;
                 document.getElementById('res-dia').textContent = cliente.dia_pago;
@@ -3255,7 +3265,7 @@ ${linkVelocidad}
                     <div class="divider"></div>
                     
                     <p><strong>Cliente:</strong> ${clienteSeleccionado.alias_cliente}<br>
-                    <strong>Cliente:</strong> ${clienteSeleccionado.direccion_ip}</p>
+                    <strong>No. cliente:</strong> ${clienteSeleccionado.codigo_cliente || 'Sin codigo'}</p>
                     
                     <div class="divider"></div>
                     
@@ -3365,6 +3375,7 @@ ${linkVelocidad}
                 document.getElementById('detalle-fecha-inst').textContent = fechaInst;
                 
                 document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
+                document.getElementById('detalle-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin codigo';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
                 document.getElementById('detalle-ip').href = cliente.url_portal || '#'; 
                 document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
@@ -4367,6 +4378,7 @@ ${linkVelocidad}
                 document.getElementById('detalle-fecha-inst').textContent = fechaInst;
                 
                 document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
+                document.getElementById('detalle-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin codigo';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
                 document.getElementById('detalle-ip').href = cliente.url_portal || '#';
                 document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';

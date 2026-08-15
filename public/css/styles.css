@@ -922,6 +922,14 @@ td {
     font-weight: normal;
 }
 
+.cliente-codigo {
+    margin: 4px 0 2px;
+    font-size: 0.9rem;
+    font-family: monospace;
+    color: #2c3e50;
+    font-weight: 700;
+}
+
 /* Círculo del día de pago */
 .cliente-pago-dia {
     text-align: center;

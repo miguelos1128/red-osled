@@ -75,11 +75,11 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
 
         let query = `
             SELECT
-                c.id, c.nombre_completo, c.url_portal, c.alias_cliente, c.telefono, c.observaciones,
+                c.id, c.codigo_cliente, c.nombre_completo, c.url_portal, c.alias_cliente, c.telefono, c.observaciones,
                 c.es_renta, c.estado_servicio, bs.tipo_evento AS tipo_suspension_activa,
                 bb.tipo_evento AS motivo_baja, bb.fecha_fin AS fecha_baja,
                 fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
-                c.paquete_id, l.nombre AS localidad_nombre,
+                c.paquete_id, l.nombre AS localidad_nombre, l.codigo_localidad,
                 COALESCE(paq.nombre_paquete, c.paquete) AS paquete,
                 paq.nombre_paquete AS paquete_nombre,
                 paq.velocidad_mbps AS paquete_velocidad_mbps,
@@ -142,10 +142,10 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         }
 
         query += `
-            GROUP BY c.id, c.nombre_completo, c.url_portal, c.alias_cliente, c.telefono, c.observaciones,
+            GROUP BY c.id, c.codigo_cliente, c.nombre_completo, c.url_portal, c.alias_cliente, c.telefono, c.observaciones,
                 c.es_renta, c.estado_servicio, bs.tipo_evento, bb.tipo_evento, bb.fecha_fin,
                 c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id, c.paquete_id,
-                l.nombre, c.paquete, paq.nombre_paquete, paq.velocidad_mbps,
+                l.nombre, l.codigo_localidad, c.paquete, paq.nombre_paquete, paq.velocidad_mbps,
                 paq.velocidad_garantizada_mbps, paq.costo
             ORDER BY c.dia_pago;
         `;
@@ -279,6 +279,85 @@ function normalizarDatosPaquete(body = {}) {
     };
 }
 
+function obtenerPeriodoCodigoCliente(fechaInstalacion) {
+    const fecha = crearFechaLocalDesdeValor(fechaInstalacion);
+    if (!fecha) return null;
+
+    const anio = String(fecha.getFullYear()).slice(-2);
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    return `${anio}${mes}`;
+}
+
+function normalizarCodigoLocalidad(codigo) {
+    const codigoNormalizado = String(codigo || '').trim().toUpperCase();
+    return /^[A-Z0-9]{2}$/.test(codigoNormalizado) ? codigoNormalizado : null;
+}
+
+async function obtenerCodigoLocalidad(ejecutor, localidadId) {
+    const [localidades] = await ejecutor.query(
+        'SELECT codigo_localidad FROM localidades WHERE id = ? LIMIT 1',
+        [localidadId]
+    );
+
+    if (localidades.length === 0) {
+        throw new Error('La localidad seleccionada no existe.');
+    }
+
+    const codigoLocalidad = normalizarCodigoLocalidad(localidades[0].codigo_localidad);
+    if (!codigoLocalidad) {
+        throw new Error('La localidad seleccionada no tiene un codigo_localidad valido.');
+    }
+
+    return codigoLocalidad;
+}
+
+async function obtenerSiguienteConsecutivoCodigoCliente(ejecutor, periodo) {
+    const [rows] = await ejecutor.query(
+        `SELECT
+            COALESCE(MAX(
+                CASE
+                    WHEN codigo_cliente IS NOT NULL
+                     AND SUBSTRING(codigo_cliente, 3, 4) = ?
+                    THEN CAST(RIGHT(codigo_cliente, 2) AS UNSIGNED)
+                END
+            ), 0) AS ultimo_codigo,
+            COUNT(
+                CASE
+                    WHEN DATE_FORMAT(fecha_instalacion, '%y%m') = ?
+                    THEN 1
+                END
+            ) AS total_mes
+         FROM clientes
+         WHERE DATE_FORMAT(fecha_instalacion, '%y%m') = ?
+            OR (
+                codigo_cliente IS NOT NULL
+                AND SUBSTRING(codigo_cliente, 3, 4) = ?
+            )`,
+        [periodo, periodo, periodo, periodo]
+    );
+
+    const ultimoCodigo = parseInt(rows[0]?.ultimo_codigo, 10) || 0;
+    const totalMes = parseInt(rows[0]?.total_mes, 10) || 0;
+    const siguiente = Math.max(ultimoCodigo, totalMes) + 1;
+
+    if (siguiente > 99) {
+        throw new Error(`Ya existen 99 clientes instalados en el periodo ${periodo}.`);
+    }
+
+    return String(siguiente).padStart(2, '0');
+}
+
+async function generarCodigoCliente(ejecutor, localidadId, fechaInstalacion) {
+    const periodo = obtenerPeriodoCodigoCliente(fechaInstalacion);
+    if (!periodo) {
+        throw new Error('La fecha de instalacion no es valida para generar el codigo de cliente.');
+    }
+
+    const codigoLocalidad = await obtenerCodigoLocalidad(ejecutor, localidadId);
+    const consecutivo = await obtenerSiguienteConsecutivoCodigoCliente(ejecutor, periodo);
+    return `${codigoLocalidad}${periodo}${consecutivo}`;
+}
+
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
@@ -330,20 +409,21 @@ app.post('/api/clientes', async (req, res) => {
 
         const usuarioIdAlta = parseInt(usuario_id, 10) || null;
         const query = `INSERT INTO clientes 
-                    (nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, paquete_id, costo_mensual, localidad_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                    (nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, \`señal\`, paquete, paquete_id, costo_mensual, localidad_id, codigo_cliente)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         console.log("Query", query);
         console.log("Datos recibidos para el nuevo cliente:", req.body);
     // 2. Abrimos el bloque try/catch
     
         connection = await db.getConnection();
         await connection.beginTransaction();
+        const codigoClienteAlta = await generarCodigoCliente(connection, localidad_id, fecha_instalacion);
 
         // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
         const [result] = await connection.query(query, [
         nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones || null, es_renta ? 1 : 0,
         fecha_instalacion, diaPagoAlta, direccion_ip, señal, paqueteSeleccionado.nombre_paquete,
-        paqueteSeleccionado.id, costoMensual, localidad_id
+        paqueteSeleccionado.id, costoMensual, localidad_id, codigoClienteAlta
         ]);
 
         await connection.query(
@@ -355,7 +435,12 @@ app.post('/api/clientes', async (req, res) => {
 
         await connection.commit();
         // 4a. Si todo sale bien, respondemos aquí
-        res.json({ success: true, mensaje: "Cliente creado con éxito" });
+        res.json({
+            success: true,
+            mensaje: "Cliente creado con exito",
+            codigo_cliente: codigoClienteAlta,
+            cliente_id: result.insertId
+        });
     }catch(error){
         if (connection) {
             try {
@@ -367,17 +452,24 @@ app.post('/api/clientes', async (req, res) => {
 
         // 4b. Si hay un error, el 'catch' lo atrapa automáticamente
         console.error("Error al crear cliente:", error);
+        if (error.code === 'ER_DUP_ENTRY' && String(error.message || '').includes('codigo_cliente')) {
+            return res.status(409).json({
+                success: false,
+                error: 'No se pudo generar un numero de cliente unico. Intenta guardar nuevamente.'
+            });
+        }
         res.status(500).json({ error: "Error al guardar en la BD: " + error.message });
     } finally {
         if (connection) connection.release();
     }
 });
 
-// Ruta para buscar clientes por nombre o IP
+// Ruta para buscar clientes por nombre o numero de cliente
 // 1. Agregamos async aquí
 app.get('/api/buscar-clientes', async (req, res) => {
     try {
-        const term = req.query.q; // Lo que el cliente escribe
+        const term = String(req.query.q || '').trim(); // Lo que el cliente escribe
+        if (term.length < 2) return res.json([]);
         // 1. Recibimos el "gafete" del frontend desde la URL
         const rol = parseInt(req.query.rol);
         // Convertimos el texto "[1,3]" de vuelta a un arreglo real de Javascript [1, 3]
@@ -388,8 +480,9 @@ app.get('/api/buscar-clientes', async (req, res) => {
         
         // 2. Preparamos la consulta base
         let query = `
-            SELECT id, nombre_completo, telefono, direccion_ip, costo_mensual, fecha_instalacion, dia_pago 
-            FROM clientes  WHERE  (nombre_completo LIKE ? OR direccion_ip LIKE ? )
+            SELECT id, codigo_cliente, nombre_completo, alias_cliente, telefono, direccion_ip, costo_mensual, fecha_instalacion, dia_pago, estado_servicio
+            FROM clientes
+            WHERE (nombre_completo LIKE ? OR codigo_cliente LIKE ?)
             `;
         let params = [`%${term}%`, `%${term}%`]
 
@@ -405,7 +498,7 @@ app.get('/api/buscar-clientes', async (req, res) => {
             }
         }
 
-        query += ` LIMIT 10`;
+        query += ` ORDER BY nombre_completo ASC LIMIT 10`;
 
         console.log("query" + query+ " params "+params)
         // 3. Hacemos el await y destructuramos [results]. Mantenemos tus variables dinámicas intactas.
@@ -1394,7 +1487,7 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
         await finalizarAusenciasProgramadasVencidas(db, clienteId);
 
         const [clienteRows] = await db.query(
-            `SELECT c.*, l.nombre AS localidad_nombre,
+            `SELECT c.*, l.nombre AS localidad_nombre, l.codigo_localidad,
                     paq.nombre_paquete AS paquete_nombre,
                     paq.velocidad_mbps AS paquete_velocidad_mbps,
                     paq.velocidad_garantizada_mbps AS paquete_velocidad_garantizada_mbps,
@@ -2393,7 +2486,7 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
         const montoEntregado = ultimoCorte.length > 0 ? parseFloat(ultimoCorte[0].monto_entregado) : 0.00;
         // 2. Obtener los pagos pendientes (Mensualidades exclusivas de clientes)
         const [detalles] = await db.query(
-            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, COALESCE(c.codigo_cliente, c.direccion_ip) as ip, p.mes_pagado, p.monto, p.estado_corte 
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 
              WHERE p.usuario_id = ? AND p.estado_corte IN (0, 3)
@@ -2467,7 +2560,7 @@ app.get('/api/corte-caja-historico/:corteId', async (req, res) => {
 
         // B) Buscamos los pagos amarrados a este candado
         const [detalles] = await db.query(
-            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, COALESCE(c.codigo_cliente, c.direccion_ip) as ip, p.mes_pagado, p.monto, p.estado_corte 
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 
              WHERE p.corte_id = ? 
@@ -2518,7 +2611,7 @@ app.get('/api/corte-caja/:usuarioId', async (req, res) => {
             [usuarioId]
         );
         const [detalles] = await db.query(
-            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, COALESCE(c.codigo_cliente, c.direccion_ip) as ip, p.mes_pagado, p.monto, p.estado_corte 
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 
              WHERE p.usuario_id = ? AND p.estado_corte = 0  or p.usuario_id = 7  and p.estado_corte = 3
@@ -2941,7 +3034,7 @@ app.get('/api/historico-cortes/:usuarioId', async (req, res) => {
 
         // B) Buscamos los pagos amarrados a este candado (corte_id)
         const [detalles] = await db.query(
-            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, c.direccion_ip as ip, p.mes_pagado, p.monto, p.estado_corte 
+            `SELECT p.id, p.fecha_pago, c.nombre_completo as cliente, COALESCE(c.codigo_cliente, c.direccion_ip) as ip, p.mes_pagado, p.monto, p.estado_corte 
              FROM pagos p 
              JOIN clientes c ON p.cliente_id = c.id 
              WHERE p.corte_id = ? 
@@ -2977,7 +3070,7 @@ app.get('/api/historico-cortes/:usuarioId', async (req, res) => {
 // Ruta para obtener todas las localidades (para el selector del formulario)
 app.get('/api/localidades', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT id, nombre, color FROM localidades ORDER BY nombre ASC');
+        const [rows] = await db.query('SELECT id, nombre, color, codigo_localidad FROM localidades ORDER BY nombre ASC');
         res.json(rows);
     } catch (error) {
         console.error("Error al obtener localidades:", error);

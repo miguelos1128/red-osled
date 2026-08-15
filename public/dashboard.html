@@ -78,6 +78,7 @@
                             <button type="button" class="admin-tab active" data-admin-tool="supervision-cobradores" onclick="cambiarHerramientaAdmin('supervision-cobradores')" role="tab" aria-selected="true">Supervisión cobradores</button>
                             <button type="button" class="admin-tab" data-admin-tool="agregar-cliente" onclick="cambiarHerramientaAdmin('agregar-cliente')" role="tab" aria-selected="false">Agregar cliente</button>
                             <button type="button" class="admin-tab" data-admin-tool="paquetes" onclick="cambiarHerramientaAdmin('paquetes')" role="tab" aria-selected="false">Administrar paquetes</button>
+                            <button type="button" class="admin-tab" data-admin-tool="usuario-localidad" onclick="cambiarHerramientaAdmin('usuario-localidad')" role="tab" aria-selected="false">Usuario Localidad</button>
                         </div>
                     </div>
 
@@ -221,6 +222,58 @@
                                 </table>
                             </div>
                         </section>
+
+                        <section id="admin-tool-usuario-localidad" class="admin-tool-panel hidden" role="tabpanel">
+                            <div class="admin-tool-title">
+                                <h4>Usuario Localidad</h4>
+                                <p>Administra las localidades visibles para cada usuario al iniciar sesión.</p>
+                            </div>
+
+                            <div class="usuario-localidad-admin">
+                                <div class="usuario-localidad-lista-panel">
+                                    <div class="usuario-localidad-busqueda">
+                                        <input type="text" id="buscador-usuario-localidad" placeholder="Buscar usuario..." oninput="renderizarUsuariosLocalidadAdmin()">
+                                    </div>
+                                    <div id="lista-usuarios-localidad" class="usuario-localidad-lista">
+                                        <p class="usuario-localidad-empty">Cargando usuarios...</p>
+                                    </div>
+                                </div>
+
+                                <div class="usuario-localidad-editor">
+                                    <div id="usuario-localidad-empty" class="usuario-localidad-empty">
+                                        Selecciona un usuario para editar sus localidades.
+                                    </div>
+
+                                    <div id="usuario-localidad-form" class="hidden">
+                                        <div class="usuario-localidad-editor-header">
+                                            <div>
+                                                <h5 id="usuario-localidad-nombre">Usuario</h5>
+                                                <p id="usuario-localidad-detalle">-</p>
+                                            </div>
+                                            <span id="usuario-localidad-contador" class="contador-badge">0 localidades</span>
+                                        </div>
+
+                                        <div class="usuario-localidad-acciones">
+                                            <button type="button" class="button btn-secundario-paquete" onclick="seleccionarTodasLocalidadesUsuarioAdmin()">Todas</button>
+                                            <button type="button" class="button btn-secundario-paquete" onclick="limpiarLocalidadesUsuarioAdmin()">Limpiar</button>
+                                            <button type="button" class="button" onclick="guardarUsuarioLocalidadAdmin()">Guardar permisos</button>
+                                        </div>
+
+                                        <div id="usuario-localidad-checkboxes" class="usuario-localidad-checkboxes"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="localidad-color-admin">
+                                <div class="admin-tool-title localidad-color-title">
+                                    <h4>Colores de localidad</h4>
+                                    <p>Estos colores se usan en las tarjetas y filtros del panel.</p>
+                                </div>
+                                <div id="localidad-color-lista" class="localidad-color-lista">
+                                    <p class="usuario-localidad-empty">Cargando localidades...</p>
+                                </div>
+                            </div>
+                        </section>
                     </div>
                 </div>
             </div>
@@ -234,13 +287,13 @@
 
                 <div class="admin-controles-busqueda">
                     <div class="input-busqueda-wrapper">
-                        <input type="text" id="buscador-nombre" placeholder="Buscar por nombre, IP, teléfono, localidad, RENTA u observaciones...">
+                        <input type="text" id="buscador-nombre" placeholder="Buscar por nombre, número de cliente, teléfono, localidad, RENTA u observaciones...">
                     </div>
                     <div class="filtro-localidad-wrapper">
                         <select id="select-ordenar" >
                             <option value="corte_asc" selected>Día de corte</option>
                             <option value="adeudo_desc">Mayor adeudo</option>
-                            <option value="ip_asc">IP / número de cliente</option>
+                            <option value="codigo_asc">Número de cliente</option>
                             <option value="nombre_asc">Nombre A-Z</option>
                             <option value="localidad_asc">Localidad</option>
                             <option value="fecha_desc">Más Recientes (Fecha Inst)</option>
@@ -280,7 +333,7 @@
                                 </div>
                                 <h3 class="cliente-nombre">Juan Pérez</h3>
                                 <div class="cliente-detalles-tecnicos">
-                                    <span class="cliente-ip"><i class="fas fa-network-wired"></i> 192.168.1.50</span>
+                                    <span class="cliente-codigo"><i class="fas fa-id-card"></i> No. cliente: JU260801</span>
                                     
                                 </div>
                             </div>
@@ -312,7 +365,7 @@
 
         <div class="main-section">
             <h3>Cobro de Mensualidad</h3>
-            <p class="instrucciones">Ingrese el nombre o la dirección IP del cliente para iniciar el cobro.</p>
+            <p class="instrucciones">Ingrese el nombre o número de cliente para iniciar el cobro.</p>
             
             <div class="search-box-container">
                 <div class="search-field">
@@ -325,7 +378,7 @@
 
                 <div class="search-field">
                     <label for="buscarIP">Buscar por Número de Cliente:</label>
-                    <input type="text" id="buscarIP" placeholder="Ej. 201" autocomplete="off" oninput="controladorBusqueda('ip')">
+                    <input type="text" id="buscarIP" placeholder="Ej. BA260801" autocomplete="off" oninput="controladorBusqueda('codigo')">
                     <div id="sugerenciasIP" class="sugerencias-lista"></div>
                 </div>
             </div>
@@ -337,7 +390,10 @@
                             <h4 id="res-nombre"></h4>
                             <span id="res-ip" class="badge-ip"></span>
                         </div>
-                        <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
+                        <div class="resultado-header-acciones">
+                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()">Detalles</button>
+                            <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
+                        </div>
                     </div>
                     <div class="card-body">
                         <p><strong>Fecha de pago:</strong> <span id="res-dia"></span></p>
@@ -685,6 +741,66 @@
         </div>
     </div>
 
+    <div id="modal-detalles-cliente-cobrador" class="modal-overlay hidden" onclick="cerrarModalPorFondo(event, 'modal-detalles-cliente-cobrador', cerrarModalDetallesClienteCobrador)">
+        <div class="modal-content modal-content-cobrador">
+            <div class="modal-cabecera">
+                <div>
+                    <h2 id="detalle-cobrador-nombre">Ficha técnica</h2>
+                </div>
+                <span class="cerrar-x-modal" onclick="cerrarModalDetallesClienteCobrador()">&times;</span>
+            </div>
+
+            <div class="modal-body">
+                <div class="seccion-detalle">
+                    <h3>📌 Ficha Técnica</h3>
+                    <div class="grid-info-cliente grid-info-cliente-cobrador">
+                        <div class="info-grupo">
+                            <label>Dirección Física</label>
+                            <p id="detalle-cobrador-direccion">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Localidad / Paquete</label>
+                            <p id="detalle-cobrador-localidad-paquete">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Fecha de Instalación</label>
+                            <p id="detalle-cobrador-fecha-inst">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Día de Pago</label>
+                            <p id="detalle-cobrador-dia-pago" class="resaltado-azul">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Número de Cliente</label>
+                            <p id="detalle-cobrador-codigo-cliente" class="resaltado-azul">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Dirección IP</label>
+                            <p id="detalle-cobrador-ip" class="resaltado-tecnico">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Correo Electrónico</label>
+                            <p id="detalle-cobrador-correo">-</p>
+                        </div>
+                    </div>
+
+                    <div class="acciones-contacto">
+                        <a id="btn-whatsapp-cobrador" href="#" target="_blank" class="btn-contacto whatsapp">
+                            💬 Enviar WhatsApp al <span id="detalle-cobrador-telefono"></span>
+                        </a>
+                        <div id="editar-box-cobrador"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-detalles-cliente" class="modal-overlay hidden" onclick="cerrarModalPorFondo(event, 'modal-detalles-cliente', cerrarModalDetalles)">
         <div class="modal-content">
             
@@ -727,6 +843,11 @@
                         <div class="info-grupo">
                             <label>Día de Pago</label>
                             <p id="detalle-dia-pago" class="resaltado-azul">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Número de Cliente</label>
+                            <p id="detalle-codigo-cliente" class="resaltado-azul">-</p>
                         </div>
 
                         <div class="info-grupo">
@@ -915,6 +1036,9 @@
         let configLocalidades = {};
         let paquetesCatalogo = [];
         let paquetesAdminCatalogo = [];
+        let usuariosLocalidadAdmin = [];
+        let localidadesUsuarioAdmin = [];
+        let usuarioLocalidadSeleccionadoId = null;
         let perfilUsuario ="";
         let detallePago;
         let ultimoDetallePago = null;
@@ -1208,7 +1332,316 @@
             }
 
             if (herramienta === 'paquetes') cargarPaquetesAdmin();
+            if (herramienta === 'usuario-localidad') cargarUsuarioLocalidadAdmin();
             if (herramienta === 'supervision-cobradores') cargarSupervisionCobradores();
+        }
+
+        function obtenerTextoRolUsuarioAdmin(rolId) {
+            const roles = {
+                1: 'Cobrador',
+                2: 'Administrador',
+                3: 'Supervisor'
+            };
+            return roles[parseInt(rolId, 10)] || `Rol ${rolId || '-'}`;
+        }
+
+        function obtenerUsuarioActualAdmin() {
+            return JSON.parse(localStorage.getItem('usuario_actual') || '{}');
+        }
+
+        async function cargarUsuarioLocalidadAdmin() {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const lista = document.getElementById('lista-usuarios-localidad');
+            if (lista) lista.innerHTML = '<p class="usuario-localidad-empty">Cargando usuarios...</p>';
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/usuario-localidad?rol_usuario=${usuarioActual.rol}`);
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudieron cargar los permisos.');
+                }
+
+                usuariosLocalidadAdmin = Array.isArray(data.usuarios) ? data.usuarios : [];
+                localidadesUsuarioAdmin = Array.isArray(data.localidades) ? data.localidades : [];
+
+                if (
+                    usuarioLocalidadSeleccionadoId
+                    && !usuariosLocalidadAdmin.some(usuario => usuario.id === usuarioLocalidadSeleccionadoId)
+                ) {
+                    usuarioLocalidadSeleccionadoId = null;
+                }
+
+                renderizarUsuariosLocalidadAdmin();
+                renderizarEditorUsuarioLocalidadAdmin();
+                renderizarColoresLocalidadAdmin();
+            } catch (error) {
+                console.error('Error cargando usuario-localidad:', error);
+                if (lista) {
+                    lista.innerHTML = '';
+                    const mensaje = document.createElement('p');
+                    mensaje.className = 'usuario-localidad-empty';
+                    mensaje.textContent = error.message;
+                    lista.appendChild(mensaje);
+                }
+            }
+        }
+
+        function renderizarUsuariosLocalidadAdmin() {
+            const lista = document.getElementById('lista-usuarios-localidad');
+            const buscador = document.getElementById('buscador-usuario-localidad');
+            if (!lista) return;
+
+            const filtro = (buscador?.value || '').trim().toLowerCase();
+            const usuariosFiltrados = usuariosLocalidadAdmin.filter(usuario => {
+                const texto = [
+                    usuario.nombre,
+                    usuario.correo,
+                    obtenerTextoRolUsuarioAdmin(usuario.rol_id)
+                ].filter(Boolean).join(' ').toLowerCase();
+                return !filtro || texto.includes(filtro);
+            });
+
+            lista.innerHTML = '';
+
+            if (usuariosFiltrados.length === 0) {
+                lista.innerHTML = '<p class="usuario-localidad-empty">No hay usuarios para mostrar.</p>';
+                return;
+            }
+
+            usuariosFiltrados.forEach(usuario => {
+                const boton = document.createElement('button');
+                boton.type = 'button';
+                boton.className = 'usuario-localidad-item';
+                boton.classList.toggle('active', usuario.id === usuarioLocalidadSeleccionadoId);
+                boton.onclick = () => seleccionarUsuarioLocalidadAdmin(usuario.id);
+
+                const nombre = document.createElement('strong');
+                nombre.textContent = usuario.nombre || `Usuario ${usuario.id}`;
+
+                const detalle = document.createElement('span');
+                const totalLocalidades = Array.isArray(usuario.localidades) ? usuario.localidades.length : 0;
+                detalle.textContent = `${obtenerTextoRolUsuarioAdmin(usuario.rol_id)} | ${totalLocalidades} localidades`;
+
+                boton.appendChild(nombre);
+                boton.appendChild(detalle);
+                lista.appendChild(boton);
+            });
+        }
+
+        function seleccionarUsuarioLocalidadAdmin(usuarioId) {
+            usuarioLocalidadSeleccionadoId = parseInt(usuarioId, 10);
+            renderizarUsuariosLocalidadAdmin();
+            renderizarEditorUsuarioLocalidadAdmin();
+        }
+
+        function renderizarEditorUsuarioLocalidadAdmin() {
+            const empty = document.getElementById('usuario-localidad-empty');
+            const form = document.getElementById('usuario-localidad-form');
+            const checkboxes = document.getElementById('usuario-localidad-checkboxes');
+            const nombre = document.getElementById('usuario-localidad-nombre');
+            const detalle = document.getElementById('usuario-localidad-detalle');
+            if (!empty || !form || !checkboxes || !nombre || !detalle) return;
+
+            const usuario = usuariosLocalidadAdmin.find(item => item.id === usuarioLocalidadSeleccionadoId);
+
+            empty.classList.toggle('hidden', Boolean(usuario));
+            form.classList.toggle('hidden', !usuario);
+
+            if (!usuario) {
+                checkboxes.innerHTML = '';
+                return;
+            }
+
+            nombre.textContent = usuario.nombre || `Usuario ${usuario.id}`;
+            detalle.textContent = `${usuario.correo || 'Sin correo'} | ${obtenerTextoRolUsuarioAdmin(usuario.rol_id)}`;
+
+            const localidadesAsignadas = new Set((usuario.localidades || []).map(id => parseInt(id, 10)));
+            checkboxes.innerHTML = '';
+
+            localidadesUsuarioAdmin.forEach(localidad => {
+                const label = document.createElement('label');
+                label.className = 'usuario-localidad-check';
+
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.value = localidad.id;
+                input.checked = localidadesAsignadas.has(parseInt(localidad.id, 10));
+                input.onchange = actualizarContadorLocalidadesUsuarioAdmin;
+
+                const color = document.createElement('span');
+                color.className = 'usuario-localidad-color';
+                color.style.backgroundColor = localidad.color || '#cccccc';
+
+                const nombreLocalidad = document.createElement('span');
+                nombreLocalidad.textContent = localidad.nombre || `Localidad ${localidad.id}`;
+
+                const codigo = document.createElement('span');
+                codigo.className = 'usuario-localidad-codigo';
+                codigo.textContent = localidad.codigo_localidad || String(localidad.id);
+
+                label.appendChild(input);
+                label.appendChild(color);
+                label.appendChild(nombreLocalidad);
+                label.appendChild(codigo);
+                checkboxes.appendChild(label);
+            });
+
+            actualizarContadorLocalidadesUsuarioAdmin();
+        }
+
+        function renderizarColoresLocalidadAdmin() {
+            const contenedor = document.getElementById('localidad-color-lista');
+            if (!contenedor) return;
+
+            contenedor.innerHTML = '';
+
+            if (localidadesUsuarioAdmin.length === 0) {
+                contenedor.innerHTML = '<p class="usuario-localidad-empty">No hay localidades para mostrar.</p>';
+                return;
+            }
+
+            localidadesUsuarioAdmin.forEach(localidad => {
+                const item = document.createElement('div');
+                item.className = 'localidad-color-item';
+
+                const info = document.createElement('div');
+                info.className = 'localidad-color-info';
+
+                const nombre = document.createElement('strong');
+                nombre.textContent = localidad.nombre || `Localidad ${localidad.id}`;
+
+                const codigo = document.createElement('span');
+                codigo.textContent = localidad.codigo_localidad || String(localidad.id);
+
+                const input = document.createElement('input');
+                input.type = 'color';
+                input.className = 'localidad-color-input';
+                input.id = `localidad-color-${localidad.id}`;
+                input.value = /^#[0-9a-fA-F]{6}$/.test(localidad.color || '')
+                    ? localidad.color
+                    : '#cccccc';
+                input.title = `Color de ${localidad.nombre || 'localidad'}`;
+
+                const boton = document.createElement('button');
+                boton.type = 'button';
+                boton.className = 'button localidad-color-guardar';
+                boton.textContent = 'Guardar';
+                boton.onclick = () => guardarColorLocalidadAdmin(localidad.id);
+
+                info.appendChild(nombre);
+                info.appendChild(codigo);
+                item.appendChild(info);
+                item.appendChild(input);
+                item.appendChild(boton);
+                contenedor.appendChild(item);
+            });
+        }
+
+        async function guardarColorLocalidadAdmin(localidadId) {
+            const input = document.getElementById(`localidad-color-${localidadId}`);
+            const color = input?.value || '';
+            const usuarioActual = obtenerUsuarioActualAdmin();
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/localidades/${localidadId}/color`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rol_usuario: usuarioActual.rol,
+                        color
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo guardar el color.');
+                }
+
+                const localidad = localidadesUsuarioAdmin.find(item => parseInt(item.id, 10) === parseInt(localidadId, 10));
+                if (localidad) localidad.color = color;
+
+                if (configLocalidades[localidadId]) {
+                    configLocalidades[localidadId].color = color;
+                }
+
+                renderizarEditorUsuarioLocalidadAdmin();
+                renderizarColoresLocalidadAdmin();
+                cargarVistaAdminClientes();
+                alert(data.message || 'Color actualizado correctamente.');
+            } catch (error) {
+                console.error('Error guardando color de localidad:', error);
+                alert(error.message);
+            }
+        }
+
+        function obtenerLocalidadesSeleccionadasUsuarioAdmin() {
+            return Array.from(document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]:checked'))
+                .map(input => parseInt(input.value, 10))
+                .filter(Boolean);
+        }
+
+        function actualizarContadorLocalidadesUsuarioAdmin() {
+            const contador = document.getElementById('usuario-localidad-contador');
+            if (!contador) return;
+
+            const total = obtenerLocalidadesSeleccionadasUsuarioAdmin().length;
+            contador.textContent = `${total} ${total === 1 ? 'localidad' : 'localidades'}`;
+        }
+
+        function seleccionarTodasLocalidadesUsuarioAdmin() {
+            document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]').forEach(input => {
+                input.checked = true;
+            });
+            actualizarContadorLocalidadesUsuarioAdmin();
+        }
+
+        function limpiarLocalidadesUsuarioAdmin() {
+            document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]').forEach(input => {
+                input.checked = false;
+            });
+            actualizarContadorLocalidadesUsuarioAdmin();
+        }
+
+        async function guardarUsuarioLocalidadAdmin() {
+            const usuario = usuariosLocalidadAdmin.find(item => item.id === usuarioLocalidadSeleccionadoId);
+            if (!usuario) {
+                alert('Selecciona un usuario.');
+                return;
+            }
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const localidades = obtenerLocalidadesSeleccionadasUsuarioAdmin();
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/usuario-localidad/${usuario.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rol_usuario: usuarioActual.rol,
+                        localidades
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudieron guardar los permisos.');
+                }
+
+                usuario.localidades = localidades;
+
+                if (parseInt(usuarioActual.id, 10) === parseInt(usuario.id, 10)) {
+                    usuarioActual.localidades = localidades;
+                    localStorage.setItem('usuario_actual', JSON.stringify(usuarioActual));
+                }
+
+                renderizarUsuariosLocalidadAdmin();
+                renderizarEditorUsuarioLocalidadAdmin();
+                alert(`${data.message || 'Permisos actualizados.'}\n\nEl usuario verá los cambios al iniciar sesión nuevamente.`);
+            } catch (error) {
+                console.error('Error guardando usuario-localidad:', error);
+                alert(error.message);
+            }
         }
 
         function formatearMontoPaqueteAdmin(valor) {
@@ -1804,9 +2237,10 @@
                     const localidadNombre = cliente.localidad_nombre || configLocalidades[cliente.localidad_id]?.nombre || '';
                     const paqueteNombre = cliente.paquete_nombre || cliente.paquete_display || cliente.paquete || '';
                     const paqueteFiltro = cliente.paquete_id ? String(cliente.paquete_id) : paqueteNombre;
+                    const codigoCliente = cliente.codigo_cliente || 'Sin codigo';
                     const textoBusquedaCombinada = [
                         cliente.nombre_completo,
-                        cliente.direccion_ip,
+                        cliente.codigo_cliente,
                         cliente.telefono,
                         localidadNombre,
                         paqueteNombre,
@@ -1816,7 +2250,7 @@
                     card.setAttribute('data-id', cliente.id);
                     card.setAttribute('data-nombre', cliente.nombre_completo);
                     card.setAttribute('data-corte', cliente.dia_pago);
-                    card.setAttribute('data-ip', cliente.direccion_ip);
+                    card.setAttribute('data-codigo', cliente.codigo_cliente || '');
                     card.setAttribute('data-fecha', cliente.fecha_instalacion || "2000-01-01");
                     card.setAttribute('data-localidad-nombre', localidadNombre);
                     card.setAttribute('data-estado-servicio', (cliente.estado_servicio || '').toLowerCase());
@@ -1860,7 +2294,8 @@
                                         <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
                                         ${badgeBajaCard}
                                     </div>
-                                    <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
+                                    <p class="cliente-codigo"><i class="fas fa-id-card"></i> No. cliente: ${codigoCliente}</p>
+                                    <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip || 'No asignada'}</p>
                                 </div>
                                 <div class="cliente-baja-adeudo">
                                     <span>Adeudo pendiente</span>
@@ -1899,7 +2334,8 @@
                                     ${badgeSuspendidoCard}
                                     ${badgeBajaCard}
                                 </div>
-                                <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip}</p>
+                                <p class="cliente-codigo"><i class="fas fa-id-card"></i> No. cliente: ${codigoCliente}</p>
+                                <p class="cliente-ip"><i class="fas fa-network-wired"></i> IP: ${cliente.direccion_ip || 'No asignada'}</p>
                             </div>
                             <div class="cliente-pago-dia">
                                 <span class="label">Corte</span>
@@ -2090,10 +2526,9 @@
                         valB = b.getAttribute('data-nombre').toLowerCase();
                         return valA.localeCompare(valB); // Orden alfabético A-Z
                     
-                    case "ip_asc":
-                        valA = a.getAttribute('data-ip');
-                        valB = b.getAttribute('data-ip');
-                        // localeCompare con numeric: true ordena excelente tanto números (172) como IPs completas
+                    case "codigo_asc":
+                        valA = a.getAttribute('data-codigo') || '';
+                        valB = b.getAttribute('data-codigo') || '';
                         return valA.localeCompare(valB, undefined, {numeric: true}); 
 
                     case "localidad_asc":
@@ -2325,7 +2760,18 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert("¡Cliente guardado correctamente!");
+                    const codigoCreado = data.codigo_cliente
+                        ? `\nNúmero de cliente para pagos: ${data.codigo_cliente}`
+                        : '';
+                    const enviarBienvenida = confirm(`¡Cliente guardado correctamente!${codigoCreado}\n\n¿Deseas enviar mensaje de bienvenida por WhatsApp al cliente?`);
+
+                    if (enviarBienvenida) {
+                        enviarWhatsappBienvenidaCliente({
+                            ...nuevoCliente,
+                            codigo_cliente: data.codigo_cliente,
+                            dia_pago: crearFechaLocalDesdeInput(fecha)?.getDate()
+                        }, paqueteSeleccionado);
+                    }
                     cerrarModal();
                     //cargarClientes();
                     cargarVistaAdminClientes();
@@ -2352,7 +2798,7 @@
 
         
 
-        // 1. Controlador inteligente de búsqueda (Alterna entre Nombre e IP)
+        // 1. Controlador inteligente de búsqueda (Alterna entre nombre y numero de cliente)
         async function controladorBusqueda(tipo) {
             const inputNombre = document.getElementById('buscarNombre');
             const inputIP = document.getElementById('buscarIP');
@@ -2361,7 +2807,7 @@
 
             let query = '';
 
-            // Si escribo en "Nombre", limpio la caja de "IP" y viceversa
+            // Si escribo en "Nombre", limpio la caja de "numero de cliente" y viceversa
             if (tipo === 'nombre') {
                 inputIP.value = '';
                 listaIP.innerHTML = '';
@@ -2400,7 +2846,7 @@
                 // Mostrar los resultados en la lista correspondiente
                 listaActiva.innerHTML = clientes.map(c => `
                     <div class="sugerencia-item" onclick='seleccionarCliente(${JSON.stringify(c).replace(/"/g, "&quot;")})'>
-                        <strong>${c.nombre_completo}</strong> - IP: ${c.direccion_ip}
+                        <strong>${c.nombre_completo}</strong> - No. cliente: ${c.codigo_cliente || 'Sin codigo'}
                     </div>
                 `).join('');
                 /* console.log("Clientes cargados:", clientes); */
@@ -2444,10 +2890,82 @@
             boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Seleccionar Mes a Pagar';
         }
 
+        function abrirDetallesClienteCobradorSeleccionado() {
+            if (!clienteSeleccionado?.id) {
+                alert('Selecciona un cliente primero.');
+                return;
+            }
+
+            abrirDetallesClienteCobrador(clienteSeleccionado.id);
+        }
+
+        function formatearPaqueteFichaCobrador(cliente) {
+            const nombre = cliente?.paquete_nombre || 'Sin paquete';
+            const velocidad = formatearNumeroPaquete(cliente?.paquete_velocidad_mbps);
+            return velocidad ? `${nombre} | ${velocidad} Mbps` : nombre;
+        }
+
+        async function abrirDetallesClienteCobrador(idCliente) {
+            const modal = document.getElementById('modal-detalles-cliente-cobrador');
+            modal.classList.remove('hidden');
+            document.getElementById('detalle-cobrador-nombre').textContent = 'Cargando ficha...';
+
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
+                const url = `${urlBase}/api/clientes/${idCliente}/ficha-tecnica?usuario_id=${usuarioActual.id}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo cargar la ficha técnica.');
+                }
+
+                const cliente = data.cliente;
+                const fechaInstalacion = crearFechaLocalDesdeValorVista(cliente.fecha_instalacion);
+                const tel = cliente.telefono || '';
+                const telefonoWhatsapp = obtenerTelefonoWhatsappCliente(cliente);
+
+                document.getElementById('detalle-cobrador-nombre').textContent = cliente.nombre_completo || 'Ficha técnica';
+                document.getElementById('detalle-cobrador-direccion').textContent = cliente.direccion || 'Sin dirección';
+                document.getElementById('detalle-cobrador-localidad-paquete').textContent = `${cliente.localidad_nombre || 'Sin localidad'} | Paquete: ${formatearPaqueteFichaCobrador(cliente)}`;
+                document.getElementById('detalle-cobrador-fecha-inst').textContent = fechaInstalacion ? fechaInstalacion.toLocaleDateString('es-MX') : 'N/A';
+                document.getElementById('detalle-cobrador-dia-pago').textContent = cliente.dia_pago || 'No asignado';
+                document.getElementById('detalle-cobrador-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin código';
+                document.getElementById('detalle-cobrador-ip').textContent = cliente.direccion_ip || 'No asignada';
+                document.getElementById('detalle-cobrador-correo').textContent = cliente.correo || 'Sin correo';
+                document.getElementById('detalle-cobrador-telefono').textContent = tel || 'Sin teléfono';
+
+                const btnWhatsapp = document.getElementById('btn-whatsapp-cobrador');
+                if (telefonoWhatsapp) {
+                    btnWhatsapp.href = `https://wa.me/${telefonoWhatsapp}`;
+                    btnWhatsapp.style.display = 'inline-block';
+                } else {
+                    btnWhatsapp.removeAttribute('href');
+                    btnWhatsapp.style.display = 'none';
+                }
+
+                const editarBox = document.getElementById('editar-box-cobrador');
+                editarBox.innerHTML = `
+                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},3)'>
+                        <i class="fas fa-eye">✏️</i>
+                    </button>
+                `;
+            } catch (error) {
+                console.error('Error cargando ficha limitada:', error);
+                document.getElementById('detalle-cobrador-nombre').textContent = 'Error al cargar ficha';
+                alert(error.message);
+            }
+        }
+
+        function cerrarModalDetallesClienteCobrador() {
+            document.getElementById('modal-detalles-cliente-cobrador').classList.add('hidden');
+        }
+
         async function seleccionarCliente(cliente) {
             
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
+            document.getElementById('btn-detalles-cobrador').classList.add('hidden');
             clienteSeleccionado = cliente;
             estadoCuentaResultadoActual = null;
             suspensionResultadoActual = null;
@@ -2460,7 +2978,7 @@
             if (document.getElementById('buscarNombre').value !== '') {
                 document.getElementById('buscarNombre').value = cliente.nombre_completo;
             } else {
-                document.getElementById('buscarIP').value = cliente.direccion_ip;
+                document.getElementById('buscarIP').value = cliente.codigo_cliente || '';
             }
 
             try {
@@ -2474,7 +2992,7 @@
 
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
-                document.getElementById('res-ip').innerText = cliente.direccion_ip;
+                document.getElementById('res-ip').innerText = `No. cliente: ${cliente.codigo_cliente || 'Sin codigo'}`;
                 const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 document.getElementById('res-costo').innerText = costoFormateado;
                 document.getElementById('res-dia').textContent = cliente.dia_pago;
@@ -2519,6 +3037,7 @@
                     msgUltimoPago.innerHTML = `<span style="color: #2e7d32; font-weight: bold;">✅ Cuenta al corriente (Sin adeudos)</span>`;
                 }
 
+                document.getElementById('btn-detalles-cobrador').classList.remove('hidden');
                 document.getElementById('resultado-busqueda').classList.remove('hidden');
             } catch (error) {
                 console.error("Error:", error);
@@ -2946,6 +3465,12 @@ ha sido *registrado correctamente* ${emojiCorrecto}
 ${emojiDinero} *Monto recibido:* $${totalFormateadoWA}
 ${emojiFecha} *Fecha de pago:* ${new Date().toLocaleDateString('es-MX')}
 
+🎉 Nos estamos actualizando para atenderte mejor con nuestro nuevo sistema. Ahora tienes un número de cliente.
+
+🆔 *Tu número de cliente es:* *${clienteSeleccionado.codigo_cliente || 'Sin código'}*
+
+Te recomendamos guardarlo, ya que te servirá para identificar tu servicio al realizar tus próximos pagos o reportes.
+
 Agradecemos mucho tu puntualidad y confianza ${emojiGracias}
 
 Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
@@ -2963,6 +3488,109 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             btnWhatsapp.href = linkWhats;
         }
 
+        function formatearPaqueteMensajeBienvenida(paquete) {
+            const nombre = paquete?.nombre_paquete || paquete?.paquete_nombre || paquete?.paquete_display || paquete?.paquete || 'Paquete contratado';
+            const velocidad = formatearNumeroPaquete(paquete?.velocidad_mbps || paquete?.paquete_velocidad_mbps);
+            return velocidad ? `${nombre} ${velocidad} Mbps` : nombre;
+        }
+
+        function crearMensajeWhatsappBienvenidaCliente(cliente, paquete) {
+            const hora = new Date().getHours();
+            const saludoTiempo = hora < 12 ? 'día' : hora < 19 ? 'tarde' : 'noche';
+            const articuloSaludoTiempo = hora < 12 ? 'un' : 'una';
+            const emojiTiempo = hora < 12 ? '☀️' : hora < 19 ? '🌇' : '🌜';
+            const nombre = cliente.nombre_completo || cliente.alias_cliente || 'cliente';
+            const codigoCliente = cliente.codigo_cliente || 'Sin código';
+            const paqueteTexto = formatearPaqueteMensajeBienvenida(paquete);
+            const mensualidad = formatearMontoMensajeServicio(cliente.costo_mensual || paquete?.costo);
+            const fechaInstalacion = formatearFechaMensajeServicio(cliente.fecha_instalacion);
+            const fechaLocal = crearFechaLocalDesdeInput(cliente.fecha_instalacion)
+                || crearFechaLocalDesdeValorVista(cliente.fecha_instalacion);
+            const diaPago = cliente.dia_pago || fechaLocal?.getDate() || '-';
+
+            return `Hola *${nombre}* 👋
+
+¡Bienvenido a *RED OSLED*!
+
+Te confirmamos que tu servicio de internet ha sido registrado correctamente ✅
+
+🆔 *Número de cliente para pagos:* *${codigoCliente}*
+📌 *Paquete contratado:* ${paqueteTexto}
+💰 *Mensualidad:* $${mensualidad}
+📅 *Fecha de instalación:* ${fechaInstalacion}
+☀️ *Día de pago:* ${diaPago} de cada mes
+
+Agradecemos mucho tu confianza 🙌
+
+Para cualquier duda, reporte o aclaración, puedes escribirnos por este medio.
+
+Que tengas ${articuloSaludoTiempo} excelente ${saludoTiempo}. ${emojiTiempo}
+
+*RED OSLED*`;
+        }
+
+        function calcularDiasDesdeInstalacionCliente(cliente) {
+            const fechaInstalacion = crearFechaLocalDesdeValorVista(cliente?.fecha_instalacion);
+            if (!fechaInstalacion) return Infinity;
+
+            const hoy = new Date();
+            const hoyLocal = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+            const msPorDia = 1000 * 60 * 60 * 24;
+            return Math.max(0, Math.floor((hoyLocal - fechaInstalacion) / msPorDia));
+        }
+
+        function crearMensajeWhatsappNumeroCliente(cliente) {
+            const nombre = cliente?.nombre_completo || cliente?.alias_cliente || 'cliente';
+            const codigoCliente = cliente?.codigo_cliente || 'Sin código';
+
+            return `Hola *${nombre}* 👋
+
+Te compartimos tu número de cliente para pagos:
+
+🆔 *Número de cliente:* *${codigoCliente}*
+
+A partir de ahora puedes proporcionar este número al realizar tus pagos o reportes.
+
+Gracias por tu confianza 🙌
+
+*RED OSLED*`;
+        }
+
+        function crearMensajeWhatsappDetalleCliente(cliente) {
+            const diasDesdeInstalacion = calcularDiasDesdeInstalacionCliente(cliente);
+            return diasDesdeInstalacion < 30
+                ? crearMensajeWhatsappBienvenidaCliente(cliente, cliente)
+                : crearMensajeWhatsappNumeroCliente(cliente);
+        }
+
+        function abrirWhatsappConMensajeCliente(cliente, mensajeWhatsapp) {
+            const telefonoWhatsapp = obtenerTelefonoWhatsappCliente(cliente);
+
+            if (!telefonoWhatsapp) {
+                alert('El cliente no tiene teléfono válido para enviar WhatsApp.');
+                return;
+            }
+
+            const linkWhats =
+                `https://api.whatsapp.com/send/?phone=${telefonoWhatsapp}&text=${encodeURIComponent(mensajeWhatsapp)}&type=phone_number&app_absent=0`;
+
+            window.open(linkWhats, '_blank');
+        }
+
+        function enviarWhatsappBienvenidaCliente(cliente, paquete) {
+            abrirWhatsappConMensajeCliente(
+                cliente,
+                crearMensajeWhatsappBienvenidaCliente(cliente, paquete)
+            );
+        }
+
+        function enviarWhatsappDetalleCliente(cliente) {
+            abrirWhatsappConMensajeCliente(
+                cliente,
+                crearMensajeWhatsappDetalleCliente(cliente)
+            );
+        }
+
         function obtenerTelefonoWhatsappCliente(cliente) {
             const telefono = (cliente?.telefono || '').replace(/\D/g, '');
             if (!telefono) return '';
@@ -2971,7 +3599,7 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
         function formatearFechaMensajeServicio(fecha) {
             if (!fecha) return 'Pendiente';
-            const fechaLocal = crearFechaLocalDesdeInput(fecha);
+            const fechaLocal = crearFechaLocalDesdeInput(fecha) || crearFechaLocalDesdeValorVista(fecha);
             return (fechaLocal || new Date(fecha)).toLocaleDateString('es-MX');
         }
 
@@ -3255,7 +3883,7 @@ ${linkVelocidad}
                     <div class="divider"></div>
                     
                     <p><strong>Cliente:</strong> ${clienteSeleccionado.alias_cliente}<br>
-                    <strong>Cliente:</strong> ${clienteSeleccionado.direccion_ip}</p>
+                    <strong>No. cliente:</strong> ${clienteSeleccionado.codigo_cliente || 'Sin codigo'}</p>
                     
                     <div class="divider"></div>
                     
@@ -3365,6 +3993,7 @@ ${linkVelocidad}
                 document.getElementById('detalle-fecha-inst').textContent = fechaInst;
                 
                 document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
+                document.getElementById('detalle-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin codigo';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
                 document.getElementById('detalle-ip').href = cliente.url_portal || '#'; 
                 document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
@@ -3382,8 +4011,12 @@ ${linkVelocidad}
                 const btnWhatsapp = document.getElementById('btn-whatsapp');
 
                 if (tel) {
-                    const telLimpio = tel.replace(/\D/g,''); 
-                    btnWhatsapp.href = `https://wa.me/${telLimpio}`;
+                    btnWhatsapp.href = '#';
+                    btnWhatsapp.onclick = function(event) {
+                        event.preventDefault();
+                        enviarWhatsappDetalleCliente(cliente);
+                    };
+                    btnWhatsapp.title = 'Enviar mensaje de WhatsApp al cliente';
                     btnWhatsapp.style.display = 'inline-block';
                     const EditarBox = document.getElementById('editar-box')
                         EditarBox.innerHTML = `
@@ -3393,6 +4026,8 @@ ${linkVelocidad}
                                     </button>
                         `;
                 } else {
+                    btnWhatsapp.onclick = null;
+                    btnWhatsapp.removeAttribute('href');
                     btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
                 }
 
@@ -3523,6 +4158,11 @@ ${linkVelocidad}
                             
                         clienteSeleccionado.telefono = nuevoTelefono
                         mostrarResumenPagoExitoso(detallePago);
+                    }else if (bandera == 3){
+                        if (clienteSeleccionado && parseInt(clienteSeleccionado.id, 10) === parseInt(idCliente, 10)) {
+                            clienteSeleccionado.telefono = nuevoTelefono;
+                        }
+                        abrirDetallesClienteCobrador(idCliente);
                     }
                         
                 } else {
@@ -4367,6 +5007,7 @@ ${linkVelocidad}
                 document.getElementById('detalle-fecha-inst').textContent = fechaInst;
                 
                 document.getElementById('detalle-dia-pago').textContent = cliente.dia_pago || 'No asignado';
+                document.getElementById('detalle-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin codigo';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
                 document.getElementById('detalle-ip').href = cliente.url_portal || '#';
                 document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
@@ -4384,8 +5025,12 @@ ${linkVelocidad}
                 const btnWhatsapp = document.getElementById('btn-whatsapp');
 
                 if (tel) {
-                    const telLimpio = tel.replace(/\D/g,''); 
-                    btnWhatsapp.href = `https://wa.me/${telLimpio}`;
+                    btnWhatsapp.href = '#';
+                    btnWhatsapp.onclick = function(event) {
+                        event.preventDefault();
+                        enviarWhatsappDetalleCliente(cliente);
+                    };
+                    btnWhatsapp.title = 'Enviar mensaje de WhatsApp al cliente';
                     btnWhatsapp.style.display = 'inline-block';
                     const EditarBox = document.getElementById('editar-box')
                         EditarBox.innerHTML = `
@@ -4395,6 +5040,8 @@ ${linkVelocidad}
                                     </button>
                         `;
                 } else {
+                    btnWhatsapp.onclick = null;
+                    btnWhatsapp.removeAttribute('href');
                     btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
                 }
 

@@ -79,10 +79,16 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
                 c.es_renta, c.estado_servicio, bs.tipo_evento AS tipo_suspension_activa,
                 bb.tipo_evento AS motivo_baja, bb.fecha_fin AS fecha_baja,
                 fecha_instalacion, c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id,
-                l.nombre AS localidad_nombre, c.paquete,
+                c.paquete_id, l.nombre AS localidad_nombre,
+                COALESCE(paq.nombre_paquete, c.paquete) AS paquete,
+                paq.nombre_paquete AS paquete_nombre,
+                paq.velocidad_mbps AS paquete_velocidad_mbps,
+                paq.velocidad_garantizada_mbps AS paquete_velocidad_garantizada_mbps,
+                paq.costo AS paquete_costo,
                 IFNULL(GROUP_CONCAT(CONCAT(p.mes_pagado, ':', p.estado_corte) SEPARATOR ','), '') as historial_pagos
             FROM clientes c
             LEFT JOIN localidades l ON l.id = c.localidad_id
+            LEFT JOIN paquetes paq ON paq.id = c.paquete_id
             LEFT JOIN bitacora_servicio bs ON bs.cliente_id = c.id
                 AND bs.estado = 'Activo'
             LEFT JOIN bitacora_servicio bb ON bb.id = (
@@ -138,7 +144,9 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
         query += `
             GROUP BY c.id, c.nombre_completo, c.url_portal, c.alias_cliente, c.telefono, c.observaciones,
                 c.es_renta, c.estado_servicio, bs.tipo_evento, bb.tipo_evento, bb.fecha_fin,
-                c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id, l.nombre, c.paquete
+                c.direccion_ip, c.costo_mensual, c.dia_pago, c.localidad_id, c.paquete_id,
+                l.nombre, c.paquete, paq.nombre_paquete, paq.velocidad_mbps,
+                paq.velocidad_garantizada_mbps, paq.costo
             ORDER BY c.dia_pago;
         `;
 
@@ -149,7 +157,8 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
                 [cliente.id]
             );
             const bitacoraCliente = await consultarBitacoraServicio(db, cliente.id);
-            const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagosCliente, bitacoraCliente);
+            const historialPaquetes = await consultarHistorialPaquetes(db, cliente.id);
+            const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagosCliente, bitacoraCliente, historialPaquetes);
 
             return {
                 ...cliente,
@@ -212,19 +221,79 @@ app.listen(PORT, () => {
     console.log(`📡 Servidor corriendo en http://localhost:${PORT}`);
 });
 
+async function obtenerPaqueteActivoPorId(paqueteId, ejecutor = db) {
+    const id = parseInt(paqueteId, 10);
+    if (!id) return null;
+
+    const [rows] = await ejecutor.query(
+        `SELECT id, nombre_paquete, velocidad_mbps, velocidad_garantizada_mbps, costo
+         FROM paquetes
+         WHERE id = ? AND activo = 1
+         LIMIT 1`,
+        [id]
+    );
+
+    return rows[0] || null;
+}
+
+function esRolAdministrador(rol) {
+    return parseInt(rol, 10) === 2;
+}
+
+function validarAdministradorRequest(req, res) {
+    const rol = req.body?.rol_usuario ?? req.query?.rol_usuario ?? req.query?.rol;
+    if (esRolAdministrador(rol)) return true;
+
+    res.status(403).json({
+        success: false,
+        error: 'Acceso denegado: solo el administrador puede administrar paquetes.'
+    });
+    return false;
+}
+
+function normalizarDatosPaquete(body = {}) {
+    const nombre = String(body.nombre_paquete || '').trim();
+    const velocidad = parseFloat(body.velocidad_mbps);
+    const garantizada = parseFloat(body.velocidad_garantizada_mbps);
+    const costo = parseFloat(body.costo);
+    const activo = body.activo === undefined ? 1 : (parseInt(body.activo, 10) ? 1 : 0);
+    const errores = [];
+
+    if (!nombre) errores.push('El nombre del paquete es obligatorio.');
+    if (!Number.isFinite(velocidad) || velocidad <= 0) errores.push('La velocidad Mbps debe ser mayor a cero.');
+    if (!Number.isFinite(garantizada) || garantizada < 0) errores.push('La velocidad garantizada no es valida.');
+    if (Number.isFinite(velocidad) && Number.isFinite(garantizada) && garantizada > velocidad) {
+        errores.push('La velocidad garantizada no puede ser mayor a la velocidad del paquete.');
+    }
+    if (!Number.isFinite(costo) || costo <= 0) errores.push('El costo debe ser mayor a cero.');
+
+    return {
+        datos: {
+            nombre_paquete: nombre,
+            velocidad_mbps: velocidad,
+            velocidad_garantizada_mbps: garantizada,
+            costo,
+            activo
+        },
+        errores
+    };
+}
+
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
+    let connection;
+
     try{
         // 1. Obtenemos los datos del cuerpo de la petición (req.body)
         const { 
             nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta,
-            fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id, rol_usuario
+            fecha_instalacion, dia_pago, direccion_ip, señal, paquete_id, costo_mensual, localidad_id, rol_usuario, usuario_id
         } = req.body;
 
         // 2. VALIDACIÓN DE SEGURIDAD (Bloqueo de Creación)
         // Comprobamos si el usuario NO es el Administrador (rol 2)
-        if (rol_usuario !== 2) {
+        if (parseInt(rol_usuario, 10) !== 2) {
             // Detenemos la ejecución y enviamos un mensaje de error al navegador
             return res.status(403).json({
                 success: false,
@@ -239,24 +308,68 @@ app.post('/api/clientes', async (req, res) => {
                 error: 'La fecha de instalacion no es valida.'
             });
         }
+
+        const paqueteSeleccionado = await obtenerPaqueteActivoPorId(paquete_id);
+        if (!paqueteSeleccionado) {
+            return res.status(400).json({
+                success: false,
+                error: 'Selecciona un paquete valido.'
+            });
+        }
+
+        const costoMensual = costo_mensual === undefined || costo_mensual === null || costo_mensual === ''
+            ? parseFloat(paqueteSeleccionado.costo)
+            : parseFloat(costo_mensual);
+
+        if (!Number.isFinite(costoMensual) || costoMensual <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'El costo mensual no es valido.'
+            });
+        }
+
+        const usuarioIdAlta = parseInt(usuario_id, 10) || null;
         const query = `INSERT INTO clientes 
-                    (nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, costo_mensual, localidad_id) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                    (nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, señal, paquete, paquete_id, costo_mensual, localidad_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         console.log("Query", query);
         console.log("Datos recibidos para el nuevo cliente:", req.body);
     // 2. Abrimos el bloque try/catch
     
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
         // 3. Usamos 'await' y extraemos [result] (Borramos el callback)
-        const [result] = await db.query(query, [
+        const [result] = await connection.query(query, [
         nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones || null, es_renta ? 1 : 0,
-        fecha_instalacion, diaPagoAlta, direccion_ip, señal, paquete, costo_mensual,localidad_id
+        fecha_instalacion, diaPagoAlta, direccion_ip, señal, paqueteSeleccionado.nombre_paquete,
+        paqueteSeleccionado.id, costoMensual, localidad_id
         ]);
+
+        await connection.query(
+            `INSERT INTO cliente_paquetes_historial
+                (cliente_id, paquete_id, costo_mensual, fecha_inicio, fecha_fin, usuario_id)
+             VALUES (?, ?, ?, ?, NULL, ?)`,
+            [result.insertId, paqueteSeleccionado.id, costoMensual, fecha_instalacion, usuarioIdAlta]
+        );
+
+        await connection.commit();
         // 4a. Si todo sale bien, respondemos aquí
         res.json({ success: true, mensaje: "Cliente creado con éxito" });
     }catch(error){
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir alta de cliente:", rollbackError);
+            }
+        }
+
         // 4b. Si hay un error, el 'catch' lo atrapa automáticamente
         console.error("Error al crear cliente:", error);
         res.status(500).json({ error: "Error al guardar en la BD: " + error.message });
+    } finally {
+        if (connection) connection.release();
     }
 });
 
@@ -360,16 +473,17 @@ app.post('/api/registrar-pago', async (req, res) => {
         });
 
         const bitacora = await consultarBitacoraServicio(db, clienteId);
-        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora);
+        const historialPaquetes = await consultarHistorialPaquetes(db, clienteId);
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora, historialPaquetes);
         const cambiosFechaPago = obtenerCambiosFechaPago(bitacora);
         let ajustePendienteDisponible = parseFloat(estadoCuenta.monto_ajustes_pendientes) || 0;
         const registros = [];
-        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0) => {
+        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0, montoEsperadoMes = costoMensual) => {
             const pagadoAntes = historial[etiquetaMes] || 0;
             const montoAAplicar = Math.min(saldoRestante, pendienteMes);
             let nuevoTipo = (montoAAplicar >= pendienteMes && pagadoAntes === 0) ? 'completo' : 'abono';
 
-            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= costoMensual) nuevoTipo = 'completo';
+            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= montoEsperadoMes) nuevoTipo = 'completo';
 
             const [pagoResult] = await db.query(
                 'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
@@ -441,7 +555,8 @@ app.post('/api/registrar-pago', async (req, res) => {
             await aplicarPagoMes(
                 mesAdeudado.mes,
                 mesAdeudado.pendiente,
-                ajusteAAplicar
+                ajusteAAplicar,
+                parseFloat(mesAdeudado.monto_esperado) || costoMensual
             );
         }
 
@@ -468,8 +583,9 @@ app.post('/api/registrar-pago', async (req, res) => {
 
             const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
             const pagadoEnEsteMes = historial[etiquetaMes] || 0;
-            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMensual - pagadoEnEsteMes, 0));
-            const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes - ajusteAAplicar, 0);
+            const costoMes = obtenerCostoMensualParaMes(historialPaquetes, cursor.anio, cursor.mesIndex, costoMensual);
+            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMes - pagadoEnEsteMes, 0));
+            const pendienteMes = Math.max(costoMes - pagadoEnEsteMes - ajusteAAplicar, 0);
 
             if (pendienteMes <= 0 && ajusteAAplicar > 0) {
                 const ajusteAplicado = await aplicarAjustesPendientes(db, clienteId, etiquetaMes, ajusteAAplicar);
@@ -485,7 +601,7 @@ app.post('/api/registrar-pago', async (req, res) => {
             }
 
             if (pendienteMes > 0) {
-                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar);
+                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar, costoMes);
             }
 
             cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
@@ -586,6 +702,103 @@ function crearFechaLocalDesdeValor(valor) {
     return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
 }
 
+function formatearFechaSql(fecha) {
+    if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return null;
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+}
+
+function restarDiasFecha(fecha, dias) {
+    const resultado = new Date(fecha);
+    resultado.setDate(resultado.getDate() - dias);
+    return resultado;
+}
+
+function sumarMesesCompletosFecha(fecha, meses) {
+    const resultado = new Date(fecha.getFullYear(), fecha.getMonth() + meses, 1);
+    const ultimoDiaDestino = obtenerUltimoDiaMes(resultado.getFullYear(), resultado.getMonth());
+    resultado.setDate(Math.min(fecha.getDate(), ultimoDiaDestino));
+    return resultado;
+}
+
+function obtenerRestriccionCambioPaquete(historialPaquetes = [], fechaReferencia = new Date()) {
+    const historialOrdenado = [...(historialPaquetes || [])]
+        .filter(periodo => crearFechaLocalDesdeValor(periodo.fecha_inicio))
+        .sort((a, b) => {
+            const fechaA = crearFechaLocalDesdeValor(a.fecha_inicio);
+            const fechaB = crearFechaLocalDesdeValor(b.fecha_inicio);
+            const diferencia = fechaA - fechaB;
+            if (diferencia !== 0) return diferencia;
+            return (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0);
+        });
+
+    if (historialOrdenado.length <= 1) {
+        return { bloqueado: false };
+    }
+
+    const ultimoCambio = historialOrdenado[historialOrdenado.length - 1];
+    const fechaUltimoCambio = crearFechaLocalDesdeValor(ultimoCambio.fecha_inicio);
+    if (!fechaUltimoCambio) {
+        return { bloqueado: false };
+    }
+
+    const fecha60Dias = sumarDias(fechaUltimoCambio, 60);
+    const fecha2Meses = sumarMesesCompletosFecha(fechaUltimoCambio, 2);
+    const fechaPermitida = fecha60Dias <= fecha2Meses ? fecha60Dias : fecha2Meses;
+    const referencia = fechaReferencia instanceof Date
+        ? new Date(fechaReferencia.getFullYear(), fechaReferencia.getMonth(), fechaReferencia.getDate())
+        : crearFechaLocalDesdeValor(fechaReferencia);
+    const msPorDia = 1000 * 60 * 60 * 24;
+    const diasRestantes = referencia && referencia < fechaPermitida
+        ? Math.ceil((fechaPermitida - referencia) / msPorDia)
+        : 0;
+
+    return {
+        bloqueado: diasRestantes > 0,
+        fecha_ultimo_cambio: formatearFechaSql(fechaUltimoCambio),
+        fecha_proximo_cambio: formatearFechaSql(fechaPermitida),
+        dias_restantes: diasRestantes
+    };
+}
+
+async function consultarHistorialPaquetes(ejecutor, clienteId) {
+    const [rows] = await ejecutor.query(
+        `SELECT h.id, h.cliente_id, h.paquete_id, h.costo_mensual, h.fecha_inicio, h.fecha_fin,
+                h.usuario_id, h.fecha_registro,
+                p.nombre_paquete, p.velocidad_mbps, p.velocidad_garantizada_mbps, p.costo AS paquete_costo
+         FROM cliente_paquetes_historial h
+         JOIN paquetes p ON p.id = h.paquete_id
+         WHERE h.cliente_id = ?
+         ORDER BY h.fecha_inicio ASC, h.id ASC`,
+        [clienteId]
+    );
+
+    return rows;
+}
+
+function obtenerCostoMensualParaMes(historialPaquetes = [], anio, mesIndex, costoDefault = 0) {
+    const costoRespaldo = parseFloat(costoDefault) || 0;
+    const mesReferencia = new Date(anio, mesIndex, 1);
+    let periodoSeleccionado = null;
+
+    for (const periodo of historialPaquetes || []) {
+        const fechaInicio = crearFechaLocalDesdeValor(periodo.fecha_inicio);
+        const fechaFin = crearFechaLocalDesdeValor(periodo.fecha_fin);
+
+        if (!fechaInicio) continue;
+        if (fechaInicio <= mesReferencia && (!fechaFin || fechaFin >= mesReferencia)) {
+            periodoSeleccionado = periodo;
+        }
+    }
+
+    const costoHistorial = parseFloat(periodoSeleccionado?.costo_mensual);
+    return Number.isFinite(costoHistorial) && costoHistorial > 0
+        ? costoHistorial
+        : costoRespaldo;
+}
+
 function crearFechaHoraDesdeValor(valor) {
     if (!valor) return null;
     if (valor instanceof Date) {
@@ -605,11 +818,13 @@ function obtenerDiaPagoDesdeFechaInstalacion(fechaInstalacion) {
 
 function obtenerEtiquetaCargoServicio(tipoEvento) {
     if (tipoEvento === 'cambio_fecha_pago') return 'Cargo cambio fecha de pago';
+    if (tipoEvento === 'cambio_paquete') return 'Cargo cambio de paquete';
     return 'Cargo de servicio';
 }
 
 function obtenerClavePagoCargoServicio(tipoEvento) {
     if (tipoEvento === 'cambio_fecha_pago') return 'Cargo prorrateo';
+    if (tipoEvento === 'cambio_paquete') return 'Cargo paquete';
     return 'Cargo servicio';
 }
 
@@ -618,6 +833,38 @@ function calcularDiasProrrateoCambioPago(diaActual, diaNuevo) {
     const nuevo = Math.min(Math.max(parseInt(diaNuevo) || 1, 1), 30);
     if (actual === nuevo) return 0;
     return nuevo > actual ? nuevo - actual : (30 - actual) + nuevo;
+}
+
+function calcularDiasRestantesHastaCorte(fechaCambio, diaPago) {
+    const fecha = fechaCambio instanceof Date ? fechaCambio : crearFechaLocalDesdeValor(fechaCambio);
+    if (!fecha) return 0;
+    return calcularDiasProrrateoCambioPago(fecha.getDate(), diaPago);
+}
+
+function calcularProrrateoCambioPaquete(costoAnterior, costoNuevo, diasRestantes) {
+    const anterior = parseFloat(costoAnterior) || 0;
+    const nuevo = parseFloat(costoNuevo) || 0;
+    const dias = parseInt(diasRestantes, 10) || 0;
+    const diferenciaMensual = Number((nuevo - anterior).toFixed(2));
+    const montoProrrateo = Math.floor((Math.abs(diferenciaMensual) / 30) * dias);
+    let tipoProrrateo = 'sin_ajuste';
+    let montoAjuste = 0;
+
+    if (montoProrrateo > 0 && diferenciaMensual > 0) {
+        tipoProrrateo = 'cargo';
+        montoAjuste = -montoProrrateo;
+    } else if (montoProrrateo > 0 && diferenciaMensual < 0) {
+        tipoProrrateo = 'saldo_favor';
+        montoAjuste = montoProrrateo;
+    }
+
+    return {
+        diferencia_mensual: diferenciaMensual,
+        dias_restantes: dias,
+        monto_prorrateo: Number(montoProrrateo.toFixed(2)),
+        monto_ajuste: Number(montoAjuste.toFixed(2)),
+        tipo_prorrateo: tipoProrrateo
+    };
 }
 
 function extraerDiaCambioFechaPago(observaciones, etiqueta) {
@@ -828,13 +1075,13 @@ function obtenerAplicacionesAjuste(evento) {
 }
 
 function eventoGeneraSaldoFavor(evento) {
-    return ['falla_tecnica', 'decision_usuario'].includes(evento.tipo_evento)
+    return ['falla_tecnica', 'decision_usuario', 'cambio_paquete'].includes(evento.tipo_evento)
         && evento.estado === 'Finalizado'
         && (parseFloat(evento.monto_ajuste) || 0) > 0;
 }
 
 function eventoGeneraCargoServicio(evento) {
-    return evento.tipo_evento === 'cambio_fecha_pago'
+    return ['cambio_fecha_pago', 'cambio_paquete'].includes(evento.tipo_evento)
         && evento.estado === 'Finalizado'
         && (parseFloat(evento.monto_ajuste) || 0) < 0;
 }
@@ -915,7 +1162,7 @@ async function aplicarAjustesPendientes(ejecutor, clienteId, mesAplicado, montoA
          FROM bitacora_servicio b
          LEFT JOIN aplicaciones_ajustes_servicio a ON a.bitacora_id = b.id
          WHERE b.cliente_id = ?
-           AND b.tipo_evento IN ('falla_tecnica', 'decision_usuario')
+           AND b.tipo_evento IN ('falla_tecnica', 'decision_usuario', 'cambio_paquete')
            AND b.estado = 'Finalizado'
            AND b.monto_ajuste > 0
          GROUP BY b.id, b.monto_ajuste, b.fecha_fin, b.fecha_inicio
@@ -958,7 +1205,7 @@ async function aplicarCargosPendientes(ejecutor, clienteId, mesAplicado, montoAA
          FROM bitacora_servicio b
          LEFT JOIN aplicaciones_ajustes_servicio a ON a.bitacora_id = b.id
          WHERE b.cliente_id = ?
-           AND b.tipo_evento = 'cambio_fecha_pago'
+           AND b.tipo_evento IN ('cambio_fecha_pago', 'cambio_paquete')
            AND b.estado = 'Finalizado'
            AND b.monto_ajuste < 0
          GROUP BY b.id, b.tipo_evento, b.monto_ajuste, b.fecha_fin, b.fecha_inicio
@@ -1024,8 +1271,8 @@ function mesEstaVencido(anio, mesIndex, diaPago, hoy = new Date(), diasCompensad
     return hoy >= obtenerFechaVencimiento(anio, mesIndex, diaPago, diasCompensados);
 }
 
-function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
-    const costoMensual = parseFloat(cliente.costo_mensual) || 0;
+function calcularEstadoCuentaServidor(cliente, pagos, bitacora = [], historialPaquetes = []) {
+    const costoMensualActual = parseFloat(cliente.costo_mensual) || 0;
     const fechaInstalacion = crearFechaLocalDesdeValor(cliente.fecha_instalacion) || new Date();
     const diaPago = normalizarDiaPago(cliente.dia_pago) || obtenerDiaPagoDesdeFechaInstalacion(cliente.fecha_instalacion) || 1;
     const totalPagado = pagos.reduce((total, pago) => total + (parseFloat(pago.monto) || 0), 0);
@@ -1042,6 +1289,7 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
 
     const mesesAdeudados = [];
     const mesesVencidos = [];
+    let totalMensualTeorico = 0;
     let fechaProximoPago = null;
     let cursor = avanzarMesContable(fechaInstalacion.getFullYear(), fechaInstalacion.getMonth(), 1);
     const hoy = new Date();
@@ -1052,20 +1300,22 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
 
         if (!reglaPagoMes.omitir_mes && mesEstaVencido(cursor.anio, cursor.mesIndex, reglaPagoMes.dia_pago, hoy, 0)) {
             const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
+            const costoMensualMes = obtenerCostoMensualParaMes(historialPaquetes, cursor.anio, cursor.mesIndex, costoMensualActual);
             const pagadoEnMes = pagosPorMes[etiquetaMes] || 0;
             const ajusteAplicadoEnMes = ajustesServicio.aplicado_por_mes[etiquetaMes] || 0;
-            const pendienteSinAjuste = Math.max(costoMensual - pagadoEnMes - ajusteAplicadoEnMes, 0);
+            const pendienteSinAjuste = Math.max(costoMensualMes - pagadoEnMes - ajusteAplicadoEnMes, 0);
             const ajustePendienteAplicable = Number(Math.min(saldoAjustePendiente, pendienteSinAjuste).toFixed(2));
             const pendiente = Number(Math.max(pendienteSinAjuste - ajustePendienteAplicable, 0).toFixed(2));
 
             mesesVencidos.push(etiquetaMes);
+            totalMensualTeorico = Number((totalMensualTeorico + costoMensualMes).toFixed(2));
             saldoAjustePendiente = Number(Math.max(saldoAjustePendiente - ajustePendienteAplicable, 0).toFixed(2));
 
             if (pendienteSinAjuste > 0) {
                 mesesAdeudados.push({
                     mes: etiquetaMes,
-                    monto_esperado: costoMensual,
-                    monto_cubierto: Math.min(pagadoEnMes + ajusteAplicadoEnMes, costoMensual),
+                    monto_esperado: costoMensualMes,
+                    monto_cubierto: Math.min(pagadoEnMes + ajusteAplicadoEnMes, costoMensualMes),
                     monto_ajuste_aplicado: ajusteAplicadoEnMes,
                     monto_ajuste_pendiente: ajustePendienteAplicable,
                     pendiente_sin_ajuste: Number(pendienteSinAjuste.toFixed(2)),
@@ -1101,14 +1351,14 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = []) {
 
     const mesesTranscurridos = mesesVencidos.length;
     const montoAjustes = resumenServicio.monto_ajustes;
-    const totalTeorico = Math.max((mesesTranscurridos * costoMensual) - ajustesServicio.total_aplicado + cargosServicio.total_generado, 0);
+    const totalTeorico = Math.max(totalMensualTeorico - ajustesServicio.total_aplicado + cargosServicio.total_generado, 0);
     const adeudoMensual = mesesAdeudados
         .filter(mes => mes.tipo !== 'cargo_servicio')
         .reduce((total, mes) => total + mes.pendiente, 0);
     const adeudoCargos = cargosServicio.pendiente;
     const adeudoActual = Number((adeudoMensual + adeudoCargos).toFixed(2));
     const saldoFavor = Number((Math.max(totalPagado - totalTeorico, 0) + saldoAjustePendiente).toFixed(2));
-    const mesesAdeudoDecimal = costoMensual > 0 ? adeudoActual / costoMensual : 0;
+    const mesesAdeudoDecimal = costoMensualActual > 0 ? adeudoActual / costoMensualActual : 0;
 
     return {
         total_pagado_historico: totalPagado,
@@ -1144,9 +1394,15 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
         await finalizarAusenciasProgramadasVencidas(db, clienteId);
 
         const [clienteRows] = await db.query(
-            `SELECT c.*, l.nombre AS localidad_nombre
+            `SELECT c.*, l.nombre AS localidad_nombre,
+                    paq.nombre_paquete AS paquete_nombre,
+                    paq.velocidad_mbps AS paquete_velocidad_mbps,
+                    paq.velocidad_garantizada_mbps AS paquete_velocidad_garantizada_mbps,
+                    paq.costo AS paquete_costo,
+                    COALESCE(paq.nombre_paquete, c.paquete) AS paquete_display
              FROM clientes c
              LEFT JOIN localidades l ON c.localidad_id = l.id
+             LEFT JOIN paquetes paq ON paq.id = c.paquete_id
              WHERE c.id = ?`,
             [clienteId]
         );
@@ -1187,18 +1443,282 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
         );
 
         const bitacora = await consultarBitacoraServicio(db, clienteId);
+        const historialPaquetes = await consultarHistorialPaquetes(db, clienteId);
 
-        const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora);
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora, historialPaquetes);
 
         res.json({
             cliente: clienteRows[0],
             historial_pagos: pagos,
+            historial_paquetes: historialPaquetes,
             bitacora_servicio: bitacora,
             estado_cuenta: estadoCuenta
         });
     } catch (error) {
         console.error('Error al calcular estado de cuenta completo:', error);
         res.status(500).json({ error: 'Error al calcular estado de cuenta del cliente' });
+    }
+});
+
+app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
+    const clienteId = req.params.id;
+    const { paquete_id, costo_mensual, fecha_inicio, usuario_id, rol_usuario } = req.body;
+    const connection = await db.getConnection();
+
+    try {
+        const hoy = new Date();
+        const hoyLocal = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+        if (parseInt(rol_usuario, 10) !== 2) {
+            return res.status(403).json({
+                success: false,
+                error: 'Acceso denegado: solo el administrador puede cambiar paquetes.'
+            });
+        }
+
+        const paqueteSeleccionado = await obtenerPaqueteActivoPorId(paquete_id, connection);
+        if (!paqueteSeleccionado) {
+            return res.status(400).json({ success: false, error: 'Selecciona un paquete valido.' });
+        }
+
+        const costoMensual = costo_mensual === undefined || costo_mensual === null || costo_mensual === ''
+            ? parseFloat(paqueteSeleccionado.costo)
+            : parseFloat(costo_mensual);
+
+        if (!Number.isFinite(costoMensual) || costoMensual <= 0) {
+            return res.status(400).json({ success: false, error: 'El costo mensual no es valido.' });
+        }
+
+        const fechaInicio = crearFechaLocalDesdeValor(fecha_inicio) || hoyLocal;
+        if (!fechaInicio) {
+            return res.status(400).json({ success: false, error: 'La fecha de inicio no es valida.' });
+        }
+
+        if (formatearFechaSql(fechaInicio) !== formatearFechaSql(hoyLocal)) {
+            return res.status(400).json({ success: false, error: 'El cambio de paquete se aplica desde hoy.' });
+        }
+
+        await connection.beginTransaction();
+
+        const [clienteRows] = await connection.query(
+            `SELECT id, paquete_id, paquete, costo_mensual, fecha_instalacion, dia_pago
+             FROM clientes
+             WHERE id = ?
+             FOR UPDATE`,
+            [clienteId]
+        );
+
+        if (clienteRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+        }
+
+        const cliente = clienteRows[0];
+        const fechaInstalacion = crearFechaLocalDesdeValor(cliente.fecha_instalacion);
+        if (fechaInstalacion && fechaInicio < fechaInstalacion) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'La fecha de inicio no puede ser anterior a la instalacion.'
+            });
+        }
+
+        const [pagos] = await connection.query(
+            'SELECT mes_pagado, monto FROM pagos WHERE cliente_id = ? AND estado_corte < 3',
+            [clienteId]
+        );
+        const bitacora = await consultarBitacoraServicio(connection, clienteId);
+        const historialPaquetesCuenta = await consultarHistorialPaquetes(connection, clienteId);
+        const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagos, bitacora, historialPaquetesCuenta);
+        const adeudoActual = parseFloat(estadoCuenta.adeudo_actual) || 0;
+        if (adeudoActual > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: `Solo se puede cambiar de paquete cuando el cliente no tiene adeudo ni saldo a favor. Adeudo actual: $${adeudoActual.toFixed(2)}.`,
+                adeudo_actual: adeudoActual
+            });
+        }
+
+        const saldoFavor = parseFloat(estadoCuenta.saldo_favor) || 0;
+        if (saldoFavor > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: `Solo se puede cambiar de paquete cuando el cliente no tiene adeudo ni saldo a favor. Saldo a favor actual: $${saldoFavor.toFixed(2)}.`,
+                saldo_favor: saldoFavor
+            });
+        }
+
+        const restriccionCambio = obtenerRestriccionCambioPaquete(historialPaquetesCuenta, hoyLocal);
+        if (restriccionCambio.bloqueado) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: `El cliente ya tuvo un cambio de paquete reciente. Podra cambiar nuevamente a partir del ${restriccionCambio.fecha_proximo_cambio}.`,
+                fecha_ultimo_cambio: restriccionCambio.fecha_ultimo_cambio,
+                fecha_proximo_cambio: restriccionCambio.fecha_proximo_cambio,
+                dias_restantes: restriccionCambio.dias_restantes
+            });
+        }
+
+        const [historialActivoRows] = await connection.query(
+            `SELECT h.id, h.paquete_id, h.costo_mensual, h.fecha_inicio,
+                    p.nombre_paquete, p.velocidad_mbps
+             FROM cliente_paquetes_historial h
+             JOIN paquetes p ON p.id = h.paquete_id
+             WHERE h.cliente_id = ? AND h.fecha_fin IS NULL
+             ORDER BY h.fecha_inicio DESC, h.id DESC
+             LIMIT 1
+             FOR UPDATE`,
+            [clienteId]
+        );
+
+        let historialActivo = historialActivoRows[0] || null;
+        if (!historialActivo && cliente.paquete_id) {
+            const fechaInicioInicial = fechaInstalacion || hoyLocal;
+            const [insertInicial] = await connection.query(
+                `INSERT INTO cliente_paquetes_historial
+                    (cliente_id, paquete_id, costo_mensual, fecha_inicio, fecha_fin, usuario_id)
+                 VALUES (?, ?, ?, ?, NULL, NULL)`,
+                [clienteId, cliente.paquete_id, cliente.costo_mensual, formatearFechaSql(fechaInicioInicial)]
+            );
+
+            historialActivo = {
+                id: insertInicial.insertId,
+                paquete_id: cliente.paquete_id,
+                costo_mensual: cliente.costo_mensual,
+                fecha_inicio: formatearFechaSql(fechaInicioInicial),
+                nombre_paquete: cliente.paquete || 'Paquete anterior'
+            };
+        }
+
+        if (!historialActivo) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'El cliente no tiene paquete actual para cerrar historial.'
+            });
+        }
+
+        const mismoPaquete = parseInt(historialActivo.paquete_id, 10) === parseInt(paqueteSeleccionado.id, 10);
+        const mismoCosto = Number(parseFloat(historialActivo.costo_mensual).toFixed(2)) === Number(costoMensual.toFixed(2));
+        if (mismoPaquete && mismoCosto) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'El cliente ya tiene ese paquete y costo.' });
+        }
+
+        const fechaInicioActivo = crearFechaLocalDesdeValor(historialActivo.fecha_inicio);
+        if (fechaInicioActivo && fechaInicio < fechaInicioActivo) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'La fecha de inicio no puede ser anterior al inicio del paquete actual.'
+            });
+        }
+
+        const fechaFinAnterior = fechaInicioActivo && formatearFechaSql(fechaInicioActivo) === formatearFechaSql(fechaInicio)
+            ? fechaInicio
+            : restarDiasFecha(fechaInicio, 1);
+        const diaPago = normalizarDiaPago(cliente.dia_pago) || obtenerDiaPagoDesdeFechaInstalacion(cliente.fecha_instalacion) || 1;
+        const costoAnterior = parseFloat(historialActivo.costo_mensual) || parseFloat(cliente.costo_mensual) || 0;
+        const diasRestantes = calcularDiasRestantesHastaCorte(fechaInicio, diaPago);
+        const prorrateo = calcularProrrateoCambioPaquete(costoAnterior, costoMensual, diasRestantes);
+        const resultadoProrrateo = prorrateo.tipo_prorrateo === 'cargo'
+            ? 'Cargo por prorrateo'
+            : prorrateo.tipo_prorrateo === 'saldo_favor'
+                ? 'Saldo a favor'
+                : 'Sin prorrateo';
+        const observacionCambioPaquete = [
+            `Paquete anterior: ${historialActivo.nombre_paquete || cliente.paquete || 'N/A'}`,
+            `Paquete nuevo: ${paqueteSeleccionado.nombre_paquete}`,
+            `Costo anterior: $${costoAnterior.toFixed(2)}`,
+            `Costo nuevo: $${costoMensual.toFixed(2)}`,
+            `Dia de corte: ${diaPago}`,
+            `Dias prorrateados: ${prorrateo.dias_restantes}`,
+            `Diferencia mensual: $${prorrateo.diferencia_mensual.toFixed(2)}`,
+            `Resultado: ${resultadoProrrateo}`,
+            `Monto prorrateo: $${prorrateo.monto_prorrateo.toFixed(2)}`,
+            'Validacion de velocidad: https://wifiman.com/'
+        ].join(' | ');
+
+        await connection.query(
+            'UPDATE cliente_paquetes_historial SET fecha_fin = ? WHERE id = ?',
+            [formatearFechaSql(fechaFinAnterior), historialActivo.id]
+        );
+
+        await connection.query(
+            `INSERT INTO cliente_paquetes_historial
+                (cliente_id, paquete_id, costo_mensual, fecha_inicio, fecha_fin, usuario_id)
+             VALUES (?, ?, ?, ?, NULL, ?)`,
+            [
+                clienteId,
+                paqueteSeleccionado.id,
+                costoMensual,
+                formatearFechaSql(fechaInicio),
+                parseInt(usuario_id, 10) || null
+            ]
+        );
+
+        await connection.query(
+            `UPDATE clientes
+             SET paquete_id = ?, paquete = ?, costo_mensual = ?
+             WHERE id = ?`,
+            [paqueteSeleccionado.id, paqueteSeleccionado.nombre_paquete, costoMensual, clienteId]
+        );
+
+        const columnaObservaciones = await obtenerColumnaObservacionesBitacora(connection);
+        const camposObservacion = columnaObservaciones ? `, ${escaparIdentificadorMysql(columnaObservaciones)}` : '';
+        const valoresObservacion = columnaObservaciones ? ', ?' : '';
+        const paramsBitacora = [
+            clienteId,
+            prorrateo.dias_restantes,
+            prorrateo.monto_ajuste
+        ];
+        if (columnaObservaciones) paramsBitacora.push(observacionCambioPaquete);
+
+        await connection.query(
+            `INSERT INTO bitacora_servicio
+                (cliente_id, tipo_evento, fecha_inicio, fecha_fin, dias_compensados, monto_ajuste, estado${camposObservacion})
+             VALUES (?, 'cambio_paquete', NOW(), NOW(), ?, ?, 'Finalizado'${valoresObservacion})`,
+            paramsBitacora
+        );
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: 'Paquete actualizado correctamente.',
+            paquete_anterior: {
+                id: historialActivo.paquete_id,
+                nombre_paquete: historialActivo.nombre_paquete || cliente.paquete || 'Paquete anterior',
+                costo_mensual: costoAnterior
+            },
+            paquete: {
+                id: paqueteSeleccionado.id,
+                nombre_paquete: paqueteSeleccionado.nombre_paquete,
+                costo_mensual: costoMensual,
+                fecha_inicio: formatearFechaSql(fechaInicio)
+            },
+            fecha_inicio: formatearFechaSql(fechaInicio),
+            dia_pago: diaPago,
+            dias_prorrateo: prorrateo.dias_restantes,
+            diferencia_mensual: prorrateo.diferencia_mensual,
+            tipo_prorrateo: prorrateo.tipo_prorrateo,
+            monto_prorrateo: prorrateo.monto_prorrateo,
+            monto_ajuste: prorrateo.monto_ajuste,
+            observaciones_guardadas: observacionCambioPaquete,
+            validacion_velocidad_url: 'https://wifiman.com/'
+        });
+    } catch (error) {
+        try {
+            await connection.rollback();
+        } catch (rollbackError) {
+            console.error('Error al revertir cambio de paquete:', rollbackError);
+        }
+        console.error('Error al cambiar paquete:', error);
+        res.status(500).json({ success: false, error: error.message });
+    } finally {
+        connection.release();
     }
 });
 
@@ -1211,7 +1731,7 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
         await finalizarAusenciasProgramadasVencidas(db, clienteId);
 
         if (!tiposValidos.includes(tipo_evento)) {
-            return res.status(400).json({ success: false, error: 'Tipo de suspensi�n no valido.' });
+            return res.status(400).json({ success: false, error: 'Tipo de suspension no valido.' });
         }
 
         const [activos] = await db.query(
@@ -1220,7 +1740,7 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
         );
 
         if (activos.length > 0 && tipo_evento !== 'falla_tecnica') {
-            return res.status(400).json({ success: false, error: 'El cliente ya tiene una suspensi�n activa.' });
+            return res.status(400).json({ success: false, error: 'El cliente ya tiene una suspension activa.' });
         }
 
         if (tipo_evento === 'falta_pago') {
@@ -1238,7 +1758,8 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                 [clienteId]
             );
             const bitacora = await consultarBitacoraServicio(db, clienteId);
-            const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora);
+            const historialPaquetes = await consultarHistorialPaquetes(db, clienteId);
+            const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora, historialPaquetes);
 
             if ((parseFloat(estadoCuenta.adeudo_actual) || 0) <= 0) {
                 return res.status(400).json({
@@ -1300,7 +1821,8 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                     [clienteId]
                 );
                 const bitacora = await consultarBitacoraServicio(connection, clienteId);
-                const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagos, bitacora);
+                const historialPaquetes = await consultarHistorialPaquetes(connection, clienteId);
+                const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagos, bitacora, historialPaquetes);
 
                 if ((parseFloat(estadoCuenta.adeudo_actual) || 0) > 0) {
                     await connection.rollback();
@@ -1437,6 +1959,7 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                 [clienteId]
             );
             const bitacora = await consultarBitacoraServicio(db, clienteId);
+            const historialPaquetes = await consultarHistorialPaquetes(db, clienteId);
             const estadoCuenta = calcularEstadoCuentaServidor(
                 {
                     costo_mensual: clienteRows[0].costo_mensual,
@@ -1444,7 +1967,8 @@ app.post('/api/clientes/:id/suspender-servicio', async (req, res) => {
                     dia_pago: clienteRows[0].dia_pago
                 },
                 pagos,
-                bitacora
+                bitacora,
+                historialPaquetes
             );
 
             if ((parseFloat(estadoCuenta.adeudo_actual) || 0) > 0) {
@@ -1520,7 +2044,7 @@ app.post('/api/clientes/:id/reactivar-servicio', async (req, res) => {
         );
 
         if (activos.length === 0) {
-            return res.status(404).json({ success: false, error: 'No hay suspensi�n activa para este cliente.' });
+            return res.status(404).json({ success: false, error: 'No hay suspension activa para este cliente.' });
         }
 
         const evento = activos[0];
@@ -1597,7 +2121,7 @@ app.post('/api/clientes/:id/dar-baja', async (req, res) => {
             await connection.rollback();
             return res.status(400).json({
                 success: false,
-                error: 'Solo se puede dar de baja desde una suspensi�n activa por falta de pago.'
+                error: 'Solo se puede dar de baja desde una suspension activa por falta de pago.'
             });
         }
 
@@ -1661,7 +2185,7 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
 
         if (activos.length === 0) {
             await connection.rollback();
-            return res.status(400).json({ success: false, error: 'No hay suspensi�n activa por falta de pago.' });
+            return res.status(400).json({ success: false, error: 'No hay suspension activa por falta de pago.' });
         }
 
         const [pagosExistentes] = await connection.query(
@@ -1673,7 +2197,8 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
 
         const clienteData = clienteRows[0];
         const costoMensual = parseFloat(clienteData.costo_mensual) || 0;
-        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora);
+        const historialPaquetes = await consultarHistorialPaquetes(connection, clienteId);
+        const estadoCuenta = calcularEstadoCuentaServidor(clienteData, pagosExistentes, bitacora, historialPaquetes);
         const cambiosFechaPago = obtenerCambiosFechaPago(bitacora);
         const minimoReactivacion = parseFloat(estadoCuenta.adeudo_actual) || 0;
 
@@ -1693,12 +2218,12 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
         let saldoRestante = montoTotalRecibido;
         let ajustePendienteDisponible = parseFloat(estadoCuenta.monto_ajustes_pendientes) || 0;
         const registros = [];
-        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0) => {
+        const aplicarPagoMes = async (etiquetaMes, pendienteMes, ajusteAAplicar = 0, montoEsperadoMes = costoMensual) => {
             const pagadoAntes = historial[etiquetaMes] || 0;
             const montoAAplicar = Math.min(saldoRestante, pendienteMes);
             let nuevoTipo = (montoAAplicar >= pendienteMes && pagadoAntes === 0) ? 'completo' : 'abono';
 
-            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= costoMensual) nuevoTipo = 'completo';
+            if (pagadoAntes + montoAAplicar + ajusteAAplicar >= montoEsperadoMes) nuevoTipo = 'completo';
 
             const [pagoResult] = await connection.query(
                 'INSERT INTO pagos (cliente_id, usuario_id, monto, mes_pagado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
@@ -1770,7 +2295,8 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
             await aplicarPagoMes(
                 mesAdeudado.mes,
                 mesAdeudado.pendiente,
-                ajusteAAplicar
+                ajusteAAplicar,
+                parseFloat(mesAdeudado.monto_esperado) || costoMensual
             );
         }
 
@@ -1809,8 +2335,9 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
 
             const etiquetaMes = obtenerEtiquetaMes(cursor.anio, cursor.mesIndex);
             const pagadoEnEsteMes = historial[etiquetaMes] || 0;
-            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMensual - pagadoEnEsteMes, 0));
-            const pendienteMes = Math.max(costoMensual - pagadoEnEsteMes - ajusteAAplicar, 0);
+            const costoMes = obtenerCostoMensualParaMes(historialPaquetes, cursor.anio, cursor.mesIndex, costoMensual);
+            const ajusteAAplicar = Math.min(ajustePendienteDisponible, Math.max(costoMes - pagadoEnEsteMes, 0));
+            const pendienteMes = Math.max(costoMes - pagadoEnEsteMes - ajusteAAplicar, 0);
 
             if (pendienteMes <= 0 && ajusteAAplicar > 0) {
                 const ajusteAplicado = await aplicarAjustesPendientes(db, clienteId, etiquetaMes, ajusteAAplicar);
@@ -1826,7 +2353,7 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
             }
 
             if (pendienteMes > 0) {
-                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar);
+                await aplicarPagoMes(etiquetaMes, pendienteMes, ajusteAAplicar, costoMes);
             }
 
             cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
@@ -2459,6 +2986,120 @@ app.get('/api/localidades', async (req, res) => {
 });
 
 
+
+app.get('/api/paquetes', async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            `SELECT id, nombre_paquete, velocidad_mbps, velocidad_garantizada_mbps, costo
+             FROM paquetes
+             WHERE activo = 1
+             ORDER BY costo ASC, velocidad_mbps ASC`
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error("Error al obtener paquetes:", error);
+        res.status(500).json({ error: "Error al cargar catalogo de paquetes" });
+    }
+});
+
+app.get('/api/admin/paquetes', async (req, res) => {
+    if (!validarAdministradorRequest(req, res)) return;
+
+    try {
+        const [rows] = await db.query(
+            `SELECT id, nombre_paquete, velocidad_mbps, velocidad_garantizada_mbps, costo,
+                    activo, fecha_creacion, fecha_actualizacion
+             FROM paquetes
+             ORDER BY activo DESC, costo ASC, velocidad_mbps ASC, nombre_paquete ASC`
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error("Error al obtener paquetes administrativos:", error);
+        res.status(500).json({ success: false, error: "Error al cargar catalogo administrativo de paquetes" });
+    }
+});
+
+app.post('/api/admin/paquetes', async (req, res) => {
+    if (!validarAdministradorRequest(req, res)) return;
+
+    const { datos, errores } = normalizarDatosPaquete(req.body);
+    if (errores.length > 0) {
+        return res.status(400).json({ success: false, error: errores.join(' ') });
+    }
+
+    try {
+        const [result] = await db.query(
+            `INSERT INTO paquetes
+                (nombre_paquete, velocidad_mbps, velocidad_garantizada_mbps, costo, activo)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+                datos.nombre_paquete,
+                datos.velocidad_mbps,
+                datos.velocidad_garantizada_mbps,
+                datos.costo,
+                datos.activo
+            ]
+        );
+
+        res.json({
+            success: true,
+            message: 'Paquete creado correctamente.',
+            id: result.insertId
+        });
+    } catch (error) {
+        console.error("Error al crear paquete:", error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: 'Ya existe un paquete con ese nombre.' });
+        }
+        res.status(500).json({ success: false, error: "Error al crear paquete: " + error.message });
+    }
+});
+
+app.put('/api/admin/paquetes/:id', async (req, res) => {
+    if (!validarAdministradorRequest(req, res)) return;
+
+    const paqueteId = parseInt(req.params.id, 10);
+    if (!paqueteId) {
+        return res.status(400).json({ success: false, error: 'Paquete no valido.' });
+    }
+
+    const { datos, errores } = normalizarDatosPaquete(req.body);
+    if (errores.length > 0) {
+        return res.status(400).json({ success: false, error: errores.join(' ') });
+    }
+
+    try {
+        const [result] = await db.query(
+            `UPDATE paquetes
+             SET nombre_paquete = ?,
+                 velocidad_mbps = ?,
+                 velocidad_garantizada_mbps = ?,
+                 costo = ?,
+                 activo = ?
+             WHERE id = ?`,
+            [
+                datos.nombre_paquete,
+                datos.velocidad_mbps,
+                datos.velocidad_garantizada_mbps,
+                datos.costo,
+                datos.activo,
+                paqueteId
+            ]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Paquete no encontrado.' });
+        }
+
+        res.json({ success: true, message: 'Paquete actualizado correctamente.' });
+    } catch (error) {
+        console.error("Error al actualizar paquete:", error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: 'Ya existe un paquete con ese nombre.' });
+        }
+        res.status(500).json({ success: false, error: "Error al actualizar paquete: " + error.message });
+    }
+});
 
 app.post('/api/cancelar-pago/:id', async (req, res) => {
     const idPago = req.params.id;

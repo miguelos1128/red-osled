@@ -1434,15 +1434,19 @@
             preview.textContent = '';
 
             const adeudoActual = parseFloat(estadoCuentaDetalleActual?.adeudo_actual) || 0;
-            const bloquearPorAdeudo = adeudoActual > 0;
-            select.disabled = bloquearPorAdeudo;
-            fechaInput.disabled = bloquearPorAdeudo;
-            costoInput.disabled = bloquearPorAdeudo;
-            if (boton) boton.disabled = bloquearPorAdeudo;
+            const saldoFavor = parseFloat(estadoCuentaDetalleActual?.saldo_favor) || 0;
+            const bloquearPorCuenta = adeudoActual > 0 || saldoFavor > 0;
+            select.disabled = bloquearPorCuenta;
+            fechaInput.disabled = bloquearPorCuenta;
+            costoInput.disabled = bloquearPorCuenta;
+            if (boton) boton.disabled = bloquearPorCuenta;
 
-            if (bloquearPorAdeudo) {
+            if (bloquearPorCuenta) {
                 const adeudoTexto = adeudoActual.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                preview.textContent = `Cambio bloqueado: el cliente tiene adeudo pendiente de $${adeudoTexto}.`;
+                const saldoTexto = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                preview.textContent = adeudoActual > 0
+                    ? `Cambio bloqueado: el cliente tiene adeudo pendiente de $${adeudoTexto}.`
+                    : `Cambio bloqueado: el cliente tiene saldo a favor de $${saldoTexto}.`;
                 preview.classList.add('bloqueo');
                 preview.classList.remove('hidden');
             }
@@ -1509,7 +1513,14 @@
             const adeudoActual = parseFloat(estadoCuentaDetalleActual?.adeudo_actual) || 0;
             if (adeudoActual > 0) {
                 const adeudoTexto = adeudoActual.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                alert(`Solo puedes cambiar de paquete cuando el cliente esta al corriente. Adeudo actual: $${adeudoTexto}.`);
+                alert(`Solo puedes cambiar de paquete cuando el cliente no tiene adeudo ni saldo a favor. Adeudo actual: $${adeudoTexto}.`);
+                return;
+            }
+
+            const saldoFavor = parseFloat(estadoCuentaDetalleActual?.saldo_favor) || 0;
+            if (saldoFavor > 0) {
+                const saldoTexto = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                alert(`Solo puedes cambiar de paquete cuando el cliente no tiene adeudo ni saldo a favor. Saldo a favor actual: $${saldoTexto}.`);
                 return;
             }
 
@@ -3747,6 +3758,7 @@ ${linkVelocidad}
         function formatearMesPagadoVisible(mesPagado) {
             const texto = String(mesPagado || '').trim();
             if (texto === 'Cargo prorrateo') return 'Cargo cambio fecha de pago';
+            if (texto === 'Cargo paquete' || texto === 'Cargo prorrateo cambio paquete') return 'Cargo cambio de paquete';
             return texto || '-';
         }
 

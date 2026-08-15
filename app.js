@@ -777,7 +777,7 @@ function obtenerEtiquetaCargoServicio(tipoEvento) {
 
 function obtenerClavePagoCargoServicio(tipoEvento) {
     if (tipoEvento === 'cambio_fecha_pago') return 'Cargo prorrateo';
-    if (tipoEvento === 'cambio_paquete') return 'Cargo prorrateo cambio paquete';
+    if (tipoEvento === 'cambio_paquete') return 'Cargo paquete';
     return 'Cargo servicio';
 }
 
@@ -1487,8 +1487,18 @@ app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
             await connection.rollback();
             return res.status(400).json({
                 success: false,
-                error: `Solo se puede cambiar de paquete cuando el cliente esta al corriente. Adeudo actual: $${adeudoActual.toFixed(2)}.`,
+                error: `Solo se puede cambiar de paquete cuando el cliente no tiene adeudo ni saldo a favor. Adeudo actual: $${adeudoActual.toFixed(2)}.`,
                 adeudo_actual: adeudoActual
+            });
+        }
+
+        const saldoFavor = parseFloat(estadoCuenta.saldo_favor) || 0;
+        if (saldoFavor > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: `Solo se puede cambiar de paquete cuando el cliente no tiene adeudo ni saldo a favor. Saldo a favor actual: $${saldoFavor.toFixed(2)}.`,
+                saldo_favor: saldoFavor
             });
         }
 

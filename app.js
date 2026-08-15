@@ -516,6 +516,77 @@ app.get('/api/buscar-clientes', async (req, res) => {
 
 
 // Ruta para obtener el historial de los últimos 6 pagos de un cliente
+app.get('/api/clientes/:id/ficha-tecnica', async (req, res) => {
+    try {
+        const clienteId = parseInt(req.params.id, 10);
+        const usuarioId = parseInt(req.query.usuario_id, 10);
+
+        if (!clienteId) {
+            return res.status(400).json({ success: false, error: 'Cliente no valido.' });
+        }
+
+        if (!usuarioId) {
+            return res.status(400).json({ success: false, error: 'Usuario no valido.' });
+        }
+
+        const [usuarios] = await db.query(
+            'SELECT rol_id FROM usuarios WHERE id = ? LIMIT 1',
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            return res.status(403).json({ success: false, error: 'Usuario no autorizado.' });
+        }
+
+        const esAdministrador = parseInt(usuarios[0].rol_id, 10) === 2;
+
+        let query = `
+            SELECT
+                c.nombre_completo,
+                c.telefono,
+                c.correo,
+                c.direccion,
+                c.fecha_instalacion,
+                c.dia_pago,
+                c.codigo_cliente,
+                c.direccion_ip,
+                l.nombre AS localidad_nombre,
+                COALESCE(paq.nombre_paquete, c.paquete) AS paquete_nombre,
+                paq.velocidad_mbps AS paquete_velocidad_mbps
+            FROM clientes c
+            LEFT JOIN localidades l ON l.id = c.localidad_id
+            LEFT JOIN paquetes paq ON paq.id = c.paquete_id
+            WHERE c.id = ?
+        `;
+        const params = [clienteId];
+
+        if (!esAdministrador) {
+            query += `
+                AND EXISTS (
+                    SELECT 1
+                    FROM usuario_localidad ul
+                    WHERE ul.usuario_id = ?
+                      AND ul.localidad_id = c.localidad_id
+                )
+            `;
+            params.push(usuarioId);
+        }
+
+        query += ' LIMIT 1';
+
+        const [rows] = await db.query(query, params);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Cliente no encontrado o sin permiso para verlo.' });
+        }
+
+        res.json({ success: true, cliente: rows[0] });
+    } catch (error) {
+        console.error("Error al obtener ficha tecnica del cliente:", error);
+        res.status(500).json({ success: false, error: "Error al cargar ficha tecnica del cliente" });
+    }
+});
+
 app.get('/api/clientes/:id/historial-pagos', async (req, res) => {
     const clienteId = req.params.id;
 

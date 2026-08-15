@@ -390,7 +390,10 @@
                             <h4 id="res-nombre"></h4>
                             <span id="res-ip" class="badge-ip"></span>
                         </div>
-                        <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
+                        <div class="resultado-header-acciones">
+                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()">Detalles</button>
+                            <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
+                        </div>
                     </div>
                     <div class="card-body">
                         <p><strong>Fecha de pago:</strong> <span id="res-dia"></span></p>
@@ -734,6 +737,66 @@
             <div class="modal-admin-botones">
                 <button class="button btn-canccelar-admin" onclick="document.getElementById('modal-admin').classList.add('hidden')">Cancelar</button>
                 <button class="button btn-autorizar-admin" onclick="ejecutarCorteFinal()">Autorizar y Generar PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-detalles-cliente-cobrador" class="modal-overlay hidden" onclick="cerrarModalPorFondo(event, 'modal-detalles-cliente-cobrador', cerrarModalDetallesClienteCobrador)">
+        <div class="modal-content modal-content-cobrador">
+            <div class="modal-cabecera">
+                <div>
+                    <h2 id="detalle-cobrador-nombre">Ficha técnica</h2>
+                </div>
+                <span class="cerrar-x-modal" onclick="cerrarModalDetallesClienteCobrador()">&times;</span>
+            </div>
+
+            <div class="modal-body">
+                <div class="seccion-detalle">
+                    <h3>📌 Ficha Técnica</h3>
+                    <div class="grid-info-cliente grid-info-cliente-cobrador">
+                        <div class="info-grupo">
+                            <label>Dirección Física</label>
+                            <p id="detalle-cobrador-direccion">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Localidad / Paquete</label>
+                            <p id="detalle-cobrador-localidad-paquete">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Fecha de Instalación</label>
+                            <p id="detalle-cobrador-fecha-inst">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Día de Pago</label>
+                            <p id="detalle-cobrador-dia-pago" class="resaltado-azul">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Número de Cliente</label>
+                            <p id="detalle-cobrador-codigo-cliente" class="resaltado-azul">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Dirección IP</label>
+                            <p id="detalle-cobrador-ip" class="resaltado-tecnico">-</p>
+                        </div>
+
+                        <div class="info-grupo">
+                            <label>Correo Electrónico</label>
+                            <p id="detalle-cobrador-correo">-</p>
+                        </div>
+                    </div>
+
+                    <div class="acciones-contacto">
+                        <a id="btn-whatsapp-cobrador" href="#" target="_blank" class="btn-contacto whatsapp">
+                            💬 Enviar WhatsApp al <span id="detalle-cobrador-telefono"></span>
+                        </a>
+                        <div id="editar-box-cobrador"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2827,10 +2890,82 @@
             boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Seleccionar Mes a Pagar';
         }
 
+        function abrirDetallesClienteCobradorSeleccionado() {
+            if (!clienteSeleccionado?.id) {
+                alert('Selecciona un cliente primero.');
+                return;
+            }
+
+            abrirDetallesClienteCobrador(clienteSeleccionado.id);
+        }
+
+        function formatearPaqueteFichaCobrador(cliente) {
+            const nombre = cliente?.paquete_nombre || 'Sin paquete';
+            const velocidad = formatearNumeroPaquete(cliente?.paquete_velocidad_mbps);
+            return velocidad ? `${nombre} | ${velocidad} Mbps` : nombre;
+        }
+
+        async function abrirDetallesClienteCobrador(idCliente) {
+            const modal = document.getElementById('modal-detalles-cliente-cobrador');
+            modal.classList.remove('hidden');
+            document.getElementById('detalle-cobrador-nombre').textContent = 'Cargando ficha...';
+
+            try {
+                const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
+                const url = `${urlBase}/api/clientes/${idCliente}/ficha-tecnica?usuario_id=${usuarioActual.id}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo cargar la ficha técnica.');
+                }
+
+                const cliente = data.cliente;
+                const fechaInstalacion = crearFechaLocalDesdeValorVista(cliente.fecha_instalacion);
+                const tel = cliente.telefono || '';
+                const telefonoWhatsapp = obtenerTelefonoWhatsappCliente(cliente);
+
+                document.getElementById('detalle-cobrador-nombre').textContent = cliente.nombre_completo || 'Ficha técnica';
+                document.getElementById('detalle-cobrador-direccion').textContent = cliente.direccion || 'Sin dirección';
+                document.getElementById('detalle-cobrador-localidad-paquete').textContent = `${cliente.localidad_nombre || 'Sin localidad'} | Paquete: ${formatearPaqueteFichaCobrador(cliente)}`;
+                document.getElementById('detalle-cobrador-fecha-inst').textContent = fechaInstalacion ? fechaInstalacion.toLocaleDateString('es-MX') : 'N/A';
+                document.getElementById('detalle-cobrador-dia-pago').textContent = cliente.dia_pago || 'No asignado';
+                document.getElementById('detalle-cobrador-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin código';
+                document.getElementById('detalle-cobrador-ip').textContent = cliente.direccion_ip || 'No asignada';
+                document.getElementById('detalle-cobrador-correo').textContent = cliente.correo || 'Sin correo';
+                document.getElementById('detalle-cobrador-telefono').textContent = tel || 'Sin teléfono';
+
+                const btnWhatsapp = document.getElementById('btn-whatsapp-cobrador');
+                if (telefonoWhatsapp) {
+                    btnWhatsapp.href = `https://wa.me/${telefonoWhatsapp}`;
+                    btnWhatsapp.style.display = 'inline-block';
+                } else {
+                    btnWhatsapp.removeAttribute('href');
+                    btnWhatsapp.style.display = 'none';
+                }
+
+                const editarBox = document.getElementById('editar-box-cobrador');
+                editarBox.innerHTML = `
+                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},3)'>
+                        <i class="fas fa-eye">✏️</i>
+                    </button>
+                `;
+            } catch (error) {
+                console.error('Error cargando ficha limitada:', error);
+                document.getElementById('detalle-cobrador-nombre').textContent = 'Error al cargar ficha';
+                alert(error.message);
+            }
+        }
+
+        function cerrarModalDetallesClienteCobrador() {
+            document.getElementById('modal-detalles-cliente-cobrador').classList.add('hidden');
+        }
+
         async function seleccionarCliente(cliente) {
             
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
+            document.getElementById('btn-detalles-cobrador').classList.add('hidden');
             clienteSeleccionado = cliente;
             estadoCuentaResultadoActual = null;
             suspensionResultadoActual = null;
@@ -2902,6 +3037,7 @@
                     msgUltimoPago.innerHTML = `<span style="color: #2e7d32; font-weight: bold;">✅ Cuenta al corriente (Sin adeudos)</span>`;
                 }
 
+                document.getElementById('btn-detalles-cobrador').classList.remove('hidden');
                 document.getElementById('resultado-busqueda').classList.remove('hidden');
             } catch (error) {
                 console.error("Error:", error);
@@ -4022,6 +4158,11 @@ ${linkVelocidad}
                             
                         clienteSeleccionado.telefono = nuevoTelefono
                         mostrarResumenPagoExitoso(detallePago);
+                    }else if (bandera == 3){
+                        if (clienteSeleccionado && parseInt(clienteSeleccionado.id, 10) === parseInt(idCliente, 10)) {
+                            clienteSeleccionado.telefono = nuevoTelefono;
+                        }
+                        abrirDetallesClienteCobrador(idCliente);
                     }
                         
                 } else {

@@ -246,7 +246,7 @@ function validarAdministradorRequest(req, res) {
 
     res.status(403).json({
         success: false,
-        error: 'Acceso denegado: solo el administrador puede administrar paquetes.'
+        error: 'Acceso denegado: solo el administrador puede usar herramientas administrativas.'
     });
     return false;
 }
@@ -3109,6 +3109,145 @@ app.get('/api/admin/paquetes', async (req, res) => {
     } catch (error) {
         console.error("Error al obtener paquetes administrativos:", error);
         res.status(500).json({ success: false, error: "Error al cargar catalogo administrativo de paquetes" });
+    }
+});
+
+app.get('/api/admin/usuario-localidad', async (req, res) => {
+    if (!validarAdministradorRequest(req, res)) return;
+
+    try {
+        const [usuarios] = await db.query(
+            `SELECT
+                u.id,
+                u.nombre,
+                u.correo,
+                u.rol_id,
+                COALESCE(GROUP_CONCAT(ul.localidad_id ORDER BY ul.localidad_id SEPARATOR ','), '') AS localidades
+             FROM usuarios u
+             LEFT JOIN usuario_localidad ul ON ul.usuario_id = u.id
+             GROUP BY u.id, u.nombre, u.correo, u.rol_id
+             ORDER BY u.rol_id ASC, u.nombre ASC`
+        );
+
+        const [localidades] = await db.query(
+            `SELECT id, nombre, color, codigo_localidad
+             FROM localidades
+             ORDER BY nombre ASC`
+        );
+
+        res.json({
+            success: true,
+            usuarios: usuarios.map(usuario => ({
+                ...usuario,
+                localidades: String(usuario.localidades || '')
+                    .split(',')
+                    .filter(Boolean)
+                    .map(id => parseInt(id, 10))
+            })),
+            localidades
+        });
+    } catch (error) {
+        console.error("Error al obtener permisos de usuario-localidad:", error);
+        res.status(500).json({ success: false, error: "Error al cargar permisos de usuario-localidad" });
+    }
+});
+
+app.put('/api/admin/usuario-localidad/:usuarioId', async (req, res) => {
+    if (!validarAdministradorRequest(req, res)) return;
+
+    const usuarioId = parseInt(req.params.usuarioId, 10);
+    const localidades = Array.isArray(req.body.localidades)
+        ? [...new Set(req.body.localidades.map(id => parseInt(id, 10)).filter(Boolean))]
+        : [];
+
+    if (!usuarioId) {
+        return res.status(400).json({ success: false, error: 'Usuario no valido.' });
+    }
+
+    let connection;
+    try {
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [usuarios] = await connection.query(
+            'SELECT id FROM usuarios WHERE id = ? LIMIT 1',
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
+        }
+
+        if (localidades.length > 0) {
+            const [localidadesValidas] = await connection.query(
+                'SELECT id FROM localidades WHERE id IN (?)',
+                [localidades]
+            );
+            const idsValidos = new Set(localidadesValidas.map(loc => parseInt(loc.id, 10)));
+            const hayLocalidadInvalida = localidades.some(id => !idsValidos.has(id));
+
+            if (hayLocalidadInvalida) {
+                await connection.rollback();
+                return res.status(400).json({ success: false, error: 'Una o más localidades no son validas.' });
+            }
+        }
+
+        await connection.query('DELETE FROM usuario_localidad WHERE usuario_id = ?', [usuarioId]);
+
+        if (localidades.length > 0) {
+            await connection.query(
+                'INSERT INTO usuario_localidad (usuario_id, localidad_id) VALUES ?',
+                [localidades.map(localidadId => [usuarioId, localidadId])]
+            );
+        }
+
+        await connection.commit();
+        res.json({ success: true, message: 'Permisos de localidades actualizados correctamente.' });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir permisos usuario-localidad:", rollbackError);
+            }
+        }
+
+        console.error("Error al guardar permisos de usuario-localidad:", error);
+        res.status(500).json({ success: false, error: "Error al guardar permisos: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.put('/api/admin/localidades/:id/color', async (req, res) => {
+    if (!validarAdministradorRequest(req, res)) return;
+
+    const localidadId = parseInt(req.params.id, 10);
+    const color = String(req.body.color || '').trim();
+
+    if (!localidadId) {
+        return res.status(400).json({ success: false, error: 'Localidad no valida.' });
+    }
+
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
+        return res.status(400).json({ success: false, error: 'El color debe tener formato hexadecimal, por ejemplo #3498db.' });
+    }
+
+    try {
+        const [result] = await db.query(
+            'UPDATE localidades SET color = ? WHERE id = ?',
+            [color, localidadId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Localidad no encontrada.' });
+        }
+
+        res.json({ success: true, message: 'Color de localidad actualizado correctamente.' });
+    } catch (error) {
+        console.error("Error al actualizar color de localidad:", error);
+        res.status(500).json({ success: false, error: "Error al actualizar color de localidad: " + error.message });
     }
 });
 

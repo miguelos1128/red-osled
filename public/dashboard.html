@@ -78,6 +78,7 @@
                             <button type="button" class="admin-tab active" data-admin-tool="supervision-cobradores" onclick="cambiarHerramientaAdmin('supervision-cobradores')" role="tab" aria-selected="true">Supervisión cobradores</button>
                             <button type="button" class="admin-tab" data-admin-tool="agregar-cliente" onclick="cambiarHerramientaAdmin('agregar-cliente')" role="tab" aria-selected="false">Agregar cliente</button>
                             <button type="button" class="admin-tab" data-admin-tool="paquetes" onclick="cambiarHerramientaAdmin('paquetes')" role="tab" aria-selected="false">Administrar paquetes</button>
+                            <button type="button" class="admin-tab" data-admin-tool="usuario-localidad" onclick="cambiarHerramientaAdmin('usuario-localidad')" role="tab" aria-selected="false">Usuario Localidad</button>
                         </div>
                     </div>
 
@@ -219,6 +220,58 @@
                                         </tr>
                                     </tbody>
                                 </table>
+                            </div>
+                        </section>
+
+                        <section id="admin-tool-usuario-localidad" class="admin-tool-panel hidden" role="tabpanel">
+                            <div class="admin-tool-title">
+                                <h4>Usuario Localidad</h4>
+                                <p>Administra las localidades visibles para cada usuario al iniciar sesión.</p>
+                            </div>
+
+                            <div class="usuario-localidad-admin">
+                                <div class="usuario-localidad-lista-panel">
+                                    <div class="usuario-localidad-busqueda">
+                                        <input type="text" id="buscador-usuario-localidad" placeholder="Buscar usuario..." oninput="renderizarUsuariosLocalidadAdmin()">
+                                    </div>
+                                    <div id="lista-usuarios-localidad" class="usuario-localidad-lista">
+                                        <p class="usuario-localidad-empty">Cargando usuarios...</p>
+                                    </div>
+                                </div>
+
+                                <div class="usuario-localidad-editor">
+                                    <div id="usuario-localidad-empty" class="usuario-localidad-empty">
+                                        Selecciona un usuario para editar sus localidades.
+                                    </div>
+
+                                    <div id="usuario-localidad-form" class="hidden">
+                                        <div class="usuario-localidad-editor-header">
+                                            <div>
+                                                <h5 id="usuario-localidad-nombre">Usuario</h5>
+                                                <p id="usuario-localidad-detalle">-</p>
+                                            </div>
+                                            <span id="usuario-localidad-contador" class="contador-badge">0 localidades</span>
+                                        </div>
+
+                                        <div class="usuario-localidad-acciones">
+                                            <button type="button" class="button btn-secundario-paquete" onclick="seleccionarTodasLocalidadesUsuarioAdmin()">Todas</button>
+                                            <button type="button" class="button btn-secundario-paquete" onclick="limpiarLocalidadesUsuarioAdmin()">Limpiar</button>
+                                            <button type="button" class="button" onclick="guardarUsuarioLocalidadAdmin()">Guardar permisos</button>
+                                        </div>
+
+                                        <div id="usuario-localidad-checkboxes" class="usuario-localidad-checkboxes"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="localidad-color-admin">
+                                <div class="admin-tool-title localidad-color-title">
+                                    <h4>Colores de localidad</h4>
+                                    <p>Estos colores se usan en las tarjetas y filtros del panel.</p>
+                                </div>
+                                <div id="localidad-color-lista" class="localidad-color-lista">
+                                    <p class="usuario-localidad-empty">Cargando localidades...</p>
+                                </div>
                             </div>
                         </section>
                     </div>
@@ -920,6 +973,9 @@
         let configLocalidades = {};
         let paquetesCatalogo = [];
         let paquetesAdminCatalogo = [];
+        let usuariosLocalidadAdmin = [];
+        let localidadesUsuarioAdmin = [];
+        let usuarioLocalidadSeleccionadoId = null;
         let perfilUsuario ="";
         let detallePago;
         let ultimoDetallePago = null;
@@ -1213,7 +1269,316 @@
             }
 
             if (herramienta === 'paquetes') cargarPaquetesAdmin();
+            if (herramienta === 'usuario-localidad') cargarUsuarioLocalidadAdmin();
             if (herramienta === 'supervision-cobradores') cargarSupervisionCobradores();
+        }
+
+        function obtenerTextoRolUsuarioAdmin(rolId) {
+            const roles = {
+                1: 'Cobrador',
+                2: 'Administrador',
+                3: 'Supervisor'
+            };
+            return roles[parseInt(rolId, 10)] || `Rol ${rolId || '-'}`;
+        }
+
+        function obtenerUsuarioActualAdmin() {
+            return JSON.parse(localStorage.getItem('usuario_actual') || '{}');
+        }
+
+        async function cargarUsuarioLocalidadAdmin() {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const lista = document.getElementById('lista-usuarios-localidad');
+            if (lista) lista.innerHTML = '<p class="usuario-localidad-empty">Cargando usuarios...</p>';
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/usuario-localidad?rol_usuario=${usuarioActual.rol}`);
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudieron cargar los permisos.');
+                }
+
+                usuariosLocalidadAdmin = Array.isArray(data.usuarios) ? data.usuarios : [];
+                localidadesUsuarioAdmin = Array.isArray(data.localidades) ? data.localidades : [];
+
+                if (
+                    usuarioLocalidadSeleccionadoId
+                    && !usuariosLocalidadAdmin.some(usuario => usuario.id === usuarioLocalidadSeleccionadoId)
+                ) {
+                    usuarioLocalidadSeleccionadoId = null;
+                }
+
+                renderizarUsuariosLocalidadAdmin();
+                renderizarEditorUsuarioLocalidadAdmin();
+                renderizarColoresLocalidadAdmin();
+            } catch (error) {
+                console.error('Error cargando usuario-localidad:', error);
+                if (lista) {
+                    lista.innerHTML = '';
+                    const mensaje = document.createElement('p');
+                    mensaje.className = 'usuario-localidad-empty';
+                    mensaje.textContent = error.message;
+                    lista.appendChild(mensaje);
+                }
+            }
+        }
+
+        function renderizarUsuariosLocalidadAdmin() {
+            const lista = document.getElementById('lista-usuarios-localidad');
+            const buscador = document.getElementById('buscador-usuario-localidad');
+            if (!lista) return;
+
+            const filtro = (buscador?.value || '').trim().toLowerCase();
+            const usuariosFiltrados = usuariosLocalidadAdmin.filter(usuario => {
+                const texto = [
+                    usuario.nombre,
+                    usuario.correo,
+                    obtenerTextoRolUsuarioAdmin(usuario.rol_id)
+                ].filter(Boolean).join(' ').toLowerCase();
+                return !filtro || texto.includes(filtro);
+            });
+
+            lista.innerHTML = '';
+
+            if (usuariosFiltrados.length === 0) {
+                lista.innerHTML = '<p class="usuario-localidad-empty">No hay usuarios para mostrar.</p>';
+                return;
+            }
+
+            usuariosFiltrados.forEach(usuario => {
+                const boton = document.createElement('button');
+                boton.type = 'button';
+                boton.className = 'usuario-localidad-item';
+                boton.classList.toggle('active', usuario.id === usuarioLocalidadSeleccionadoId);
+                boton.onclick = () => seleccionarUsuarioLocalidadAdmin(usuario.id);
+
+                const nombre = document.createElement('strong');
+                nombre.textContent = usuario.nombre || `Usuario ${usuario.id}`;
+
+                const detalle = document.createElement('span');
+                const totalLocalidades = Array.isArray(usuario.localidades) ? usuario.localidades.length : 0;
+                detalle.textContent = `${obtenerTextoRolUsuarioAdmin(usuario.rol_id)} | ${totalLocalidades} localidades`;
+
+                boton.appendChild(nombre);
+                boton.appendChild(detalle);
+                lista.appendChild(boton);
+            });
+        }
+
+        function seleccionarUsuarioLocalidadAdmin(usuarioId) {
+            usuarioLocalidadSeleccionadoId = parseInt(usuarioId, 10);
+            renderizarUsuariosLocalidadAdmin();
+            renderizarEditorUsuarioLocalidadAdmin();
+        }
+
+        function renderizarEditorUsuarioLocalidadAdmin() {
+            const empty = document.getElementById('usuario-localidad-empty');
+            const form = document.getElementById('usuario-localidad-form');
+            const checkboxes = document.getElementById('usuario-localidad-checkboxes');
+            const nombre = document.getElementById('usuario-localidad-nombre');
+            const detalle = document.getElementById('usuario-localidad-detalle');
+            if (!empty || !form || !checkboxes || !nombre || !detalle) return;
+
+            const usuario = usuariosLocalidadAdmin.find(item => item.id === usuarioLocalidadSeleccionadoId);
+
+            empty.classList.toggle('hidden', Boolean(usuario));
+            form.classList.toggle('hidden', !usuario);
+
+            if (!usuario) {
+                checkboxes.innerHTML = '';
+                return;
+            }
+
+            nombre.textContent = usuario.nombre || `Usuario ${usuario.id}`;
+            detalle.textContent = `${usuario.correo || 'Sin correo'} | ${obtenerTextoRolUsuarioAdmin(usuario.rol_id)}`;
+
+            const localidadesAsignadas = new Set((usuario.localidades || []).map(id => parseInt(id, 10)));
+            checkboxes.innerHTML = '';
+
+            localidadesUsuarioAdmin.forEach(localidad => {
+                const label = document.createElement('label');
+                label.className = 'usuario-localidad-check';
+
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.value = localidad.id;
+                input.checked = localidadesAsignadas.has(parseInt(localidad.id, 10));
+                input.onchange = actualizarContadorLocalidadesUsuarioAdmin;
+
+                const color = document.createElement('span');
+                color.className = 'usuario-localidad-color';
+                color.style.backgroundColor = localidad.color || '#cccccc';
+
+                const nombreLocalidad = document.createElement('span');
+                nombreLocalidad.textContent = localidad.nombre || `Localidad ${localidad.id}`;
+
+                const codigo = document.createElement('span');
+                codigo.className = 'usuario-localidad-codigo';
+                codigo.textContent = localidad.codigo_localidad || String(localidad.id);
+
+                label.appendChild(input);
+                label.appendChild(color);
+                label.appendChild(nombreLocalidad);
+                label.appendChild(codigo);
+                checkboxes.appendChild(label);
+            });
+
+            actualizarContadorLocalidadesUsuarioAdmin();
+        }
+
+        function renderizarColoresLocalidadAdmin() {
+            const contenedor = document.getElementById('localidad-color-lista');
+            if (!contenedor) return;
+
+            contenedor.innerHTML = '';
+
+            if (localidadesUsuarioAdmin.length === 0) {
+                contenedor.innerHTML = '<p class="usuario-localidad-empty">No hay localidades para mostrar.</p>';
+                return;
+            }
+
+            localidadesUsuarioAdmin.forEach(localidad => {
+                const item = document.createElement('div');
+                item.className = 'localidad-color-item';
+
+                const info = document.createElement('div');
+                info.className = 'localidad-color-info';
+
+                const nombre = document.createElement('strong');
+                nombre.textContent = localidad.nombre || `Localidad ${localidad.id}`;
+
+                const codigo = document.createElement('span');
+                codigo.textContent = localidad.codigo_localidad || String(localidad.id);
+
+                const input = document.createElement('input');
+                input.type = 'color';
+                input.className = 'localidad-color-input';
+                input.id = `localidad-color-${localidad.id}`;
+                input.value = /^#[0-9a-fA-F]{6}$/.test(localidad.color || '')
+                    ? localidad.color
+                    : '#cccccc';
+                input.title = `Color de ${localidad.nombre || 'localidad'}`;
+
+                const boton = document.createElement('button');
+                boton.type = 'button';
+                boton.className = 'button localidad-color-guardar';
+                boton.textContent = 'Guardar';
+                boton.onclick = () => guardarColorLocalidadAdmin(localidad.id);
+
+                info.appendChild(nombre);
+                info.appendChild(codigo);
+                item.appendChild(info);
+                item.appendChild(input);
+                item.appendChild(boton);
+                contenedor.appendChild(item);
+            });
+        }
+
+        async function guardarColorLocalidadAdmin(localidadId) {
+            const input = document.getElementById(`localidad-color-${localidadId}`);
+            const color = input?.value || '';
+            const usuarioActual = obtenerUsuarioActualAdmin();
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/localidades/${localidadId}/color`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rol_usuario: usuarioActual.rol,
+                        color
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo guardar el color.');
+                }
+
+                const localidad = localidadesUsuarioAdmin.find(item => parseInt(item.id, 10) === parseInt(localidadId, 10));
+                if (localidad) localidad.color = color;
+
+                if (configLocalidades[localidadId]) {
+                    configLocalidades[localidadId].color = color;
+                }
+
+                renderizarEditorUsuarioLocalidadAdmin();
+                renderizarColoresLocalidadAdmin();
+                cargarVistaAdminClientes();
+                alert(data.message || 'Color actualizado correctamente.');
+            } catch (error) {
+                console.error('Error guardando color de localidad:', error);
+                alert(error.message);
+            }
+        }
+
+        function obtenerLocalidadesSeleccionadasUsuarioAdmin() {
+            return Array.from(document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]:checked'))
+                .map(input => parseInt(input.value, 10))
+                .filter(Boolean);
+        }
+
+        function actualizarContadorLocalidadesUsuarioAdmin() {
+            const contador = document.getElementById('usuario-localidad-contador');
+            if (!contador) return;
+
+            const total = obtenerLocalidadesSeleccionadasUsuarioAdmin().length;
+            contador.textContent = `${total} ${total === 1 ? 'localidad' : 'localidades'}`;
+        }
+
+        function seleccionarTodasLocalidadesUsuarioAdmin() {
+            document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]').forEach(input => {
+                input.checked = true;
+            });
+            actualizarContadorLocalidadesUsuarioAdmin();
+        }
+
+        function limpiarLocalidadesUsuarioAdmin() {
+            document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]').forEach(input => {
+                input.checked = false;
+            });
+            actualizarContadorLocalidadesUsuarioAdmin();
+        }
+
+        async function guardarUsuarioLocalidadAdmin() {
+            const usuario = usuariosLocalidadAdmin.find(item => item.id === usuarioLocalidadSeleccionadoId);
+            if (!usuario) {
+                alert('Selecciona un usuario.');
+                return;
+            }
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const localidades = obtenerLocalidadesSeleccionadasUsuarioAdmin();
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/usuario-localidad/${usuario.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rol_usuario: usuarioActual.rol,
+                        localidades
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudieron guardar los permisos.');
+                }
+
+                usuario.localidades = localidades;
+
+                if (parseInt(usuarioActual.id, 10) === parseInt(usuario.id, 10)) {
+                    usuarioActual.localidades = localidades;
+                    localStorage.setItem('usuario_actual', JSON.stringify(usuarioActual));
+                }
+
+                renderizarUsuariosLocalidadAdmin();
+                renderizarEditorUsuarioLocalidadAdmin();
+                alert(`${data.message || 'Permisos actualizados.'}\n\nEl usuario verá los cambios al iniciar sesión nuevamente.`);
+            } catch (error) {
+                console.error('Error guardando usuario-localidad:', error);
+                alert(error.message);
+            }
         }
 
         function formatearMontoPaqueteAdmin(valor) {
@@ -2964,6 +3329,12 @@ ha sido *registrado correctamente* ${emojiCorrecto}
 ${emojiDinero} *Monto recibido:* $${totalFormateadoWA}
 ${emojiFecha} *Fecha de pago:* ${new Date().toLocaleDateString('es-MX')}
 
+🎉 Nos estamos actualizando para atenderte mejor con nuestro nuevo sistema. Ahora tienes un número de cliente.
+
+🆔 *Tu número de cliente es:* *${clienteSeleccionado.codigo_cliente || 'Sin código'}*
+
+Te recomendamos guardarlo, ya que te servirá para identificar tu servicio al realizar tus próximos pagos o reportes.
+
 Agradecemos mucho tu puntualidad y confianza ${emojiGracias}
 
 Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
@@ -2982,8 +3353,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
         }
 
         function formatearPaqueteMensajeBienvenida(paquete) {
-            const nombre = paquete?.nombre_paquete || 'Paquete contratado';
-            const velocidad = formatearNumeroPaquete(paquete?.velocidad_mbps);
+            const nombre = paquete?.nombre_paquete || paquete?.paquete_nombre || paquete?.paquete_display || paquete?.paquete || 'Paquete contratado';
+            const velocidad = formatearNumeroPaquete(paquete?.velocidad_mbps || paquete?.paquete_velocidad_mbps);
             return velocidad ? `${nombre} ${velocidad} Mbps` : nombre;
         }
 
@@ -2997,7 +3368,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
             const paqueteTexto = formatearPaqueteMensajeBienvenida(paquete);
             const mensualidad = formatearMontoMensajeServicio(cliente.costo_mensual || paquete?.costo);
             const fechaInstalacion = formatearFechaMensajeServicio(cliente.fecha_instalacion);
-            const fechaLocal = crearFechaLocalDesdeInput(cliente.fecha_instalacion);
+            const fechaLocal = crearFechaLocalDesdeInput(cliente.fecha_instalacion)
+                || crearFechaLocalDesdeValorVista(cliente.fecha_instalacion);
             const diaPago = cliente.dia_pago || fechaLocal?.getDate() || '-';
 
             return `Hola *${nombre}* 👋
@@ -3021,7 +3393,41 @@ Que tengas ${articuloSaludoTiempo} excelente ${saludoTiempo}. ${emojiTiempo}
 *RED OSLED*`;
         }
 
-        function enviarWhatsappBienvenidaCliente(cliente, paquete) {
+        function calcularDiasDesdeInstalacionCliente(cliente) {
+            const fechaInstalacion = crearFechaLocalDesdeValorVista(cliente?.fecha_instalacion);
+            if (!fechaInstalacion) return Infinity;
+
+            const hoy = new Date();
+            const hoyLocal = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+            const msPorDia = 1000 * 60 * 60 * 24;
+            return Math.max(0, Math.floor((hoyLocal - fechaInstalacion) / msPorDia));
+        }
+
+        function crearMensajeWhatsappNumeroCliente(cliente) {
+            const nombre = cliente?.nombre_completo || cliente?.alias_cliente || 'cliente';
+            const codigoCliente = cliente?.codigo_cliente || 'Sin código';
+
+            return `Hola *${nombre}* 👋
+
+Te compartimos tu número de cliente para pagos:
+
+🆔 *Número de cliente:* *${codigoCliente}*
+
+A partir de ahora puedes proporcionar este número al realizar tus pagos o reportes.
+
+Gracias por tu confianza 🙌
+
+*RED OSLED*`;
+        }
+
+        function crearMensajeWhatsappDetalleCliente(cliente) {
+            const diasDesdeInstalacion = calcularDiasDesdeInstalacionCliente(cliente);
+            return diasDesdeInstalacion < 30
+                ? crearMensajeWhatsappBienvenidaCliente(cliente, cliente)
+                : crearMensajeWhatsappNumeroCliente(cliente);
+        }
+
+        function abrirWhatsappConMensajeCliente(cliente, mensajeWhatsapp) {
             const telefonoWhatsapp = obtenerTelefonoWhatsappCliente(cliente);
 
             if (!telefonoWhatsapp) {
@@ -3029,11 +3435,24 @@ Que tengas ${articuloSaludoTiempo} excelente ${saludoTiempo}. ${emojiTiempo}
                 return;
             }
 
-            const mensajeWhatsapp = crearMensajeWhatsappBienvenidaCliente(cliente, paquete);
             const linkWhats =
                 `https://api.whatsapp.com/send/?phone=${telefonoWhatsapp}&text=${encodeURIComponent(mensajeWhatsapp)}&type=phone_number&app_absent=0`;
 
             window.open(linkWhats, '_blank');
+        }
+
+        function enviarWhatsappBienvenidaCliente(cliente, paquete) {
+            abrirWhatsappConMensajeCliente(
+                cliente,
+                crearMensajeWhatsappBienvenidaCliente(cliente, paquete)
+            );
+        }
+
+        function enviarWhatsappDetalleCliente(cliente) {
+            abrirWhatsappConMensajeCliente(
+                cliente,
+                crearMensajeWhatsappDetalleCliente(cliente)
+            );
         }
 
         function obtenerTelefonoWhatsappCliente(cliente) {
@@ -3044,7 +3463,7 @@ Que tengas ${articuloSaludoTiempo} excelente ${saludoTiempo}. ${emojiTiempo}
 
         function formatearFechaMensajeServicio(fecha) {
             if (!fecha) return 'Pendiente';
-            const fechaLocal = crearFechaLocalDesdeInput(fecha);
+            const fechaLocal = crearFechaLocalDesdeInput(fecha) || crearFechaLocalDesdeValorVista(fecha);
             return (fechaLocal || new Date(fecha)).toLocaleDateString('es-MX');
         }
 
@@ -3456,8 +3875,12 @@ ${linkVelocidad}
                 const btnWhatsapp = document.getElementById('btn-whatsapp');
 
                 if (tel) {
-                    const telLimpio = tel.replace(/\D/g,''); 
-                    btnWhatsapp.href = `https://wa.me/${telLimpio}`;
+                    btnWhatsapp.href = '#';
+                    btnWhatsapp.onclick = function(event) {
+                        event.preventDefault();
+                        enviarWhatsappDetalleCliente(cliente);
+                    };
+                    btnWhatsapp.title = 'Enviar mensaje de WhatsApp al cliente';
                     btnWhatsapp.style.display = 'inline-block';
                     const EditarBox = document.getElementById('editar-box')
                         EditarBox.innerHTML = `
@@ -3467,6 +3890,8 @@ ${linkVelocidad}
                                     </button>
                         `;
                 } else {
+                    btnWhatsapp.onclick = null;
+                    btnWhatsapp.removeAttribute('href');
                     btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
                 }
 
@@ -4459,8 +4884,12 @@ ${linkVelocidad}
                 const btnWhatsapp = document.getElementById('btn-whatsapp');
 
                 if (tel) {
-                    const telLimpio = tel.replace(/\D/g,''); 
-                    btnWhatsapp.href = `https://wa.me/${telLimpio}`;
+                    btnWhatsapp.href = '#';
+                    btnWhatsapp.onclick = function(event) {
+                        event.preventDefault();
+                        enviarWhatsappDetalleCliente(cliente);
+                    };
+                    btnWhatsapp.title = 'Enviar mensaje de WhatsApp al cliente';
                     btnWhatsapp.style.display = 'inline-block';
                     const EditarBox = document.getElementById('editar-box')
                         EditarBox.innerHTML = `
@@ -4470,6 +4899,8 @@ ${linkVelocidad}
                                     </button>
                         `;
                 } else {
+                    btnWhatsapp.onclick = null;
+                    btnWhatsapp.removeAttribute('href');
                     btnWhatsapp.style.display = 'none'; // Ocultamos el botón si no hay teléfono
                 }
 

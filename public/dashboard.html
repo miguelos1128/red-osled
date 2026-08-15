@@ -2335,7 +2335,15 @@
                     const codigoCreado = data.codigo_cliente
                         ? `\nNúmero de cliente para pagos: ${data.codigo_cliente}`
                         : '';
-                    alert(`¡Cliente guardado correctamente!${codigoCreado}`);
+                    const enviarBienvenida = confirm(`¡Cliente guardado correctamente!${codigoCreado}\n\n¿Deseas enviar mensaje de bienvenida por WhatsApp al cliente?`);
+
+                    if (enviarBienvenida) {
+                        enviarWhatsappBienvenidaCliente({
+                            ...nuevoCliente,
+                            codigo_cliente: data.codigo_cliente,
+                            dia_pago: crearFechaLocalDesdeInput(fecha)?.getDate()
+                        }, paqueteSeleccionado);
+                    }
                     cerrarModal();
                     //cargarClientes();
                     cargarVistaAdminClientes();
@@ -2971,6 +2979,61 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
                 window.open(linkWhats, "_blank");
             btnWhatsapp.href = linkWhats;
+        }
+
+        function formatearPaqueteMensajeBienvenida(paquete) {
+            const nombre = paquete?.nombre_paquete || 'Paquete contratado';
+            const velocidad = formatearNumeroPaquete(paquete?.velocidad_mbps);
+            return velocidad ? `${nombre} ${velocidad} Mbps` : nombre;
+        }
+
+        function crearMensajeWhatsappBienvenidaCliente(cliente, paquete) {
+            const hora = new Date().getHours();
+            const saludoTiempo = hora < 12 ? 'día' : hora < 19 ? 'tarde' : 'noche';
+            const articuloSaludoTiempo = hora < 12 ? 'un' : 'una';
+            const emojiTiempo = hora < 12 ? '☀️' : hora < 19 ? '🌇' : '🌜';
+            const nombre = cliente.nombre_completo || cliente.alias_cliente || 'cliente';
+            const codigoCliente = cliente.codigo_cliente || 'Sin código';
+            const paqueteTexto = formatearPaqueteMensajeBienvenida(paquete);
+            const mensualidad = formatearMontoMensajeServicio(cliente.costo_mensual || paquete?.costo);
+            const fechaInstalacion = formatearFechaMensajeServicio(cliente.fecha_instalacion);
+            const fechaLocal = crearFechaLocalDesdeInput(cliente.fecha_instalacion);
+            const diaPago = cliente.dia_pago || fechaLocal?.getDate() || '-';
+
+            return `Hola *${nombre}* 👋
+
+¡Bienvenido a *RED OSLED*!
+
+Te confirmamos que tu servicio de internet ha sido registrado correctamente ✅
+
+🆔 *Número de cliente para pagos:* *${codigoCliente}*
+📌 *Paquete contratado:* ${paqueteTexto}
+💰 *Mensualidad:* $${mensualidad}
+📅 *Fecha de instalación:* ${fechaInstalacion}
+☀️ *Día de pago:* ${diaPago} de cada mes
+
+Agradecemos mucho tu confianza 🙌
+
+Para cualquier duda, reporte o aclaración, puedes escribirnos por este medio.
+
+Que tengas ${articuloSaludoTiempo} excelente ${saludoTiempo}. ${emojiTiempo}
+
+*RED OSLED*`;
+        }
+
+        function enviarWhatsappBienvenidaCliente(cliente, paquete) {
+            const telefonoWhatsapp = obtenerTelefonoWhatsappCliente(cliente);
+
+            if (!telefonoWhatsapp) {
+                alert('El cliente no tiene teléfono válido para enviar WhatsApp.');
+                return;
+            }
+
+            const mensajeWhatsapp = crearMensajeWhatsappBienvenidaCliente(cliente, paquete);
+            const linkWhats =
+                `https://api.whatsapp.com/send/?phone=${telefonoWhatsapp}&text=${encodeURIComponent(mensajeWhatsapp)}&type=phone_number&app_absent=0`;
+
+            window.open(linkWhats, '_blank');
         }
 
         function obtenerTelefonoWhatsappCliente(cliente) {

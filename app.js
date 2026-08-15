@@ -716,6 +716,53 @@ function restarDiasFecha(fecha, dias) {
     return resultado;
 }
 
+function sumarMesesCompletosFecha(fecha, meses) {
+    const resultado = new Date(fecha.getFullYear(), fecha.getMonth() + meses, 1);
+    const ultimoDiaDestino = obtenerUltimoDiaMes(resultado.getFullYear(), resultado.getMonth());
+    resultado.setDate(Math.min(fecha.getDate(), ultimoDiaDestino));
+    return resultado;
+}
+
+function obtenerRestriccionCambioPaquete(historialPaquetes = [], fechaReferencia = new Date()) {
+    const historialOrdenado = [...(historialPaquetes || [])]
+        .filter(periodo => crearFechaLocalDesdeValor(periodo.fecha_inicio))
+        .sort((a, b) => {
+            const fechaA = crearFechaLocalDesdeValor(a.fecha_inicio);
+            const fechaB = crearFechaLocalDesdeValor(b.fecha_inicio);
+            const diferencia = fechaA - fechaB;
+            if (diferencia !== 0) return diferencia;
+            return (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0);
+        });
+
+    if (historialOrdenado.length <= 1) {
+        return { bloqueado: false };
+    }
+
+    const ultimoCambio = historialOrdenado[historialOrdenado.length - 1];
+    const fechaUltimoCambio = crearFechaLocalDesdeValor(ultimoCambio.fecha_inicio);
+    if (!fechaUltimoCambio) {
+        return { bloqueado: false };
+    }
+
+    const fecha60Dias = sumarDias(fechaUltimoCambio, 60);
+    const fecha2Meses = sumarMesesCompletosFecha(fechaUltimoCambio, 2);
+    const fechaPermitida = fecha60Dias <= fecha2Meses ? fecha60Dias : fecha2Meses;
+    const referencia = fechaReferencia instanceof Date
+        ? new Date(fechaReferencia.getFullYear(), fechaReferencia.getMonth(), fechaReferencia.getDate())
+        : crearFechaLocalDesdeValor(fechaReferencia);
+    const msPorDia = 1000 * 60 * 60 * 24;
+    const diasRestantes = referencia && referencia < fechaPermitida
+        ? Math.ceil((fechaPermitida - referencia) / msPorDia)
+        : 0;
+
+    return {
+        bloqueado: diasRestantes > 0,
+        fecha_ultimo_cambio: formatearFechaSql(fechaUltimoCambio),
+        fecha_proximo_cambio: formatearFechaSql(fechaPermitida),
+        dias_restantes: diasRestantes
+    };
+}
+
 async function consultarHistorialPaquetes(ejecutor, clienteId) {
     const [rows] = await ejecutor.query(
         `SELECT h.id, h.cliente_id, h.paquete_id, h.costo_mensual, h.fecha_inicio, h.fecha_fin,
@@ -1499,6 +1546,18 @@ app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
                 success: false,
                 error: `Solo se puede cambiar de paquete cuando el cliente no tiene adeudo ni saldo a favor. Saldo a favor actual: $${saldoFavor.toFixed(2)}.`,
                 saldo_favor: saldoFavor
+            });
+        }
+
+        const restriccionCambio = obtenerRestriccionCambioPaquete(historialPaquetesCuenta, hoyLocal);
+        if (restriccionCambio.bloqueado) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: `El cliente ya tuvo un cambio de paquete reciente. Podra cambiar nuevamente a partir del ${restriccionCambio.fecha_proximo_cambio}.`,
+                fecha_ultimo_cambio: restriccionCambio.fecha_ultimo_cambio,
+                fecha_proximo_cambio: restriccionCambio.fecha_proximo_cambio,
+                dias_restantes: restriccionCambio.dias_restantes
             });
         }
 

@@ -918,6 +918,7 @@
         let clienteDetalleActualId = null;
         let suspensionServicioActual = null;
         let estadoCuentaDetalleActual = null;
+        let historialPaquetesDetalleActual = [];
         let filtroLocalidadTodasSeleccionadoAntes = false;
         const filtrosRapidosAdmin = { estadoCuenta: null, renta: false, paquete: null, mostrarGarantizados: false };
 
@@ -1051,6 +1052,70 @@
             const partes = String(valor || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
             if (!partes) return null;
             return new Date(parseInt(partes[1], 10), parseInt(partes[2], 10) - 1, parseInt(partes[3], 10));
+        }
+
+        function crearFechaLocalDesdeValorVista(valor) {
+            if (!valor) return null;
+            if (valor instanceof Date) {
+                return Number.isNaN(valor.getTime())
+                    ? null
+                    : new Date(valor.getFullYear(), valor.getMonth(), valor.getDate());
+            }
+
+            const partes = String(valor).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (partes) {
+                return new Date(parseInt(partes[1], 10), parseInt(partes[2], 10) - 1, parseInt(partes[3], 10));
+            }
+
+            const fecha = new Date(valor);
+            return Number.isNaN(fecha.getTime()) ? null : new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+        }
+
+        function sumarDiasFechaVista(fecha, dias) {
+            const resultado = new Date(fecha);
+            resultado.setDate(resultado.getDate() + dias);
+            return resultado;
+        }
+
+        function sumarMesesCompletosFechaVista(fecha, meses) {
+            const resultado = new Date(fecha.getFullYear(), fecha.getMonth() + meses, 1);
+            const ultimoDiaDestino = new Date(resultado.getFullYear(), resultado.getMonth() + 1, 0).getDate();
+            resultado.setDate(Math.min(fecha.getDate(), ultimoDiaDestino));
+            return resultado;
+        }
+
+        function calcularRestriccionCambioPaqueteVista(historialPaquetes = [], fechaReferencia = new Date()) {
+            const historialOrdenado = [...(historialPaquetes || [])]
+                .filter(periodo => crearFechaLocalDesdeValorVista(periodo.fecha_inicio))
+                .sort((a, b) => {
+                    const fechaA = crearFechaLocalDesdeValorVista(a.fecha_inicio);
+                    const fechaB = crearFechaLocalDesdeValorVista(b.fecha_inicio);
+                    const diferencia = fechaA - fechaB;
+                    if (diferencia !== 0) return diferencia;
+                    return (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0);
+                });
+
+            if (historialOrdenado.length <= 1) return { bloqueado: false };
+
+            const ultimoCambio = historialOrdenado[historialOrdenado.length - 1];
+            const fechaUltimoCambio = crearFechaLocalDesdeValorVista(ultimoCambio.fecha_inicio);
+            if (!fechaUltimoCambio) return { bloqueado: false };
+
+            const fecha60Dias = sumarDiasFechaVista(fechaUltimoCambio, 60);
+            const fecha2Meses = sumarMesesCompletosFechaVista(fechaUltimoCambio, 2);
+            const fechaPermitida = fecha60Dias <= fecha2Meses ? fecha60Dias : fecha2Meses;
+            const referencia = new Date(fechaReferencia.getFullYear(), fechaReferencia.getMonth(), fechaReferencia.getDate());
+            const msPorDia = 1000 * 60 * 60 * 24;
+            const diasRestantes = referencia < fechaPermitida
+                ? Math.ceil((fechaPermitida - referencia) / msPorDia)
+                : 0;
+
+            return {
+                bloqueado: diasRestantes > 0,
+                fecha_ultimo_cambio: formatearFechaInput(fechaUltimoCambio),
+                fecha_proximo_cambio: formatearFechaInput(fechaPermitida),
+                dias_restantes: diasRestantes
+            };
         }
 
         function obtenerPaquetePorId(paqueteId) {
@@ -1395,7 +1460,7 @@
             }
         }
 
-        function configurarCambioPaquete(cliente) {
+        function configurarCambioPaquete(cliente, historialPaquetes = historialPaquetesDetalleActual) {
             const box = document.getElementById('cambio-paquete-box');
             const select = document.getElementById('cambio-paquete-select');
             const fechaInput = document.getElementById('cambio-paquete-fecha');
@@ -1435,7 +1500,8 @@
 
             const adeudoActual = parseFloat(estadoCuentaDetalleActual?.adeudo_actual) || 0;
             const saldoFavor = parseFloat(estadoCuentaDetalleActual?.saldo_favor) || 0;
-            const bloquearPorCuenta = adeudoActual > 0 || saldoFavor > 0;
+            const restriccionCambio = calcularRestriccionCambioPaqueteVista(historialPaquetes);
+            const bloquearPorCuenta = adeudoActual > 0 || saldoFavor > 0 || restriccionCambio.bloqueado;
             select.disabled = bloquearPorCuenta;
             fechaInput.disabled = bloquearPorCuenta;
             costoInput.disabled = bloquearPorCuenta;
@@ -1446,7 +1512,9 @@
                 const saldoTexto = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 preview.textContent = adeudoActual > 0
                     ? `Cambio bloqueado: el cliente tiene adeudo pendiente de $${adeudoTexto}.`
-                    : `Cambio bloqueado: el cliente tiene saldo a favor de $${saldoTexto}.`;
+                    : saldoFavor > 0
+                        ? `Cambio bloqueado: el cliente tiene saldo a favor de $${saldoTexto}.`
+                        : `Cambio bloqueado: último cambio de paquete el ${restriccionCambio.fecha_ultimo_cambio}. Disponible nuevamente desde ${restriccionCambio.fecha_proximo_cambio}.`;
                 preview.classList.add('bloqueo');
                 preview.classList.remove('hidden');
             }
@@ -1521,6 +1589,12 @@
             if (saldoFavor > 0) {
                 const saldoTexto = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 alert(`Solo puedes cambiar de paquete cuando el cliente no tiene adeudo ni saldo a favor. Saldo a favor actual: $${saldoTexto}.`);
+                return;
+            }
+
+            const restriccionCambio = calcularRestriccionCambioPaqueteVista(historialPaquetesDetalleActual);
+            if (restriccionCambio.bloqueado) {
+                alert(`El cliente ya tuvo un cambio de paquete reciente. Podra cambiar nuevamente a partir del ${restriccionCambio.fecha_proximo_cambio}.`);
                 return;
             }
 
@@ -3249,7 +3323,9 @@ ${linkVelocidad}
                 const dataCompleto = await respuestaEstadoCuenta.json();
                 const cliente = dataCompleto.cliente;
                 const pagos = dataCompleto.historial_pagos || [];
+                const historialPaquetes = dataCompleto.historial_paquetes || [];
                 const estadoCuenta = dataCompleto.estado_cuenta;
+                historialPaquetesDetalleActual = historialPaquetes;
 
                 const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
                         EditarBoxAlias.innerHTML = `
@@ -3280,7 +3356,7 @@ ${linkVelocidad}
                 const paq = formatearPaqueteCliente(cliente);
                 document.getElementById('detalle-localidad-paquete').textContent = `${loc} | Paquete: ${paq}`;
                 if (!paquetesCatalogo.length) await cargarPaquetes();
-                configurarCambioPaquete(cliente);
+                configurarCambioPaquete(cliente, historialPaquetes);
 
                 // 4. Configurar WhatsApp
                 const tel = cliente.telefono || '';
@@ -4247,9 +4323,11 @@ ${linkVelocidad}
                 const cliente = dataCompleto.cliente;
                 const pagos = dataCompleto.historial_pagos || [];
                 const bitacoraServicio = dataCompleto.bitacora_servicio || [];
+                const historialPaquetes = dataCompleto.historial_paquetes || [];
                 const estadoCuenta = dataCompleto.estado_cuenta;
                 clienteSeleccionado = cliente;
                 estadoCuentaDetalleActual = estadoCuenta;
+                historialPaquetesDetalleActual = historialPaquetes;
 
                 const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
                         EditarBoxAlias.innerHTML = `
@@ -4280,7 +4358,7 @@ ${linkVelocidad}
                 const paq = formatearPaqueteCliente(cliente);
                 document.getElementById('detalle-localidad-paquete').textContent = `${loc} | Paquete: ${paq}`;
                 if (!paquetesCatalogo.length) await cargarPaquetes();
-                configurarCambioPaquete(cliente);
+                configurarCambioPaquete(cliente, historialPaquetes);
 
                 // 4. Configurar WhatsApp
                 const tel = cliente.telefono || '';

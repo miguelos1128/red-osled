@@ -59,15 +59,168 @@
             
             <div id="modal-actions-admin" class="actions admin-actions-panel seccion-colapsada">
                 <div class="admin-actions-header" role="button" tabindex="0" onclick="toggleHeaderColapsable(event, 'modal-actions-admin')" onkeydown="manejarTeclaHeaderColapsable(event, 'modal-actions-admin')">
-                    <h3>Acciones de Administración</h3>
+                    <h3>Herramientas administrativas</h3>
                     <button type="button" class="btn-colapsar-seccion" aria-label="Expandir sección" aria-expanded="false" title="Expandir sección">
                         <i class="fas fa-chevron-down"></i>
                     </button>
                 </div>
                 <div class="seccion-colapsable-contenido admin-actions-contenido">
-                    <button id="btn-nuevo-cliente" class="btn-add button" onclick="mostrarFormularioCliente()">+ Agregar Nuevo Cliente</button>
-                    <div id="lista-supervision-cobradores" class="supervision-container">
-                    
+                    <div class="admin-tabs-shell">
+                        <button id="admin-tabs-toggle" type="button" class="admin-tabs-toggle" aria-expanded="false" aria-controls="admin-tabs-nav" onclick="toggleMenuHerramientasAdmin()">
+                            <span class="admin-tabs-toggle-icon" aria-hidden="true">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
+                            <span>Herramientas</span>
+                        </button>
+                        <div id="admin-tabs-nav" class="admin-tabs-nav" role="tablist" aria-label="Herramientas administrativas">
+                            <button type="button" class="admin-tab active" data-admin-tool="supervision-cobradores" onclick="cambiarHerramientaAdmin('supervision-cobradores')" role="tab" aria-selected="true">Supervisión cobradores</button>
+                            <button type="button" class="admin-tab" data-admin-tool="agregar-cliente" onclick="cambiarHerramientaAdmin('agregar-cliente')" role="tab" aria-selected="false">Agregar cliente</button>
+                            <button type="button" class="admin-tab" data-admin-tool="paquetes" onclick="cambiarHerramientaAdmin('paquetes')" role="tab" aria-selected="false">Administrar paquetes</button>
+                        </div>
+                    </div>
+
+                    <div class="admin-tools-content">
+                        <section id="admin-tool-supervision-cobradores" class="admin-tool-panel active" role="tabpanel">
+                            <div class="admin-tool-title">
+                                <h4>Supervisión cobradores</h4>
+                            </div>
+                            <div id="lista-supervision-cobradores" class="supervision-container"></div>
+                        </section>
+
+                        <section id="admin-tool-agregar-cliente" class="admin-tool-panel hidden" role="tabpanel">
+                            <div class="admin-tool-title">
+                                <h4>Agregar cliente</h4>
+                            </div>
+                            <div class="admin-cliente-form-shell">
+                                <form id="formCliente" class="cliente-form">
+                                    <div class="cliente-form-field">
+                                        <label>Nombre Completo:</label>
+                                        <input type="text" id="nom_cli" placeholder="Ej. Juan Pérez" required>
+                                    </div>
+
+                                    <div class="cliente-form-grid cliente-form-grid-2">
+                                        <div class="cliente-form-field">
+                                            <label>Teléfono (10 dígitos):</label>
+                                            <input type="text" id="tel_cli" placeholder="Ej. 5512345678" maxlength="10"
+                                                oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                                        </div>
+                                        <div class="cliente-form-field">
+                                            <label>Correo Electrónico:</label>
+                                            <input type="email" id="cor_cli" placeholder="Correo Electrónico">
+                                        </div>
+                                    </div>
+
+                                    <textarea id="dir_cli" placeholder="Dirección completa" required></textarea>
+                                    <textarea id="obs_cli" placeholder="Observaciones (opcional)"></textarea>
+
+                                    <div class="fila-localidad-renta mb-3">
+                                        <div class="campo-localidad">
+                                            <label class="form-label">Localidad:</label>
+                                            <select id="selectLocalidad" class="form-select" required>
+                                                <option value="">Seleccione una localidad...</option>
+                                            </select>
+                                        </div>
+                                        <label class="switch-renta">
+                                            <span>Modalidad RENTA</span>
+                                            <input type="checkbox" id="es_renta_cli">
+                                            <span class="slider-renta" data-off="OFF" data-on="ON"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="cliente-form-grid cliente-form-grid-3">
+                                        <div class="cliente-form-field">
+                                            <label>Fecha Instalación:</label>
+                                            <input type="date" id="fecha_ins" required>
+                                        </div>
+                                        <div class="cliente-form-field">
+                                            <label>IP:</label>
+                                            <input type="number" id="ip_cli" placeholder="Ej. 128" min="1" max="254" required>
+                                        </div>
+                                        <div class="cliente-form-field">
+                                            <label>Señal (30-90):</label>
+                                            <input type="number" id="senal_cli" placeholder="Ej. 60" min="30" max="90" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="cliente-form-grid cliente-form-grid-2">
+                                        <div class="cliente-form-field">
+                                            <label>Paquete:</label>
+                                            <select id="paquete_cli" onchange="actualizarCosto()" required>
+                                                <option value="">Selecciona Paquete</option>
+                                            </select>
+                                        </div>
+                                        <div class="cliente-form-field">
+                                            <label>Costo Mensual ($):</label>
+                                            <input type="number" id="costo_cli" placeholder="Costo Mensual ($)" required>
+                                        </div>
+                                    </div>
+
+                                    <button class="button" type="submit">Guardar Cliente</button>
+                                </form>
+                            </div>
+                        </section>
+
+                        <section id="admin-tool-paquetes" class="admin-tool-panel hidden" role="tabpanel">
+                            <div class="admin-tool-title">
+                                <h4>Administrar paquetes</h4>
+                                <p>El costo editado aplica solo para clientes nuevos o futuros cambios de paquete. No modifica automáticamente a clientes actuales.</p>
+                            </div>
+
+                            <form id="formPaqueteAdmin" class="paquete-admin-form" onsubmit="guardarPaqueteAdmin(event)">
+                                <input type="hidden" id="paquete_admin_id">
+                                <div class="paquete-admin-grid">
+                                    <label>
+                                        <span>Nombre</span>
+                                        <input type="text" id="paquete_admin_nombre" placeholder="Ej. Basico Plus" required>
+                                    </label>
+                                    <label>
+                                        <span>Mbps</span>
+                                        <input type="number" id="paquete_admin_velocidad" min="0.01" step="0.01" placeholder="10" required>
+                                    </label>
+                                    <label>
+                                        <span>Garantizada</span>
+                                        <input type="number" id="paquete_admin_garantizada" min="0" step="0.01" placeholder="2" required>
+                                    </label>
+                                    <label>
+                                        <span>Costo</span>
+                                        <input type="number" id="paquete_admin_costo" min="1" step="0.01" placeholder="400" required>
+                                    </label>
+                                    <label class="paquete-admin-estado">
+                                        <span>Estado</span>
+                                        <span class="paquete-admin-check">
+                                            <input type="checkbox" id="paquete_admin_activo" checked>
+                                            <span>Activo</span>
+                                        </span>
+                                    </label>
+                                </div>
+                                <div class="paquete-admin-acciones">
+                                    <button id="btn-guardar-paquete" type="submit" class="button">Guardar paquete</button>
+                                    <button type="button" class="button btn-secundario-paquete" onclick="limpiarFormularioPaqueteAdmin()">Limpiar</button>
+                                </div>
+                            </form>
+
+                            <div class="paquetes-admin-table-wrap">
+                                <table class="tabla-paquetes-admin">
+                                    <thead>
+                                        <tr>
+                                            <th>Paquete</th>
+                                            <th>Mbps</th>
+                                            <th>Garantizada</th>
+                                            <th>Costo</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabla-paquetes-admin-body">
+                                        <tr>
+                                            <td colspan="6">Cargando paquetes...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
                     </div>
                 </div>
             </div>
@@ -75,6 +228,8 @@
             <div class="main-section">
                 <h3 class="admin-titulo">Clientes Registrados
                     <span id="contador-clientes" class="contador-badge">0</span>
+                    <span id="total-mbps-garantizados" class="contador-badge contador-badge-info hidden">0 Mbps garantizados</span>
+                    <span id="total-adeudo-filtrado" class="contador-badge contador-badge-alerta hidden">$0 adeudo</span>
                 </h3>
 
                 <div class="admin-controles-busqueda">
@@ -112,6 +267,7 @@
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="con_adeudo">Con adeudo</button>
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="al_corriente">Al corriente</button>
                     <button type="button" class="chip-filtro-admin" data-filtro-rapido="renta">RENTA</button>
+                    <button type="button" class="chip-filtro-admin" data-filtro-rapido="mbps_garantizados">Mbps garantizados</button>
                     <span id="chips-paquetes-admin" class="chips-paquetes-admin"></span>
                 </div>
 <div id ="admin-clientes-container" class="admin-clientes-container">
@@ -284,80 +440,6 @@
                     Cerrar
                 </button>
             </div>
-        </div>
-    </div>
-
-    <div id="modalCliente" class="modal hidden" onclick="cerrarModalPorFondo(event, 'modalCliente', cerrarModal)">
-        <div class="modal-content">
-            <div class="modal-cabecera">
-                <h2>Nuevo Cliente</h2>
-                <span class="cerrar-x-modal" onclick="cerrarModal()">&times;</span>
-            </div>
-            <form id="formCliente" class="cliente-form">
-                <div class="cliente-form-field">
-                    <label>Nombre Completo:</label>
-                    <input type="text" id="nom_cli" placeholder="Ej. Juan Pérez" required>
-                </div>
-
-                <div class="cliente-form-grid cliente-form-grid-2">
-                    <div class="cliente-form-field">
-                        <label>Teléfono (10 dígitos):</label>
-                        <input type="text" id="tel_cli" placeholder="Ej. 5512345678" maxlength="10"
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
-                    </div>
-                    <div class="cliente-form-field">
-                        <label>Correo Electrónico:</label>
-                        <input type="email" id="cor_cli" placeholder="Correo Electrónico">
-                    </div>
-                </div>
-
-                <textarea id="dir_cli" placeholder="Dirección completa" required></textarea>
-                <textarea id="obs_cli" placeholder="Observaciones (opcional)"></textarea>
-
-                <div class="fila-localidad-renta mb-3">
-                    <div class="campo-localidad">
-                        <label class="form-label">Localidad:</label>
-                        <select id="selectLocalidad" class="form-select" required>
-                            <option value="">Seleccione una localidad...</option>
-                            </select>
-                    </div>
-                    <label class="switch-renta">
-                        <span>Modalidad RENTA</span>
-                        <input type="checkbox" id="es_renta_cli">
-                        <span class="slider-renta" data-off="OFF" data-on="ON"></span>
-                    </label>
-                </div>
-
-                <div class="cliente-form-grid cliente-form-grid-3">
-                    <div class="cliente-form-field">
-                        <label>Fecha Instalación:</label>
-                        <input type="date" id="fecha_ins" required>
-                    </div>
-                    <div class="cliente-form-field">
-                        <label>IP:</label>
-                        <input type="number" id="ip_cli" placeholder="Ej. 128" min="1" max="254" required>
-                    </div>
-                    <div class="cliente-form-field">
-                        <label>Señal (30-90):</label>
-                        <input type="number" id="senal_cli" placeholder="Ej. 60" min="30" max="90" required>
-                    </div>
-                </div>
-
-                <div class="cliente-form-grid cliente-form-grid-2">
-                    <div class="cliente-form-field">
-                        <label>Paquete:</label>
-                        <select id="paquete_cli" onchange="actualizarCosto()" required>
-                            <option value="">Selecciona Paquete</option>
-                        </select>
-                    </div>
-                    <div class="cliente-form-field">
-                        <label>Costo Mensual ($):</label>
-                        <input type="number" id="costo_cli" placeholder="Costo Mensual ($)" required>
-                    </div>
-                </div>
-
-                <button class="button" type="submit" style="margin-top:15px;">Guardar Cliente</button>
-            </form>
         </div>
     </div>
 
@@ -826,6 +908,7 @@
         const inputBuscador = document.getElementById('buscador-nombre');
         let configLocalidades = {};
         let paquetesCatalogo = [];
+        let paquetesAdminCatalogo = [];
         let perfilUsuario ="";
         let detallePago;
         let ultimoDetallePago = null;
@@ -836,7 +919,7 @@
         let suspensionServicioActual = null;
         let estadoCuentaDetalleActual = null;
         let filtroLocalidadTodasSeleccionadoAntes = false;
-        const filtrosRapidosAdmin = { estadoCuenta: null, renta: false, paquete: null };
+        const filtrosRapidosAdmin = { estadoCuenta: null, renta: false, paquete: null, mostrarGarantizados: false };
 
         if (!usuarioJson) {
             window.location.href = 'index.html';
@@ -868,14 +951,9 @@
             document.getElementById('admin-section').style.display = 'block';
             // Verificamos si es el nuevo rol de Supervisor (ID: 3)
             if (usuario.rol === 3) {
-                const btnNuevo = document.getElementById('btn-nuevo-cliente');
                 const modalActionsAdmin = document.getElementById('modal-actions-admin');
 
-                if (btnNuevo) {
-                    // Eliminamos el botón para que no exista en el DOM del Supervisor
-                    btnNuevo.remove(); 
-                    modalActionsAdmin.remove();
-                }
+                if (modalActionsAdmin) modalActionsAdmin.remove();
                 perfilUsuario = "Administrador Local";
             }else if (usuario.rol === 2){
                 perfilUsuario = "Administrador"
@@ -965,6 +1043,16 @@
             return formatearFechaInput(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1));
         }
 
+        function obtenerFechaHoyInput() {
+            return formatearFechaInput(new Date());
+        }
+
+        function crearFechaLocalDesdeInput(valor) {
+            const partes = String(valor || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!partes) return null;
+            return new Date(parseInt(partes[1], 10), parseInt(partes[2], 10) - 1, parseInt(partes[3], 10));
+        }
+
         function obtenerPaquetePorId(paqueteId) {
             return paquetesCatalogo.find(paquete => String(paquete.id) === String(paqueteId)) || null;
         }
@@ -1020,6 +1108,280 @@
             }
         }
 
+        function toggleMenuHerramientasAdmin() {
+            const nav = document.getElementById('admin-tabs-nav');
+            const boton = document.getElementById('admin-tabs-toggle');
+            if (!nav || !boton) return;
+
+            const abierto = nav.classList.toggle('abierto');
+            boton.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+        }
+
+        function cambiarHerramientaAdmin(herramienta) {
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                const activo = tab.dataset.adminTool === herramienta;
+                tab.classList.toggle('active', activo);
+                tab.setAttribute('aria-selected', activo ? 'true' : 'false');
+            });
+
+            document.querySelectorAll('.admin-tool-panel').forEach(panel => {
+                panel.classList.toggle('hidden', panel.id !== `admin-tool-${herramienta}`);
+                panel.classList.toggle('active', panel.id === `admin-tool-${herramienta}`);
+            });
+
+            const nav = document.getElementById('admin-tabs-nav');
+            const boton = document.getElementById('admin-tabs-toggle');
+            if (nav && boton) {
+                nav.classList.remove('abierto');
+                boton.setAttribute('aria-expanded', 'false');
+            }
+
+            if (herramienta === 'paquetes') cargarPaquetesAdmin();
+            if (herramienta === 'supervision-cobradores') cargarSupervisionCobradores();
+        }
+
+        function formatearMontoPaqueteAdmin(valor) {
+            const numero = parseFloat(valor) || 0;
+            return numero.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+
+        function obtenerPayloadPaqueteAdmin() {
+            const nombre = document.getElementById('paquete_admin_nombre').value.trim();
+            const velocidad = parseFloat(document.getElementById('paquete_admin_velocidad').value);
+            const garantizada = parseFloat(document.getElementById('paquete_admin_garantizada').value);
+            const costo = parseFloat(document.getElementById('paquete_admin_costo').value);
+            const activo = document.getElementById('paquete_admin_activo').checked ? 1 : 0;
+            const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
+
+            return {
+                nombre_paquete: nombre,
+                velocidad_mbps: velocidad,
+                velocidad_garantizada_mbps: garantizada,
+                costo,
+                activo,
+                rol_usuario: usuarioActual.rol
+            };
+        }
+
+        function validarPayloadPaqueteAdmin(payload) {
+            const errores = [];
+
+            if (!payload.nombre_paquete) errores.push('- El nombre del paquete es obligatorio.');
+            if (!Number.isFinite(payload.velocidad_mbps) || payload.velocidad_mbps <= 0) {
+                errores.push('- La velocidad Mbps debe ser mayor a cero.');
+            }
+            if (!Number.isFinite(payload.velocidad_garantizada_mbps) || payload.velocidad_garantizada_mbps < 0) {
+                errores.push('- La velocidad garantizada no es valida.');
+            }
+            if (
+                Number.isFinite(payload.velocidad_mbps)
+                && Number.isFinite(payload.velocidad_garantizada_mbps)
+                && payload.velocidad_garantizada_mbps > payload.velocidad_mbps
+            ) {
+                errores.push('- La velocidad garantizada no puede ser mayor a la velocidad del paquete.');
+            }
+            if (!Number.isFinite(payload.costo) || payload.costo <= 0) errores.push('- El costo debe ser mayor a cero.');
+
+            return errores;
+        }
+
+        function renderizarTablaPaquetesAdmin() {
+            const tbody = document.getElementById('tabla-paquetes-admin-body');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (!paquetesAdminCatalogo.length) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 6;
+                cell.textContent = 'No hay paquetes registrados.';
+                row.appendChild(cell);
+                tbody.appendChild(row);
+                return;
+            }
+
+            paquetesAdminCatalogo.forEach(paquete => {
+                const row = document.createElement('tr');
+                const activo = parseInt(paquete.activo, 10) === 1;
+
+                const nombre = document.createElement('td');
+                nombre.textContent = paquete.nombre_paquete || `Paquete ${paquete.id}`;
+                row.appendChild(nombre);
+
+                const velocidad = document.createElement('td');
+                velocidad.textContent = `${formatearNumeroPaquete(paquete.velocidad_mbps)} Mbps`;
+                row.appendChild(velocidad);
+
+                const garantizada = document.createElement('td');
+                garantizada.textContent = `${formatearNumeroPaquete(paquete.velocidad_garantizada_mbps)} Mbps`;
+                row.appendChild(garantizada);
+
+                const costo = document.createElement('td');
+                costo.textContent = `$${formatearMontoPaqueteAdmin(paquete.costo)}`;
+                row.appendChild(costo);
+
+                const estado = document.createElement('td');
+                const badge = document.createElement('span');
+                badge.className = `paquete-estado-badge ${activo ? 'activo' : 'inactivo'}`;
+                badge.textContent = activo ? 'Activo' : 'Inactivo';
+                estado.appendChild(badge);
+                row.appendChild(estado);
+
+                const acciones = document.createElement('td');
+                const accionesWrap = document.createElement('div');
+                accionesWrap.className = 'paquete-admin-table-actions';
+
+                const btnEditar = document.createElement('button');
+                btnEditar.type = 'button';
+                btnEditar.className = 'button btn-editar-paquete';
+                btnEditar.textContent = 'Editar';
+                btnEditar.addEventListener('click', () => editarPaqueteAdmin(paquete.id));
+                accionesWrap.appendChild(btnEditar);
+
+                const btnEstado = document.createElement('button');
+                btnEstado.type = 'button';
+                btnEstado.className = 'button btn-toggle-paquete';
+                btnEstado.textContent = activo ? 'Desactivar' : 'Activar';
+                btnEstado.addEventListener('click', () => cambiarEstadoPaqueteAdmin(paquete.id));
+                accionesWrap.appendChild(btnEstado);
+
+                acciones.appendChild(accionesWrap);
+                row.appendChild(acciones);
+                tbody.appendChild(row);
+            });
+        }
+
+        async function cargarPaquetesAdmin() {
+            const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
+            if (parseInt(usuarioActual.rol, 10) !== 2) return;
+
+            const tbody = document.getElementById('tabla-paquetes-admin-body');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6">Cargando paquetes...</td></tr>';
+            }
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/paquetes?rol_usuario=${usuarioActual.rol}`);
+                const paquetes = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(paquetes.error || 'Error cargando paquetes');
+                }
+
+                paquetesAdminCatalogo = Array.isArray(paquetes) ? paquetes : [];
+                renderizarTablaPaquetesAdmin();
+            } catch (error) {
+                console.error(error);
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="6">No se pudo cargar el catalogo de paquetes.</td></tr>';
+                }
+            }
+        }
+
+        function limpiarFormularioPaqueteAdmin() {
+            const form = document.getElementById('formPaqueteAdmin');
+            if (form) form.reset();
+            document.getElementById('paquete_admin_id').value = '';
+            document.getElementById('paquete_admin_activo').checked = true;
+            document.getElementById('btn-guardar-paquete').textContent = 'Guardar paquete';
+        }
+
+        function editarPaqueteAdmin(paqueteId) {
+            const paquete = paquetesAdminCatalogo.find(item => String(item.id) === String(paqueteId));
+            if (!paquete) return;
+
+            cambiarHerramientaAdmin('paquetes');
+            document.getElementById('paquete_admin_id').value = paquete.id;
+            document.getElementById('paquete_admin_nombre').value = paquete.nombre_paquete || '';
+            document.getElementById('paquete_admin_velocidad').value = paquete.velocidad_mbps || '';
+            document.getElementById('paquete_admin_garantizada').value = paquete.velocidad_garantizada_mbps || '';
+            document.getElementById('paquete_admin_costo').value = paquete.costo || '';
+            document.getElementById('paquete_admin_activo').checked = parseInt(paquete.activo, 10) === 1;
+            document.getElementById('btn-guardar-paquete').textContent = 'Actualizar paquete';
+            document.getElementById('formPaqueteAdmin').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function guardarPaqueteAdmin(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('paquete_admin_id').value;
+            const payload = obtenerPayloadPaqueteAdmin();
+            const errores = validarPayloadPaqueteAdmin(payload);
+
+            if (errores.length > 0) {
+                alert(`Corrige los siguientes datos:\n\n${errores.join('\n')}`);
+                return;
+            }
+
+            const url = id
+                ? `${urlBase}/api/admin/paquetes/${id}`
+                : `${urlBase}/api/admin/paquetes`;
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert(result.error || 'No se pudo guardar el paquete.');
+                    return;
+                }
+
+                alert(result.message || 'Paquete guardado correctamente.');
+                limpiarFormularioPaqueteAdmin();
+                await cargarPaquetesAdmin();
+                await cargarPaquetes();
+            } catch (error) {
+                console.error(error);
+                alert('Error al guardar paquete.');
+            }
+        }
+
+        async function cambiarEstadoPaqueteAdmin(paqueteId) {
+            const paquete = paquetesAdminCatalogo.find(item => String(item.id) === String(paqueteId));
+            if (!paquete) return;
+
+            const activoActual = parseInt(paquete.activo, 10) === 1;
+            const accion = activoActual ? 'desactivar' : 'activar';
+            const confirmar = confirm(`¿Confirmas ${accion} el paquete ${paquete.nombre_paquete}?`);
+            if (!confirmar) return;
+
+            const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
+            const payload = {
+                nombre_paquete: paquete.nombre_paquete,
+                velocidad_mbps: parseFloat(paquete.velocidad_mbps),
+                velocidad_garantizada_mbps: parseFloat(paquete.velocidad_garantizada_mbps),
+                costo: parseFloat(paquete.costo),
+                activo: activoActual ? 0 : 1,
+                rol_usuario: usuarioActual.rol
+            };
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/paquetes/${paquete.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert(result.error || 'No se pudo actualizar el estado del paquete.');
+                    return;
+                }
+
+                await cargarPaquetesAdmin();
+                await cargarPaquetes();
+            } catch (error) {
+                console.error(error);
+                alert('Error al actualizar estado del paquete.');
+            }
+        }
+
         function configurarCambioPaquete(cliente) {
             const box = document.getElementById('cambio-paquete-box');
             const select = document.getElementById('cambio-paquete-select');
@@ -1027,6 +1389,7 @@
             const costoInput = document.getElementById('cambio-paquete-costo');
             const actual = document.getElementById('cambio-paquete-actual');
             const preview = document.getElementById('preview-cambio-paquete');
+            const boton = box ? box.querySelector('.btn-cambiar-paquete') : null;
 
             if (!box || !select || !fechaInput || !costoInput || !actual || !preview) return;
 
@@ -1048,11 +1411,44 @@
             });
 
             select.value = '';
-            fechaInput.value = obtenerPrimerDiaSiguienteMesInput();
-            fechaInput.min = formatearFechaInput(new Date());
+            fechaInput.value = obtenerFechaHoyInput();
+            fechaInput.min = obtenerFechaHoyInput();
+            fechaInput.max = obtenerFechaHoyInput();
+            fechaInput.readOnly = true;
             costoInput.value = '';
             preview.classList.add('hidden');
+            preview.classList.remove('bloqueo');
             preview.textContent = '';
+
+            const adeudoActual = parseFloat(estadoCuentaDetalleActual?.adeudo_actual) || 0;
+            const bloquearPorAdeudo = adeudoActual > 0;
+            select.disabled = bloquearPorAdeudo;
+            fechaInput.disabled = bloquearPorAdeudo;
+            costoInput.disabled = bloquearPorAdeudo;
+            if (boton) boton.disabled = bloquearPorAdeudo;
+
+            if (bloquearPorAdeudo) {
+                const adeudoTexto = adeudoActual.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                preview.textContent = `Cambio bloqueado: el cliente tiene adeudo pendiente de $${adeudoTexto}.`;
+                preview.classList.add('bloqueo');
+                preview.classList.remove('hidden');
+            }
+        }
+
+        function calcularProrrateoCambioPaqueteVista(fechaInicio, costoAnterior, costoNuevo, diaPago) {
+            const fecha = crearFechaLocalDesdeInput(fechaInicio) || new Date();
+            const dias = calcularDiasProrrateoCambioPago(fecha.getDate(), diaPago);
+            const anterior = parseFloat(costoAnterior) || 0;
+            const nuevo = parseFloat(costoNuevo) || 0;
+            const diferencia = nuevo - anterior;
+            const monto = Math.floor((Math.abs(diferencia) / 30) * dias);
+            const tipo = monto <= 0
+                ? 'sin_ajuste'
+                : diferencia > 0
+                    ? 'cargo'
+                    : 'saldo_favor';
+
+            return { dias, diferencia, monto, tipo };
         }
 
         function actualizarPreviewCambioPaquete(actualizarCosto = false) {
@@ -1075,15 +1471,34 @@
                 costoInput.value = costoPaquete > 0 ? costoPaquete.toFixed(0) : '';
             }
 
-            const fechaInicio = fechaInput.value || obtenerPrimerDiaSiguienteMesInput();
+            const fechaInicio = fechaInput.value || obtenerFechaHoyInput();
             const costo = parseFloat(costoInput.value) || costoPaquete;
+            const costoAnterior = parseFloat(clienteSeleccionado?.costo_mensual) || 0;
+            const diaPago = parseInt(clienteSeleccionado?.dia_pago) || 1;
+            const prorrateo = calcularProrrateoCambioPaqueteVista(fechaInicio, costoAnterior, costo, diaPago);
             const costoTexto = costo.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-            preview.textContent = `${paquete.nombre_paquete} | Inicio: ${fechaInicio} | Costo: $${costoTexto}`;
+            const costoAnteriorTexto = costoAnterior.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            const montoTexto = prorrateo.monto.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            const resultado = prorrateo.tipo === 'cargo'
+                ? `Cargo al siguiente pago: $${montoTexto}`
+                : prorrateo.tipo === 'saldo_favor'
+                    ? `Saldo a favor: $${montoTexto}`
+                    : 'Sin prorrateo';
+
+            preview.textContent =
+                `${paquete.nombre_paquete} | Inicio: ${fechaInicio} | Actual: $${costoAnteriorTexto} | Nuevo: $${costoTexto} | Dias restantes: ${prorrateo.dias} | ${resultado}`;
             preview.classList.remove('hidden');
         }
 
         async function cambiarPaqueteCliente() {
             if (!clienteDetalleActualId || !clienteSeleccionado) return;
+
+            const adeudoActual = parseFloat(estadoCuentaDetalleActual?.adeudo_actual) || 0;
+            if (adeudoActual > 0) {
+                const adeudoTexto = adeudoActual.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                alert(`Solo puedes cambiar de paquete cuando el cliente esta al corriente. Adeudo actual: $${adeudoTexto}.`);
+                return;
+            }
 
             const select = document.getElementById('cambio-paquete-select');
             const fechaInput = document.getElementById('cambio-paquete-fecha');
@@ -1112,7 +1527,16 @@
                 return;
             }
 
-            const confirmar = confirm(`¿Confirmas cambiar a ${paquete.nombre_paquete} desde ${fechaInicio}?`);
+            const costoAnterior = parseFloat(clienteSeleccionado?.costo_mensual) || 0;
+            const diaPago = parseInt(clienteSeleccionado?.dia_pago) || 1;
+            const prorrateo = calcularProrrateoCambioPaqueteVista(fechaInicio, costoAnterior, costoMensual, diaPago);
+            const montoTexto = prorrateo.monto.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            const prorrateoTexto = prorrateo.tipo === 'cargo'
+                ? `Cargo por prorrateo: $${montoTexto}`
+                : prorrateo.tipo === 'saldo_favor'
+                    ? `Saldo a favor: $${montoTexto}`
+                    : 'Sin prorrateo';
+            const confirmar = confirm(`¿Confirmas cambiar a ${paquete.nombre_paquete} desde hoy (${fechaInicio})?\n${prorrateoTexto}`);
             if (!confirmar) return;
 
             const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
@@ -1137,6 +1561,7 @@
                 }
 
                 alert(result.message || 'Paquete actualizado correctamente.');
+                preguntarEnviarWhatsappEventoServicio('cambio_paquete', result);
                 abrirDetallesCliente(clienteDetalleActualId);
                 cargarVistaAdminClientes();
             } catch (error) {
@@ -1280,6 +1705,7 @@
                     card.setAttribute('data-estado-servicio', (cliente.estado_servicio || '').toLowerCase());
                     card.setAttribute('data-tipo-suspension', cliente.tipo_suspension_activa || '');
                     card.setAttribute('data-adeudo', parseFloat(cliente.adeudo_actual) || 0);
+                    card.setAttribute('data-mbps-garantizados', parseFloat(cliente.paquete_velocidad_garantizada_mbps) || 0);
                     card.setAttribute('data-renta', Number(cliente.es_renta) === 1 ? '1' : '0');
                     card.setAttribute('data-paquete', paqueteFiltro);
                     card.setAttribute('data-busqueda', textoBusquedaCombinada.toLowerCase());
@@ -1576,12 +2002,15 @@
 
         // Funciones para el Modal------------
         function mostrarFormularioCliente() {
-            document.getElementById('modalCliente').classList.remove('hidden');
+            cambiarHerramientaAdmin('agregar-cliente');
         }
 
         function cerrarModal() {
-            document.getElementById('modalCliente').classList.add('hidden');
-            document.getElementById('formCliente').reset();
+            const modal = document.getElementById('modalCliente');
+            if (modal) modal.classList.add('hidden');
+            const form = document.getElementById('formCliente');
+            if (form) form.reset();
+            actualizarCosto();
         }
 
         function cerrarModalPorFondo(event, modalId, cerrarCallback) {
@@ -1594,10 +2023,12 @@
         // 1. Configurar la fecha máxima como "HOY" al cargar la página
         window.onload = function() {
             const hoy = new Date().toISOString().split('T')[0];
-            document.getElementById('fecha_ins').setAttribute('max', hoy);
+            const fechaInstalacion = document.getElementById('fecha_ins');
+            if (fechaInstalacion) fechaInstalacion.setAttribute('max', hoy);
             cargarVistaAdminClientes();
             //cargarClientes(); // Tu función existente
             cargarSupervisionCobradores();
+            cargarPaquetesAdmin();
             CargarWidgetCorteDashboard();
         };
 
@@ -1616,10 +2047,12 @@
                 const tienePermiso = usuario.localidades.includes(loc.id);
 
                 if (esAdmin || tienePermiso) {
-                     const option = document.createElement('option');
-                    option.value = loc.id;
-                    option.textContent = loc.nombre;
-                    select.appendChild(option);
+                    if (select) {
+                        const option = document.createElement('option');
+                        option.value = loc.id;
+                        option.textContent = loc.nombre;
+                        select.appendChild(option);
+                    }
 
                     // 1. Llenamos nuestro diccionario global de colores
                     configLocalidades[loc.id] = { 
@@ -1670,7 +2103,8 @@
         }
 
         // 2. Lógica de validación y envío
-        document.getElementById('formCliente').addEventListener('submit', async (e) => {
+        const formCliente = document.getElementById('formCliente');
+        if (formCliente) formCliente.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             // Recolectar valores
@@ -1753,7 +2187,7 @@
             if (usuarioString) {
                 const usuario = JSON.parse(usuarioString);
                 // Añadimos el rol al objeto que enviaremos al servidor
-                nuevoCliente.rol_usuario = usuario.rol; 
+                nuevoCliente.rol_usuario = parseInt(usuario.rol, 10);
                 nuevoCliente.usuario_id = usuario.id;
             } else {
                 alert("Error: No hay sesión activa.");
@@ -1785,6 +2219,8 @@
 
         function actualizarCosto() {
             const costoInput = document.getElementById('costo_cli');
+            if (!costoInput) return;
+
             const paquete = obtenerPaqueteSeleccionado();
             const costo = parseFloat(paquete?.costo);
 
@@ -2414,7 +2850,8 @@ Que tengas una excelente ${saludoTiempo}. ${emojiTiempo}
 
         function formatearFechaMensajeServicio(fecha) {
             if (!fecha) return 'Pendiente';
-            return new Date(fecha).toLocaleDateString('es-MX');
+            const fechaLocal = crearFechaLocalDesdeInput(fecha);
+            return (fechaLocal || new Date(fecha)).toLocaleDateString('es-MX');
         }
 
         function formatearMontoMensajeServicio(monto) {
@@ -2535,6 +2972,37 @@ ${emojiFecha} *Nuevo dia de pago:* ${nuevoDia}
 ${emojiDinero} *${accion}*
 
 Este cambio aplicara en tus siguientes pagos.
+
+*RED OSLED*`;
+            }
+
+            if (tipoEvento === 'cambio_paquete') {
+                const paqueteAnterior = datos.paquete_anterior?.nombre_paquete || 'Paquete anterior';
+                const paqueteNuevo = datos.paquete?.nombre_paquete || 'Paquete nuevo';
+                const costoAnterior = formatearMontoMensajeServicio(datos.paquete_anterior?.costo_mensual);
+                const costoNuevo = formatearMontoMensajeServicio(datos.paquete?.costo_mensual);
+                const dias = parseInt(datos.dias_prorrateo) || 0;
+                const monto = formatearMontoMensajeServicio(datos.monto_prorrateo);
+                const resultado = datos.tipo_prorrateo === 'cargo'
+                    ? `Cargo por prorrateo: $${monto}`
+                    : datos.tipo_prorrateo === 'saldo_favor'
+                        ? `Saldo a favor: $${monto}`
+                        : 'Sin prorrateo';
+                const linkVelocidad = datos.validacion_velocidad_url || 'https://wifiman.com/';
+
+                return `Hola *${nombre}* ${emojiSaludo}
+
+Te confirmamos que tu cambio de paquete fue registrado correctamente.
+
+${emojiFecha} *Fecha de cambio:* ${formatearFechaMensajeServicio(datos.fecha_inicio)}
+*Paquete anterior:* ${paqueteAnterior} - $${costoAnterior}
+*Paquete nuevo:* ${paqueteNuevo} - $${costoNuevo}
+*Dia de corte:* ${datos.dia_pago || '-'}
+*Dias prorrateados:* ${dias}
+${emojiDinero} *${resultado}*
+
+Puedes validar tu velocidad desde este enlace:
+${linkVelocidad}
 
 *RED OSLED*`;
             }
@@ -3135,7 +3603,8 @@ Este cambio aplicara en tus siguientes pagos.
                 falta_pago: 'Falta de Pago Suspendido',
                 decision_usuario: 'Decisión del Usuario',
                 falla_tecnica: 'Falla Técnica',
-                cambio_fecha_pago: 'Cambio de fecha de pago'
+                cambio_fecha_pago: 'Cambio de fecha de pago',
+                cambio_paquete: 'Cambio de paquete'
             };
             return etiquetas[tipo] || tipo;
         }
@@ -3373,7 +3842,9 @@ Este cambio aplicara en tus siguientes pagos.
                             ? 'falla-tecnica'
                             : tipo === 'cambio_fecha_pago'
                                 ? 'cambio-fecha'
-                                : '';
+                                : tipo === 'cambio_paquete'
+                                    ? 'cambio-paquete'
+                                    : '';
                 const diasHtml = diasCompensados > 0
                     ? `<div><span>Días compensados</span><strong>${diasCompensados}</strong></div>`
                     : '';
@@ -4862,6 +5333,9 @@ Este cambio aplicara en tus siguientes pagos.
             const filtroLocalidadesListo = opcionesReales.length > 0;
             const tarjetas = document.querySelectorAll('.cliente-card');
             let clientesVisibles = 0;
+            let totalMbpsGarantizados = 0;
+            let totalAdeudoFiltrado = 0;
+
             tarjetas.forEach(tarjeta => {
                 const textoTarjeta = tarjeta.getAttribute('data-busqueda') || tarjeta.querySelector('.cliente-nombre').textContent.toLowerCase();
                 const idLocalidadTarjeta = String(tarjeta.getAttribute('data-localidad') || '').trim();
@@ -4882,11 +5356,33 @@ Este cambio aplicara en tus siguientes pagos.
                 if (coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRenta && coincidePaquete) {
                     tarjeta.classList.remove('hidden');
                     clientesVisibles++;
+                    totalAdeudoFiltrado += adeudo;
+                    totalMbpsGarantizados += parseFloat(tarjeta.getAttribute('data-mbps-garantizados')) || 0;
                 } else {
                     tarjeta.classList.add('hidden');
                 }
             });
-            document.getElementById('contador-clientes').textContent = clientesVisibles;
+            actualizarResumenFiltrosAdmin(clientesVisibles, totalMbpsGarantizados, totalAdeudoFiltrado);
+        }
+
+        function actualizarResumenFiltrosAdmin(clientesVisibles, totalMbpsGarantizados = 0, totalAdeudoFiltrado = 0) {
+            const contadorClientes = document.getElementById('contador-clientes');
+            const badgeMbps = document.getElementById('total-mbps-garantizados');
+            const badgeAdeudo = document.getElementById('total-adeudo-filtrado');
+
+            if (contadorClientes) contadorClientes.textContent = clientesVisibles;
+
+            if (badgeMbps) {
+                const textoMbps = formatearNumeroPaquete(totalMbpsGarantizados);
+                badgeMbps.textContent = `${textoMbps || '0'} Mbps garantizados`;
+                badgeMbps.classList.toggle('hidden', !filtrosRapidosAdmin.mostrarGarantizados);
+            }
+
+            if (badgeAdeudo) {
+                const adeudoTexto = totalAdeudoFiltrado.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                badgeAdeudo.textContent = `$${adeudoTexto} adeudo`;
+                badgeAdeudo.classList.toggle('hidden', filtrosRapidosAdmin.estadoCuenta !== 'con_adeudo');
+            }
         }
 
         function manejarCambioFiltroLocalidad() {
@@ -4910,15 +5406,18 @@ Este cambio aplicara en tus siguientes pagos.
                 const filtro = chip.dataset.filtroRapido;
                 const activo = filtro === 'renta'
                     ? filtrosRapidosAdmin.renta
-                    : filtro.startsWith('paquete_')
-                        ? filtrosRapidosAdmin.paquete === filtro.replace('paquete_', '')
-                        : filtrosRapidosAdmin.estadoCuenta === filtro;
+                    : filtro === 'mbps_garantizados'
+                        ? filtrosRapidosAdmin.mostrarGarantizados
+                        : filtro.startsWith('paquete_')
+                            ? filtrosRapidosAdmin.paquete === filtro.replace('paquete_', '')
+                            : filtrosRapidosAdmin.estadoCuenta === filtro;
                 chip.classList.toggle('activo', activo);
             });
         }
 
         function manejarFiltroRapidoAdmin(filtro) {
             if (filtro === 'renta') filtrosRapidosAdmin.renta = !filtrosRapidosAdmin.renta;
+            else if (filtro === 'mbps_garantizados') filtrosRapidosAdmin.mostrarGarantizados = !filtrosRapidosAdmin.mostrarGarantizados;
             else if (filtro.startsWith('paquete_')) {
                 const paquete = filtro.replace('paquete_', '');
                 filtrosRapidosAdmin.paquete = filtrosRapidosAdmin.paquete === paquete ? null : paquete;

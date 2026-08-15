@@ -236,6 +236,49 @@ async function obtenerPaqueteActivoPorId(paqueteId, ejecutor = db) {
     return rows[0] || null;
 }
 
+function esRolAdministrador(rol) {
+    return parseInt(rol, 10) === 2;
+}
+
+function validarAdministradorRequest(req, res) {
+    const rol = req.body?.rol_usuario ?? req.query?.rol_usuario ?? req.query?.rol;
+    if (esRolAdministrador(rol)) return true;
+
+    res.status(403).json({
+        success: false,
+        error: 'Acceso denegado: solo el administrador puede administrar paquetes.'
+    });
+    return false;
+}
+
+function normalizarDatosPaquete(body = {}) {
+    const nombre = String(body.nombre_paquete || '').trim();
+    const velocidad = parseFloat(body.velocidad_mbps);
+    const garantizada = parseFloat(body.velocidad_garantizada_mbps);
+    const costo = parseFloat(body.costo);
+    const activo = body.activo === undefined ? 1 : (parseInt(body.activo, 10) ? 1 : 0);
+    const errores = [];
+
+    if (!nombre) errores.push('El nombre del paquete es obligatorio.');
+    if (!Number.isFinite(velocidad) || velocidad <= 0) errores.push('La velocidad Mbps debe ser mayor a cero.');
+    if (!Number.isFinite(garantizada) || garantizada < 0) errores.push('La velocidad garantizada no es valida.');
+    if (Number.isFinite(velocidad) && Number.isFinite(garantizada) && garantizada > velocidad) {
+        errores.push('La velocidad garantizada no puede ser mayor a la velocidad del paquete.');
+    }
+    if (!Number.isFinite(costo) || costo <= 0) errores.push('El costo debe ser mayor a cero.');
+
+    return {
+        datos: {
+            nombre_paquete: nombre,
+            velocidad_mbps: velocidad,
+            velocidad_garantizada_mbps: garantizada,
+            costo,
+            activo
+        },
+        errores
+    };
+}
+
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
@@ -250,7 +293,7 @@ app.post('/api/clientes', async (req, res) => {
 
         // 2. VALIDACIÓN DE SEGURIDAD (Bloqueo de Creación)
         // Comprobamos si el usuario NO es el Administrador (rol 2)
-        if (rol_usuario !== 2) {
+        if (parseInt(rol_usuario, 10) !== 2) {
             // Detenemos la ejecución y enviamos un mensaje de error al navegador
             return res.status(403).json({
                 success: false,
@@ -728,11 +771,13 @@ function obtenerDiaPagoDesdeFechaInstalacion(fechaInstalacion) {
 
 function obtenerEtiquetaCargoServicio(tipoEvento) {
     if (tipoEvento === 'cambio_fecha_pago') return 'Cargo cambio fecha de pago';
+    if (tipoEvento === 'cambio_paquete') return 'Cargo cambio de paquete';
     return 'Cargo de servicio';
 }
 
 function obtenerClavePagoCargoServicio(tipoEvento) {
     if (tipoEvento === 'cambio_fecha_pago') return 'Cargo prorrateo';
+    if (tipoEvento === 'cambio_paquete') return 'Cargo prorrateo cambio paquete';
     return 'Cargo servicio';
 }
 
@@ -741,6 +786,38 @@ function calcularDiasProrrateoCambioPago(diaActual, diaNuevo) {
     const nuevo = Math.min(Math.max(parseInt(diaNuevo) || 1, 1), 30);
     if (actual === nuevo) return 0;
     return nuevo > actual ? nuevo - actual : (30 - actual) + nuevo;
+}
+
+function calcularDiasRestantesHastaCorte(fechaCambio, diaPago) {
+    const fecha = fechaCambio instanceof Date ? fechaCambio : crearFechaLocalDesdeValor(fechaCambio);
+    if (!fecha) return 0;
+    return calcularDiasProrrateoCambioPago(fecha.getDate(), diaPago);
+}
+
+function calcularProrrateoCambioPaquete(costoAnterior, costoNuevo, diasRestantes) {
+    const anterior = parseFloat(costoAnterior) || 0;
+    const nuevo = parseFloat(costoNuevo) || 0;
+    const dias = parseInt(diasRestantes, 10) || 0;
+    const diferenciaMensual = Number((nuevo - anterior).toFixed(2));
+    const montoProrrateo = Math.floor((Math.abs(diferenciaMensual) / 30) * dias);
+    let tipoProrrateo = 'sin_ajuste';
+    let montoAjuste = 0;
+
+    if (montoProrrateo > 0 && diferenciaMensual > 0) {
+        tipoProrrateo = 'cargo';
+        montoAjuste = -montoProrrateo;
+    } else if (montoProrrateo > 0 && diferenciaMensual < 0) {
+        tipoProrrateo = 'saldo_favor';
+        montoAjuste = montoProrrateo;
+    }
+
+    return {
+        diferencia_mensual: diferenciaMensual,
+        dias_restantes: dias,
+        monto_prorrateo: Number(montoProrrateo.toFixed(2)),
+        monto_ajuste: Number(montoAjuste.toFixed(2)),
+        tipo_prorrateo: tipoProrrateo
+    };
 }
 
 function extraerDiaCambioFechaPago(observaciones, etiqueta) {
@@ -951,13 +1028,13 @@ function obtenerAplicacionesAjuste(evento) {
 }
 
 function eventoGeneraSaldoFavor(evento) {
-    return ['falla_tecnica', 'decision_usuario'].includes(evento.tipo_evento)
+    return ['falla_tecnica', 'decision_usuario', 'cambio_paquete'].includes(evento.tipo_evento)
         && evento.estado === 'Finalizado'
         && (parseFloat(evento.monto_ajuste) || 0) > 0;
 }
 
 function eventoGeneraCargoServicio(evento) {
-    return evento.tipo_evento === 'cambio_fecha_pago'
+    return ['cambio_fecha_pago', 'cambio_paquete'].includes(evento.tipo_evento)
         && evento.estado === 'Finalizado'
         && (parseFloat(evento.monto_ajuste) || 0) < 0;
 }
@@ -1038,7 +1115,7 @@ async function aplicarAjustesPendientes(ejecutor, clienteId, mesAplicado, montoA
          FROM bitacora_servicio b
          LEFT JOIN aplicaciones_ajustes_servicio a ON a.bitacora_id = b.id
          WHERE b.cliente_id = ?
-           AND b.tipo_evento IN ('falla_tecnica', 'decision_usuario')
+           AND b.tipo_evento IN ('falla_tecnica', 'decision_usuario', 'cambio_paquete')
            AND b.estado = 'Finalizado'
            AND b.monto_ajuste > 0
          GROUP BY b.id, b.monto_ajuste, b.fecha_fin, b.fecha_inicio
@@ -1081,7 +1158,7 @@ async function aplicarCargosPendientes(ejecutor, clienteId, mesAplicado, montoAA
          FROM bitacora_servicio b
          LEFT JOIN aplicaciones_ajustes_servicio a ON a.bitacora_id = b.id
          WHERE b.cliente_id = ?
-           AND b.tipo_evento = 'cambio_fecha_pago'
+           AND b.tipo_evento IN ('cambio_fecha_pago', 'cambio_paquete')
            AND b.estado = 'Finalizado'
            AND b.monto_ajuste < 0
          GROUP BY b.id, b.tipo_evento, b.monto_ajuste, b.fecha_fin, b.fecha_inicio
@@ -1342,6 +1419,8 @@ app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
     const connection = await db.getConnection();
 
     try {
+        const hoy = new Date();
+        const hoyLocal = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
         if (parseInt(rol_usuario, 10) !== 2) {
             return res.status(403).json({
                 success: false,
@@ -1362,21 +1441,19 @@ app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
             return res.status(400).json({ success: false, error: 'El costo mensual no es valido.' });
         }
 
-        const fechaInicio = crearFechaLocalDesdeValor(fecha_inicio);
+        const fechaInicio = crearFechaLocalDesdeValor(fecha_inicio) || hoyLocal;
         if (!fechaInicio) {
             return res.status(400).json({ success: false, error: 'La fecha de inicio no es valida.' });
         }
 
-        const hoy = new Date();
-        const hoyLocal = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-        if (fechaInicio < hoyLocal) {
-            return res.status(400).json({ success: false, error: 'La fecha de inicio no puede ser anterior a hoy.' });
+        if (formatearFechaSql(fechaInicio) !== formatearFechaSql(hoyLocal)) {
+            return res.status(400).json({ success: false, error: 'El cambio de paquete se aplica desde hoy.' });
         }
 
         await connection.beginTransaction();
 
         const [clienteRows] = await connection.query(
-            `SELECT id, paquete_id, paquete, costo_mensual, fecha_instalacion
+            `SELECT id, paquete_id, paquete, costo_mensual, fecha_instalacion, dia_pago
              FROM clientes
              WHERE id = ?
              FOR UPDATE`,
@@ -1398,11 +1475,30 @@ app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
             });
         }
 
+        const [pagos] = await connection.query(
+            'SELECT mes_pagado, monto FROM pagos WHERE cliente_id = ? AND estado_corte < 3',
+            [clienteId]
+        );
+        const bitacora = await consultarBitacoraServicio(connection, clienteId);
+        const historialPaquetesCuenta = await consultarHistorialPaquetes(connection, clienteId);
+        const estadoCuenta = calcularEstadoCuentaServidor(cliente, pagos, bitacora, historialPaquetesCuenta);
+        const adeudoActual = parseFloat(estadoCuenta.adeudo_actual) || 0;
+        if (adeudoActual > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: `Solo se puede cambiar de paquete cuando el cliente esta al corriente. Adeudo actual: $${adeudoActual.toFixed(2)}.`,
+                adeudo_actual: adeudoActual
+            });
+        }
+
         const [historialActivoRows] = await connection.query(
-            `SELECT id, paquete_id, costo_mensual, fecha_inicio
-             FROM cliente_paquetes_historial
-             WHERE cliente_id = ? AND fecha_fin IS NULL
-             ORDER BY fecha_inicio DESC, id DESC
+            `SELECT h.id, h.paquete_id, h.costo_mensual, h.fecha_inicio,
+                    p.nombre_paquete, p.velocidad_mbps
+             FROM cliente_paquetes_historial h
+             JOIN paquetes p ON p.id = h.paquete_id
+             WHERE h.cliente_id = ? AND h.fecha_fin IS NULL
+             ORDER BY h.fecha_inicio DESC, h.id DESC
              LIMIT 1
              FOR UPDATE`,
             [clienteId]
@@ -1422,7 +1518,8 @@ app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
                 id: insertInicial.insertId,
                 paquete_id: cliente.paquete_id,
                 costo_mensual: cliente.costo_mensual,
-                fecha_inicio: formatearFechaSql(fechaInicioInicial)
+                fecha_inicio: formatearFechaSql(fechaInicioInicial),
+                nombre_paquete: cliente.paquete || 'Paquete anterior'
             };
         }
 
@@ -1442,15 +1539,39 @@ app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
         }
 
         const fechaInicioActivo = crearFechaLocalDesdeValor(historialActivo.fecha_inicio);
-        if (fechaInicioActivo && fechaInicio <= fechaInicioActivo) {
+        if (fechaInicioActivo && fechaInicio < fechaInicioActivo) {
             await connection.rollback();
             return res.status(400).json({
                 success: false,
-                error: 'La fecha de inicio debe ser posterior al inicio del paquete actual.'
+                error: 'La fecha de inicio no puede ser anterior al inicio del paquete actual.'
             });
         }
 
-        const fechaFinAnterior = restarDiasFecha(fechaInicio, 1);
+        const fechaFinAnterior = fechaInicioActivo && formatearFechaSql(fechaInicioActivo) === formatearFechaSql(fechaInicio)
+            ? fechaInicio
+            : restarDiasFecha(fechaInicio, 1);
+        const diaPago = normalizarDiaPago(cliente.dia_pago) || obtenerDiaPagoDesdeFechaInstalacion(cliente.fecha_instalacion) || 1;
+        const costoAnterior = parseFloat(historialActivo.costo_mensual) || parseFloat(cliente.costo_mensual) || 0;
+        const diasRestantes = calcularDiasRestantesHastaCorte(fechaInicio, diaPago);
+        const prorrateo = calcularProrrateoCambioPaquete(costoAnterior, costoMensual, diasRestantes);
+        const resultadoProrrateo = prorrateo.tipo_prorrateo === 'cargo'
+            ? 'Cargo por prorrateo'
+            : prorrateo.tipo_prorrateo === 'saldo_favor'
+                ? 'Saldo a favor'
+                : 'Sin prorrateo';
+        const observacionCambioPaquete = [
+            `Paquete anterior: ${historialActivo.nombre_paquete || cliente.paquete || 'N/A'}`,
+            `Paquete nuevo: ${paqueteSeleccionado.nombre_paquete}`,
+            `Costo anterior: $${costoAnterior.toFixed(2)}`,
+            `Costo nuevo: $${costoMensual.toFixed(2)}`,
+            `Dia de corte: ${diaPago}`,
+            `Dias prorrateados: ${prorrateo.dias_restantes}`,
+            `Diferencia mensual: $${prorrateo.diferencia_mensual.toFixed(2)}`,
+            `Resultado: ${resultadoProrrateo}`,
+            `Monto prorrateo: $${prorrateo.monto_prorrateo.toFixed(2)}`,
+            'Validacion de velocidad: https://wifiman.com/'
+        ].join(' | ');
+
         await connection.query(
             'UPDATE cliente_paquetes_historial SET fecha_fin = ? WHERE id = ?',
             [formatearFechaSql(fechaFinAnterior), historialActivo.id]
@@ -1476,17 +1597,48 @@ app.post('/api/clientes/:id/cambiar-paquete', async (req, res) => {
             [paqueteSeleccionado.id, paqueteSeleccionado.nombre_paquete, costoMensual, clienteId]
         );
 
+        const columnaObservaciones = await obtenerColumnaObservacionesBitacora(connection);
+        const camposObservacion = columnaObservaciones ? `, ${escaparIdentificadorMysql(columnaObservaciones)}` : '';
+        const valoresObservacion = columnaObservaciones ? ', ?' : '';
+        const paramsBitacora = [
+            clienteId,
+            prorrateo.dias_restantes,
+            prorrateo.monto_ajuste
+        ];
+        if (columnaObservaciones) paramsBitacora.push(observacionCambioPaquete);
+
+        await connection.query(
+            `INSERT INTO bitacora_servicio
+                (cliente_id, tipo_evento, fecha_inicio, fecha_fin, dias_compensados, monto_ajuste, estado${camposObservacion})
+             VALUES (?, 'cambio_paquete', NOW(), NOW(), ?, ?, 'Finalizado'${valoresObservacion})`,
+            paramsBitacora
+        );
+
         await connection.commit();
 
         res.json({
             success: true,
             message: 'Paquete actualizado correctamente.',
+            paquete_anterior: {
+                id: historialActivo.paquete_id,
+                nombre_paquete: historialActivo.nombre_paquete || cliente.paquete || 'Paquete anterior',
+                costo_mensual: costoAnterior
+            },
             paquete: {
                 id: paqueteSeleccionado.id,
                 nombre_paquete: paqueteSeleccionado.nombre_paquete,
                 costo_mensual: costoMensual,
                 fecha_inicio: formatearFechaSql(fechaInicio)
-            }
+            },
+            fecha_inicio: formatearFechaSql(fechaInicio),
+            dia_pago: diaPago,
+            dias_prorrateo: prorrateo.dias_restantes,
+            diferencia_mensual: prorrateo.diferencia_mensual,
+            tipo_prorrateo: prorrateo.tipo_prorrateo,
+            monto_prorrateo: prorrateo.monto_prorrateo,
+            monto_ajuste: prorrateo.monto_ajuste,
+            observaciones_guardadas: observacionCambioPaquete,
+            validacion_velocidad_url: 'https://wifiman.com/'
         });
     } catch (error) {
         try {
@@ -2778,6 +2930,105 @@ app.get('/api/paquetes', async (req, res) => {
     } catch (error) {
         console.error("Error al obtener paquetes:", error);
         res.status(500).json({ error: "Error al cargar catalogo de paquetes" });
+    }
+});
+
+app.get('/api/admin/paquetes', async (req, res) => {
+    if (!validarAdministradorRequest(req, res)) return;
+
+    try {
+        const [rows] = await db.query(
+            `SELECT id, nombre_paquete, velocidad_mbps, velocidad_garantizada_mbps, costo,
+                    activo, fecha_creacion, fecha_actualizacion
+             FROM paquetes
+             ORDER BY activo DESC, costo ASC, velocidad_mbps ASC, nombre_paquete ASC`
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error("Error al obtener paquetes administrativos:", error);
+        res.status(500).json({ success: false, error: "Error al cargar catalogo administrativo de paquetes" });
+    }
+});
+
+app.post('/api/admin/paquetes', async (req, res) => {
+    if (!validarAdministradorRequest(req, res)) return;
+
+    const { datos, errores } = normalizarDatosPaquete(req.body);
+    if (errores.length > 0) {
+        return res.status(400).json({ success: false, error: errores.join(' ') });
+    }
+
+    try {
+        const [result] = await db.query(
+            `INSERT INTO paquetes
+                (nombre_paquete, velocidad_mbps, velocidad_garantizada_mbps, costo, activo)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+                datos.nombre_paquete,
+                datos.velocidad_mbps,
+                datos.velocidad_garantizada_mbps,
+                datos.costo,
+                datos.activo
+            ]
+        );
+
+        res.json({
+            success: true,
+            message: 'Paquete creado correctamente.',
+            id: result.insertId
+        });
+    } catch (error) {
+        console.error("Error al crear paquete:", error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: 'Ya existe un paquete con ese nombre.' });
+        }
+        res.status(500).json({ success: false, error: "Error al crear paquete: " + error.message });
+    }
+});
+
+app.put('/api/admin/paquetes/:id', async (req, res) => {
+    if (!validarAdministradorRequest(req, res)) return;
+
+    const paqueteId = parseInt(req.params.id, 10);
+    if (!paqueteId) {
+        return res.status(400).json({ success: false, error: 'Paquete no valido.' });
+    }
+
+    const { datos, errores } = normalizarDatosPaquete(req.body);
+    if (errores.length > 0) {
+        return res.status(400).json({ success: false, error: errores.join(' ') });
+    }
+
+    try {
+        const [result] = await db.query(
+            `UPDATE paquetes
+             SET nombre_paquete = ?,
+                 velocidad_mbps = ?,
+                 velocidad_garantizada_mbps = ?,
+                 costo = ?,
+                 activo = ?
+             WHERE id = ?`,
+            [
+                datos.nombre_paquete,
+                datos.velocidad_mbps,
+                datos.velocidad_garantizada_mbps,
+                datos.costo,
+                datos.activo,
+                paqueteId
+            ]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Paquete no encontrado.' });
+        }
+
+        res.json({ success: true, message: 'Paquete actualizado correctamente.' });
+    } catch (error) {
+        console.error("Error al actualizar paquete:", error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: 'Ya existe un paquete con ese nombre.' });
+        }
+        res.status(500).json({ success: false, error: "Error al actualizar paquete: " + error.message });
     }
 });
 

@@ -759,7 +759,13 @@
 
                     <div id="cambio-paquete-box" class="cambio-paquete-box hidden">
                         <div class="cambio-paquete-header">
-                            <h3>Cambio de paquete</h3>
+                            <div class="cambio-paquete-titulo">
+                                <h3>Cambio de paquete</h3>
+                                <button type="button" class="btn-ayuda-cambio-paquete" aria-label="Ver reglas de cambio de paquete">?</button>
+                                <div class="tooltip-cambio-paquete" role="tooltip">
+                                    El cliente debe estar sin adeudo y sin saldo a favor. El cambio se aplica desde hoy, calcula prorrateo hasta el próximo corte y queda bloqueado un nuevo cambio por 60 días o 2 meses completos, lo que ocurra primero.
+                                </div>
+                            </div>
                             <span id="cambio-paquete-actual">-</span>
                         </div>
                         <div class="cambio-paquete-controles">
@@ -1570,8 +1576,20 @@
                     ? `Saldo a favor: $${montoTexto}`
                     : 'Sin prorrateo';
 
-            preview.textContent =
-                `${paquete.nombre_paquete} | Inicio: ${fechaInicio} | Actual: $${costoAnteriorTexto} | Nuevo: $${costoTexto} | Dias restantes: ${prorrateo.dias} | ${resultado}`;
+            const textoPreview = `${paquete.nombre_paquete} | Inicio: ${fechaInicio} | Actual: $${costoAnteriorTexto} | Nuevo: $${costoTexto} | Dias restantes: ${prorrateo.dias} | ${resultado}`;
+            preview.innerHTML = `
+                <span>${escaparHtml(textoPreview)}</span>
+                <span class="prorrateo-ayuda-wrap">
+                    <button type="button" class="btn-ayuda-prorrateo" aria-label="Ver cálculo del prorrateo">?</button>
+                    <span class="tooltip-prorrateo" role="tooltip">
+                        <strong>Subida:</strong> (costo nuevo - costo actual) / 30 x días restantes = cargo.<br>
+                        Ejemplo: de $400 a $600 por 26 días = $173 de cargo.<br><br>
+                        <strong>Bajada:</strong> (costo actual - costo nuevo) / 30 x días restantes = saldo a favor.<br>
+                        Ejemplo: de $600 a $300 por 10 días = $100 de saldo a favor.<br><br>
+                        Los días restantes van desde hoy hasta el próximo corte. El resultado se redondea hacia abajo.
+                    </span>
+                </span>
+            `;
             preview.classList.remove('hidden');
         }
 

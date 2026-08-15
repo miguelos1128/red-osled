@@ -1145,6 +1145,19 @@
             return numero.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         }
 
+        function obtenerClaseBadgeAdeudo(adeudo) {
+            const monto = parseFloat(adeudo) || 0;
+            if (monto >= 1200) return 'adeudo-rojo';
+            if (monto >= 900) return 'adeudo-naranja';
+            if (monto >= 601) return 'adeudo-amarillo';
+            return 'adeudo-verde';
+        }
+
+        function formatearAdeudoBadge(adeudo) {
+            const monto = parseFloat(adeudo) || 0;
+            return monto.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+
         function obtenerPayloadPaqueteAdmin() {
             const nombre = document.getElementById('paquete_admin_nombre').value.trim();
             const velocidad = parseFloat(document.getElementById('paquete_admin_velocidad').value);
@@ -1696,6 +1709,7 @@
                         paqueteNombre,
                         cliente.observaciones
                     ].filter(Boolean).join(' ');
+                    const adeudoClienteCard = parseFloat(cliente.adeudo_actual) || 0;
                     card.setAttribute('data-id', cliente.id);
                     card.setAttribute('data-nombre', cliente.nombre_completo);
                     card.setAttribute('data-corte', cliente.dia_pago);
@@ -1704,11 +1718,14 @@
                     card.setAttribute('data-localidad-nombre', localidadNombre);
                     card.setAttribute('data-estado-servicio', (cliente.estado_servicio || '').toLowerCase());
                     card.setAttribute('data-tipo-suspension', cliente.tipo_suspension_activa || '');
-                    card.setAttribute('data-adeudo', parseFloat(cliente.adeudo_actual) || 0);
+                    card.setAttribute('data-adeudo', adeudoClienteCard);
                     card.setAttribute('data-mbps-garantizados', parseFloat(cliente.paquete_velocidad_garantizada_mbps) || 0);
                     card.setAttribute('data-renta', Number(cliente.es_renta) === 1 ? '1' : '0');
                     card.setAttribute('data-paquete', paqueteFiltro);
                     card.setAttribute('data-busqueda', textoBusquedaCombinada.toLowerCase());
+                    const badgeAdeudoCard = adeudoClienteCard > 0
+                        ? `<span class="cliente-badge-adeudo ${obtenerClaseBadgeAdeudo(adeudoClienteCard)} hidden">Debe $${formatearAdeudoBadge(adeudoClienteCard)}</span>`
+                        : '';
                     const badgeRentaCard = Number(cliente.es_renta) === 1
                         ? '<span class="cliente-badge-renta">RENTA</span>'
                         : '';
@@ -1774,6 +1791,7 @@
                             <div class="cliente-info-principal">                              
                                 <div class="cliente-nombre-linea">
                                     <h3 class="cliente-nombre">${cliente.nombre_completo}</h3>
+                                    ${badgeAdeudoCard}
                                     ${badgeRentaCard}
                                     ${badgeSuspendidoCard}
                                     ${badgeBajaCard}
@@ -5353,6 +5371,11 @@ ${linkVelocidad}
                 const coincidePaquete = filtrosRapidosAdmin.paquete
                     ? paqueteTarjeta === filtrosRapidosAdmin.paquete
                     : true;
+                const badgeAdeudo = tarjeta.querySelector('.cliente-badge-adeudo');
+                if (badgeAdeudo) {
+                    badgeAdeudo.classList.toggle('hidden', filtrosRapidosAdmin.estadoCuenta !== 'con_adeudo' || adeudo <= 0);
+                }
+
                 if (coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRenta && coincidePaquete) {
                     tarjeta.classList.remove('hidden');
                     clientesVisibles++;

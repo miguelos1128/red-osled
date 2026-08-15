@@ -2826,6 +2826,41 @@ td {
     line-height: 1;
 }
 
+.cliente-badge-adeudo {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.cliente-badge-adeudo.hidden {
+    display: none;
+}
+
+.cliente-badge-adeudo.adeudo-verde {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.cliente-badge-adeudo.adeudo-amarillo {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.cliente-badge-adeudo.adeudo-naranja {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.cliente-badge-adeudo.adeudo-rojo {
+    background: #fde2df;
+    color: #b42318;
+}
+
 .cliente-badge-suspendido {
     display: inline-flex;
     align-items: center;

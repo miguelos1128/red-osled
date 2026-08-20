@@ -385,27 +385,45 @@
 
             <div id="resultado-busqueda" class="hidden">
                 <div class="card-pago">
-                    <div class="card-header">
-                        <div>
+                    <div class="card-header resultado-cliente-header">
+                        <div class="resultado-cliente-main">
+                            <span class="resultado-label">Cliente seleccionado</span>
+                            <div class="resultado-nombre-linea">
                             <h4 id="res-nombre"></h4>
                             <span id="res-ip" class="badge-ip"></span>
-                        </div>
-                        <div class="resultado-header-acciones">
-                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()">Detalles</button>
-                            <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <p><strong>Fecha de pago:</strong> <span id="res-dia"></span></p>
-                        <p><strong>Costo del Paquete:</strong> $<span id="res-costo"></span></p>
-                        <div class="info-box">
-                            <strong>Estado de Cuenta:</strong>
+                    <div class="card-body resultado-card-body">
+                        <div class="resultado-resumen-grid">
+                            <div class="resultado-dato">
+                                <span>Fecha de pago</span>
+                                <strong id="res-dia"></strong>
+                            </div>
+                            <div class="resultado-dato">
+                                <span>Costo del paquete</span>
+                                <strong>$<span id="res-costo"></span></strong>
+                            </div>
+                        </div>
+                        <div id="estado-cuenta-box" class="info-box estado-cuenta-box">
+                            <strong>Estado de cuenta</strong>
                             <p id="res-ultimo-pago" class="msg-adeudo"></p>
                         </div>
                     </div>
-                    <div class="grupo-botones-pago">
-                        <button id="btn-preparar-pago" onclick="prepararPago()" class="btn-pago button">Seleccionar Mes a Pagar</button>
-                        <button id="btn-ver-pagos" class="btn-pago button">Ver Pagos</button>
+                    <div class="cobro-inline">
+                        <label for="monto-pago-input">Monto recibido en efectivo ($)</label>
+                        <div class="cobro-inline-controles">
+                            <input type="number" id="monto-pago-input" min="1" step="1" inputmode="decimal" placeholder="Ej. 1000">
+                            <button id="btn-preparar-pago" onclick="prepararPago()" class="btn-pago btn-pago-principal button">Confirmar Pago</button>
+                        </div>
+                        <p id="res-cobro-ayuda" class="cobro-ayuda">El sistema distribuirá este monto automáticamente empezando por el mes más antiguo pendiente.</p>
+                    </div>
+                    <div class="resultado-actions-bar">
+                        <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
+                        <div class="resultado-actions-buttons">
+                            <button id="btn-ver-pagos" class="btn-pago btn-pago-secundario button">Ver Pagos</button>
+                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()">Detalles</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -427,36 +445,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div id="modalPago" class="modal hidden" onclick="cerrarModalPorFondo(event, 'modalPago', cerrarModalPago)">
-        <div class="modal-content">
-            <div class="modal-cabecera">
-                <h2 style="margin-bottom: 10px;">Registrar Cobro</h2>
-                <span class="cerrar-x-modal" onclick="cerrarModalPago()">&times;</span>
-            </div>
-            <p style="margin-bottom: 20px; color: #555;">
-                Cliente: <strong id="modal-nombre-cliente"></strong>
-            </p>
-
-            <div class="input-group">
-                <label style="display: block; font-weight: bold; margin-bottom: 8px;">
-                    Monto recibido en efectivo ($):
-                </label>
-                <input type="number" id="monto-pago-input" 
-                    placeholder="Ej: 1000" 
-                    style="width: 100%; padding: 12px; font-size: 1.5em; border: 2px solid #1a73e8; border-radius: 8px; text-align: center;">
-                
-                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                    * El sistema distribuirá este monto automáticamente empezando por el mes más antiguo pendiente.
-                </p>
-            </div>
-
-            <button onclick="procesarPagoFinal()" class="btn-success button" 
-                    style="width: 100%; padding: 15px; margin-top: 20px; font-size: 1.1em; background-color: #28a745; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">
-                Confirmar y Pagar
-            </button>
         </div>
     </div>
 
@@ -2884,10 +2872,17 @@
 
         function configurarBotonPagoResultado() {
             const boton = document.getElementById('btn-preparar-pago');
+            const ayuda = document.getElementById('res-cobro-ayuda');
             if (!boton) return;
 
             const esSuspensionFaltaPago = suspensionResultadoActual?.tipo_evento === 'falta_pago';
-            boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Seleccionar Mes a Pagar';
+            boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Confirmar Pago';
+
+            if (ayuda) {
+                ayuda.textContent = esSuspensionFaltaPago
+                    ? 'Ingresa el monto recibido. Para reactivar debe cubrir al menos el adeudo actual.'
+                    : 'El sistema distribuirá este monto automáticamente empezando por el mes más antiguo pendiente.';
+            }
         }
 
         function abrirDetallesClienteCobradorSeleccionado() {
@@ -2985,6 +2980,8 @@
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
             document.getElementById('btn-detalles-cobrador').classList.add('hidden');
+            document.getElementById('monto-pago-input').value = '';
+            document.getElementById('estado-cuenta-box').classList.remove('estado-cuenta-adeudo', 'estado-cuenta-favor', 'estado-cuenta-corriente');
             clienteSeleccionado = cliente;
             estadoCuentaResultadoActual = null;
             suspensionResultadoActual = null;
@@ -3029,6 +3026,7 @@
                 const mesesPendientes = estadoCuenta.meses_adeudados || [];
 
                 if (deudaReal > 0) {
+                    document.getElementById('estado-cuenta-box').classList.add('estado-cuenta-adeudo');
                     const deudaFormateada = deudaReal.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                     const mesesTexto = mesesPendientes.length > 0
                         ? `<br><span style="color: #555; font-size: 0.9em;">Meses pendientes: ${mesesPendientes.map(item => {
@@ -3050,9 +3048,11 @@
                         ${mesesTexto}
                     `;
                 } else if (saldoFavor > 0) {
+                    document.getElementById('estado-cuenta-box').classList.add('estado-cuenta-favor');
                     const saldoFormateado = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                     msgUltimoPago.innerHTML = `<span style="color: #1a73e8; font-weight: bold;">✅ Saldo a favor: $${saldoFormateado}</span>`;
                 } else {
+                    document.getElementById('estado-cuenta-box').classList.add('estado-cuenta-corriente');
                     msgUltimoPago.innerHTML = `<span style="color: #2e7d32; font-weight: bold;">✅ Cuenta al corriente (Sin adeudos)</span>`;
                 }
 
@@ -3198,27 +3198,30 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
 
             const minimoReactivacion = parseFloat(estadoCuentaResultadoActual?.adeudo_actual) || 0;
             const minimoTexto = minimoReactivacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const inputMonto = document.getElementById('monto-pago-input');
 
             if (minimoReactivacion <= 0) {
                 alert('El cliente no tiene adeudo pendiente para cobrar desde esta vista.');
                 return;
             }
 
-            const montoTexto = prompt(
-                `Monto recibido para reactivar el servicio.\n\nMínimo requerido: $${minimoTexto}`,
-                minimoReactivacion.toFixed(2)
-            );
-
-            if (montoTexto === null) return;
-
-            const montoRecibido = parseFloat(montoTexto.replace(/[^0-9.]/g, ''));
+            const montoRecibido = parseFloat(inputMonto?.value);
             if (!montoRecibido || montoRecibido <= 0) {
                 alert('Captura un monto válido para reactivar.');
+                inputMonto?.focus();
                 return;
             }
 
             if (montoRecibido < minimoReactivacion) {
                 alert(`Para reactivar el servicio debes cobrar al menos $${minimoTexto}.`);
+                inputMonto?.focus();
+                inputMonto?.select();
+                return;
+            }
+
+            const montoTexto = montoRecibido.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const confirmarCobro = confirm(`¿Confirmas cobrar $${montoTexto} y reactivar el servicio de ${clienteSeleccionado.nombre_completo}?`);
+            if (!confirmarCobro) {
                 return;
             }
 
@@ -3256,16 +3259,7 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                 return;
             }
 
-            document.getElementById('modal-nombre-cliente').innerText = clienteSeleccionado.nombre_completo;
-            
-            // Dejamos el campo vacío para que el cobrador escriba lo que recibió
-            const inputMonto = document.getElementById('monto-pago-input');
-            inputMonto.value = ''; 
-            
-            document.getElementById('modalPago').classList.remove('hidden');
-
-            // Ponemos el cursor automáticamente en el cuadro de texto
-            setTimeout(() => inputMonto.focus(), 200);
+            procesarPagoFinal();
         }
         // Función para CERRAR el modal
         function cerrarHistorial() {
@@ -3325,10 +3319,12 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
         
 
         async function procesarPagoFinal() {
-            const monto = parseFloat(document.getElementById('monto-pago-input').value);
+            const inputMonto = document.getElementById('monto-pago-input');
+            const monto = parseFloat(inputMonto?.value);
             
             if (!monto || monto <= 0) {
                 alert("Por favor ingresa un monto válido");
+                inputMonto?.focus();
                 return;
             }
             
@@ -3376,8 +3372,11 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
         }
 
         function cerrarModalPago() {
-            document.getElementById('modalPago').classList.add('hidden');
-            document.getElementById('monto-pago-input').value = ''; // Limpiar campo
+            const modalPago = document.getElementById('modalPago');
+            const inputMonto = document.getElementById('monto-pago-input');
+
+            modalPago?.classList.add('hidden');
+            if (inputMonto) inputMonto.value = ''; // Limpiar campo
         }
 
 

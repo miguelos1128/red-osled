@@ -3478,15 +3478,160 @@ td {
 }
 
 .modal-content-cobrador {
-    max-width: 860px;
+    max-width: 900px;
+}
+
+.modal-cobrador-header {
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 0;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f8fafc;
+}
+
+.modal-cobrador-titulo {
+    min-width: 0;
+}
+
+.modal-cobrador-titulo h2 {
+    color: #172033;
+    font-size: 1.25rem;
+    line-height: 1.2;
+}
+
+.modal-cobrador-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.modal-cobrador-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 28px;
+    padding: 5px 10px;
+    border: 1px solid #dbe3ef;
+    border-radius: 999px;
+    background: #fff;
+    color: #334155;
+    font-size: 0.82rem;
+    line-height: 1.2;
+}
+
+.modal-cobrador-chip span {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.modal-cobrador-chip strong {
+    color: #111827;
+    font-family: Consolas, 'Courier New', monospace;
+    font-weight: 800;
+}
+
+.modal-body-cobrador {
+    background: #fff;
 }
 
 .grid-info-cliente-cobrador {
     align-items: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    margin-bottom: 0;
+}
+
+.seccion-ficha-cobrador,
+.seccion-pagos-cobrador {
+    padding: 16px 20px;
+}
+
+.seccion-detalle-header h3 {
+    margin: 0;
+    color: #172033;
+    font-size: 1rem;
+}
+
+.grid-info-cliente-cobrador .info-grupo {
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.grid-info-cliente-cobrador .info-grupo label {
+    color: #64748b;
+    font-size: 0.76rem;
+}
+
+.grid-info-cliente-cobrador .info-grupo p {
+    margin-top: 4px;
+    color: #172033;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.acciones-contacto-cobrador {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
 }
 
 .seccion-pagos-cobrador {
-    margin-top: 16px;
+    margin-top: 0;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: none;
+}
+
+.seccion-pagos-cobrador .lista-pagos-ul {
+    max-height: none;
+    overflow-y: visible;
+    margin-top: 10px;
+}
+
+.seccion-pagos-cobrador .item-pago {
+    padding: 10px 0;
+}
+
+@media (max-width: 640px) {
+    .modal-cobrador-header {
+        padding: 16px;
+    }
+
+    .modal-cobrador-titulo h2 {
+        font-size: 1.12rem;
+    }
+
+    .modal-cobrador-meta {
+        gap: 6px;
+    }
+
+    .modal-cobrador-chip {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .grid-info-cliente-cobrador {
+        grid-template-columns: 1fr;
+    }
+
+    .seccion-ficha-cobrador,
+    .seccion-pagos-cobrador {
+        padding: 14px 16px;
+    }
+
+    .acciones-contacto-cobrador .btn-contacto.whatsapp {
+        width: 100%;
+        text-align: center;
+    }
 }
 
 .badge-servicio-resultado {

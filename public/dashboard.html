@@ -730,16 +730,28 @@
 
     <div id="modal-detalles-cliente-cobrador" class="modal-overlay hidden" onclick="cerrarModalPorFondo(event, 'modal-detalles-cliente-cobrador', cerrarModalDetallesClienteCobrador)">
         <div class="modal-content modal-content-cobrador">
-            <div class="modal-cabecera">
-                <div>
+            <div class="modal-cabecera modal-cobrador-header">
+                <div class="modal-cobrador-titulo">
                     <h2 id="detalle-cobrador-nombre">Ficha técnica</h2>
+                    <div class="modal-cobrador-meta">
+                        <span class="modal-cobrador-chip">
+                            <span>Código</span>
+                            <strong id="detalle-cobrador-codigo-cliente">-</strong>
+                        </span>
+                        <span class="modal-cobrador-chip modal-cobrador-chip-tecnico">
+                            <span>IP</span>
+                            <strong id="detalle-cobrador-ip">-</strong>
+                        </span>
+                    </div>
                 </div>
                 <span class="cerrar-x-modal" onclick="cerrarModalDetallesClienteCobrador()">&times;</span>
             </div>
 
-            <div class="modal-body">
-                <div class="seccion-detalle">
-                    <h3>📌 Ficha Técnica</h3>
+            <div class="modal-body modal-body-cobrador">
+                <div class="seccion-detalle seccion-ficha-cobrador">
+                    <div class="seccion-detalle-header">
+                        <h3>Datos del servicio</h3>
+                    </div>
                     <div class="grid-info-cliente grid-info-cliente-cobrador">
                         <div class="info-grupo">
                             <label>Dirección Física</label>
@@ -762,22 +774,12 @@
                         </div>
 
                         <div class="info-grupo">
-                            <label>Número de Cliente</label>
-                            <p id="detalle-cobrador-codigo-cliente" class="resaltado-azul">-</p>
-                        </div>
-
-                        <div class="info-grupo">
-                            <label>Dirección IP</label>
-                            <p id="detalle-cobrador-ip" class="resaltado-tecnico">-</p>
-                        </div>
-
-                        <div class="info-grupo">
                             <label>Correo Electrónico</label>
                             <p id="detalle-cobrador-correo">-</p>
                         </div>
                     </div>
 
-                    <div class="acciones-contacto">
+                    <div class="acciones-contacto acciones-contacto-cobrador">
                         <a id="btn-whatsapp-cobrador" href="#" target="_blank" class="btn-contacto whatsapp">
                             💬 Enviar WhatsApp al <span id="detalle-cobrador-telefono"></span>
                         </a>
@@ -786,7 +788,9 @@
                 </div>
 
                 <div class="seccion-detalle seccion-pagos-cobrador">
-                    <h3>Pagos</h3>
+                    <div class="seccion-detalle-header">
+                        <h3>Pagos recientes</h3>
+                    </div>
                     <ul id="listaPagosHistorialCobrador" class="lista-pagos-ul">
                     </ul>
                 </div>

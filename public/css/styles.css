@@ -1,4 +1,4 @@
-﻿/* Configuración General */
+/* Configuraci�n General */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -72,7 +72,7 @@ button {
 
 /* Utilidades para el Dashboard (Roles)---------------------------- */
 .admin-only {
-    display: none; /* Se activará por JS solo si es Admin */
+    display: none; /* Se activar� por JS solo si es Admin */
 }
 
 .hidden {
@@ -81,15 +81,26 @@ button {
 
 /* Contenedor principal */
 .container {
-    width: 90%;
+    width: 100%;
     max-width: 1000px;
     margin: 20px auto;
     background: #ffffff;
-    padding: 20px;
+    padding: 0px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
-
+.header{
+    margin: 20px
+}
+.widget-corte{
+    margin: 20px;
+}
+.main-section{
+    padding: 20px;
+}
+.admin-actions-panel{
+    margin: 20px;
+}
 /* Encabezado */
 .header {
     display: flex;
@@ -101,7 +112,7 @@ button {
 
 /* Acciones */
 .actions {
-    margin: 20px 0;
+    margin: 20px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -109,7 +120,7 @@ button {
 
 .admin-actions-panel {
     display: block;
-    margin: 14px 0 18px;
+    margin: 20pxs;
     border-bottom: 1px solid #eee;
 }
 
@@ -556,14 +567,14 @@ td {
     border-bottom: 1px solid #dddddd;
 }
 
-/* Botón agregar */
+/* Bot�n agregar */
 .btn-add {
     background-color: #28a745;
     width: 200px;
     padding: 10px 20px;
 }
 
-/* Botón cerrar sesión */
+/* Bot�n cerrar sesi�n */
 .btn-logout {
     background-color: #dc3545;
     width: auto;
@@ -725,20 +736,20 @@ td {
 }
 
 /* =========================================
-   MÓDULO DE SUPERVISIÓN DE COBRADORES
+   M�DULO DE SUPERVISI�N DE COBRADORES
    ========================================= */
 .supervision-container {
     display: flex;
     flex-direction: column; /* Apila las tarjetas hacia abajo */
-    gap: 12px; /* Separación entre cada tarjeta */
+    gap: 12px; /* Separaci�n entre cada tarjeta */
     margin-top: 20px;
     width: 100%;
 }
 
-/* Configuración del contenedor principal de la lista */
+/* Configuraci�n del contenedor principal de la lista */
 #lista-supervision-cobradores {
     display: grid;
-    grid-template-columns: 1fr; /* 1 sola columna por defecto (para móviles) */
+    grid-template-columns: 1fr; /* 1 sola columna por defecto (para m�viles) */
     gap: 20px; /* Espaciado uniforme entre las tarjetas (arriba, abajo y a los lados) */
     margin-top: 20px;
 }
@@ -777,7 +788,6 @@ td {
     color: #1e293b;
     font-size: 16px;
 }
-
 
 
 .btn-historial-mini:hover {
@@ -893,13 +903,13 @@ td {
     }
 }
 
-/* Alineamos el título y el contador en la misma línea */
+/* Alineamos el t�tulo y el contador en la misma l�nea */
 .admin-titulo {
     display: flex;
     align-items: center;
-    gap: 12px; /* Espacio entre el texto y el número */
+    gap: 12px; /* Espacio entre el texto y el n�mero */
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin: 20px;
 }
 
 /* Estilo del contador */
@@ -909,7 +919,7 @@ td {
     font-size: 1rem;
     font-weight: 600;
     padding: 4px 14px;
-    border-radius: 20px; /* Lo hace ver como una píldora */
+    border-radius: 20px; /* Lo hace ver como una p�ldora */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ligera sombra para resaltar */
 }
 
@@ -923,9 +933,9 @@ td {
 
 /* =======================================================
    ESTILOS del buscador
-   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+   Dise�o: Mobile First (Tarjetas) -> PC (Tabla)
 ======================================================= */
-/* Contenedor de la barra de búsqueda */
+/* Contenedor de la barra de b�squeda */
 .admin-controles-busqueda {
     display: flex;
     justify-content: center;
@@ -939,24 +949,24 @@ td {
 /* Burbujas para los meses que NO se han pagado */
 .pago-pendiente {
     background-color: #f1f2f6; /* Un gris muy suave */
-    color: #a4b0be; /* Texto grisáceo */
-    border: 2px dashed #ced6e0; /* Borde punteado que da la sensación de "vacío" o "pendiente" */
+    color: #a4b0be; /* Texto gris�ceo */
+    border: 2px dashed #ced6e0; /* Borde punteado que da la sensaci�n de "vac�o" o "pendiente" */
 }
 
-/* Opcional pero muy recomendado: Resaltar visualmente cuál es el mes actual */
+/* Opcional pero muy recomendado: Resaltar visualmente cu�l es el mes actual */
 .mes-actual {
     background-color: #c82333;
     border: 2px solid #2980b9; /* Borde azul fuerte */
     box-shadow: 0 0 8px rgba(41, 128, 185, 0.4); /* Un ligero brillo azul */
-    font-weight: bold; /* Hace la letra un poco más gruesa */
+    font-weight: bold; /* Hace la letra un poco m�s gruesa */
 }
 
-/* Esto hará que los meses que no son el actual ni han sido pagados se vean más tenues */
+/* Esto har� que los meses que no son el actual ni han sido pagados se vean m�s tenues */
 .pago-pendiente:not(.mes-actual) {
     opacity: 0.6;
 }
 .input-busqueda-wrapper {
-    flex: 2; /* Toma más espacio */
+    flex: 2; /* Toma m�s espacio */
     min-width: 200px;
     position: relative;
 }
@@ -1008,7 +1018,7 @@ td {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* Estilizar el select múltiple nativo */
+/* Estilizar el select m�ltiple nativo */
 .filtro-localidad-wrapper  select {
     width: 100%;
     min-width: 200px;
@@ -1027,23 +1037,23 @@ td {
 
 /* Estilizar las opciones (localidades) */
 #filtro-localidad option {
-    padding: 8px 12px; /* Separación entre cada checkbox/texto */
+    padding: 8px 12px; /* Separaci�n entre cada checkbox/texto */
     border-radius: 4px;
     margin-bottom: 2px;
     cursor: pointer;
 }
 
-/* Nota: Algunos navegadores no permiten cambiar el color de 
-   fondo de la selección de forma directa con CSS puro, 
-   pero el padding y el radio de borde sí se aplican */
+/* Nota: Algunos navegadores no permiten cambiar el color de
+   fondo de la selecci�n de forma directa con CSS puro,
+   pero el padding y el radio de borde s� se aplican */
 #filtro-localidad option:checked {
-    background-color: #eff6ff; /* Azul muy pálido */
+    background-color: #eff6ff; /* Azul muy p�lido */
     color: #1e40af; /* Texto azul oscuro */
 }
 
 /* =======================================================
-   ESTILOS COMPLETOS PARA LA VISUALIZACIÓN DE PAGOS ADMIN
-   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+   ESTILOS COMPLETOS PARA LA VISUALIZACI�N DE PAGOS ADMIN
+   Dise�o: Mobile First (Tarjetas) -> PC (Tabla)
 ======================================================= */
 /* Contenedor Principal */
 .admin-clientes-container {
@@ -1060,7 +1070,7 @@ td {
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border-left: 6px solid #ccc; /* Color por defecto por si falla */
 }
-/* Esta clase ocultará la tarjeta sin importar el tamaño de pantalla */
+/* Esta clase ocultar� la tarjeta sin importar el tama�o de pantalla */
 .cliente-card.hidden {
     display: none !important;
 }
@@ -1120,7 +1130,7 @@ td {
     font-weight: 700;
 }
 
-/* Círculo del día de pago */
+/* C�rculo del d�a de pago */
 .cliente-pago-dia {
     text-align: center;
     background: #eef2f3;
@@ -1137,43 +1147,43 @@ td {
 .cliente-pago-dia .dia {
     font-weight: bold;
     font-size: 1.2rem;
-    color: #d35400; /* Color naranja para resaltar el día */
+    color: #d35400; /* Color naranja para resaltar el d�a */
 }
 
 /* Historial de Pagos (Burbujas tipo imagen 2) */
 .cliente-historial-pagos.dynamic-history {
     display: flex;
-    flex-wrap: wrap; /* Permite que las burbujas bajen a la siguiente línea si no caben */
+    flex-wrap: wrap; /* Permite que las burbujas bajen a la siguiente l�nea si no caben */
     gap: 8px; /* Espacio entre burbujas */
     padding: 12px 0;
     border-top: 1px dashed #ddd;
 }
 
 .pago-burbuja {
-    /* Ajustamos el tamaño para que quepa "Mes Año" */
-    width: 65px; 
+    /* Ajustamos el tama�o para que quepa "Mes A�o" */
+    width: 65px;
     height: 65px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%; /* Lo hace un círculo perfecto */
-    font-size: 0.75rem; /* Texto pequeño */
+    border-radius: 50%; /* Lo hace un c�rculo perfecto */
+    font-size: 0.75rem; /* Texto peque�o */
     font-weight: bold;
     text-align: center;
-    line-height: 1.1; /* Ajusta el espacio entre líneas si el texto se corta */
+    line-height: 1.1; /* Ajusta el espacio entre l�neas si el texto se corta */
     border: 2px solid #ddd; /* Borde sutil por defecto */
     transition: all 0.2s;
     background-color: #f8f9fa; /* Fondo gris claro por defecto */
     color: #888; /* Texto gris por defecto */
     text-transform: capitalize; /* "mayo 2024" -> "Mayo 2024" */
-    padding: 5px; /* Pequeño padding interno */
+    padding: 5px; /* Peque�o padding interno */
 }
 
 /* Clase para pagos realizados (Verde) */
 .pago-burbuja.pago-realizado {
     background-color: #2ecc71 !important; /* Verde esmeralda */
     color: white !important; /* Texto blanco para buen contraste */
-    border-color: #27ae60 !important; /* Borde verde más oscuro */
+    border-color: #27ae60 !important; /* Borde verde m�s oscuro */
 }
 
 /* .pago-burbuja.pendiente {
@@ -1191,14 +1201,14 @@ td {
     text-align: center;
 }
 
-/* Botón de Detalles */
+/* Bot�n de Detalles */
 .cliente-acciones-group {
     display: flex;
     gap: 10px;
     margin-top: 15px;
 }
 .btn-registrar-pago {
-    flex: 2; /* Más ancho que el de detalles */
+    flex: 2; /* M�s ancho que el de detalles */
     background-color: #007bff;
     color: white;
     border: none;
@@ -1213,7 +1223,7 @@ td {
 .btn-registrar-pago:hover {
     background-color: #0056b3;
 }
-/* Botón Detalles (Secundario) */
+/* Bot�n Detalles (Secundario) */
 .btn-detalles-slim {
     flex: 1;
     background-color: #f8f9fa;
@@ -1233,7 +1243,7 @@ td {
 
 /* =======================================================
    ESTILOS COMPLETOS PARA EL REPORTE DE CORTE (RESPONSIVO)
-   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+   Dise�o: Mobile First (Tarjetas) -> PC (Tabla)
 ======================================================= */
 
 /* --- 1. Contenedor y Caja del Modal (Fondo y Centrado) --- */
@@ -1255,16 +1265,16 @@ td {
     padding: 20px;
     border-radius: 8px;
     width: 90%;
-    max-width: 500px; /* Tamaño móvil inicial */
+    max-width: 500px; /* Tama�o m�vil inicial */
     max-height: 85vh;
     overflow-y: auto;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     display: flex;
     flex-direction: column;
-    transition: max-width 0.3s ease; /* Animación al cambiar de tamaño */
+    transition: max-width 0.3s ease; /* Animaci�n al cambiar de tama�o */
 }
 
-/* --- 2. Cabecera (Título y X) --- */
+/* --- 2. Cabecera (T�tulo y X) --- */
 .cabecera-modal-corte {
     display: flex;
     justify-content: space-between;
@@ -1312,9 +1322,9 @@ td {
 }
 .cerrar-x-modal:hover { color: #dc3545; }
 
-/* --- 3. DISEÑO DE TARJETAS PARA MÓVIL (Por defecto) --- */
+/* --- 3. DISE�O DE TARJETAS PARA M�VIL (Por defecto) --- */
 
-/* Ocultamos el encabezado de tabla en móvil */
+/* Ocultamos el encabezado de tabla en m�vil */
 .reporte-grid-header {
     display: none;
 }
@@ -1332,7 +1342,7 @@ td {
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-/* Estilos de las "columnas" dentro de la tarjeta móvil */
+/* Estilos de las "columnas" dentro de la tarjeta m�vil */
 .reporte-item-pago div {
     color: #333;
 }
@@ -1343,7 +1353,7 @@ td {
     font-size: 20px;
 }
 
-/* El nombre del cliente es el título de la tarjeta */
+/* El nombre del cliente es el t�tulo de la tarjeta */
 .col-cliente {
     font-weight: bold;
     font-size: 15px;
@@ -1354,7 +1364,7 @@ td {
 .col-monto {
     display: flex;
     justify-content: space-between;
-    align-items: center;    
+    align-items: center;
     font-weight: bold;
     color: #28a745; /* Verde para monto */
     margin-top: 5px;
@@ -1507,7 +1517,7 @@ td {
     text-align: center;
 }
 /* =========================================
-   Banner Histórico de Corte
+   Banner Hist�rico de Corte
 ========================================= */
 .banner-historico-container {
     background-color: #f8fafc;
@@ -1578,7 +1588,7 @@ td {
     transform: scale(0.98);
 }
 /* =========================================
-   WIDGET DEL DASHBOARD (DISEÑO PREMIUM ENRIQUECIDO)
+   WIDGET DEL DASHBOARD (DISE�O PREMIUM ENRIQUECIDO)
    ========================================= */
 .widget-corte {
     background-color: #e3f2fd;
@@ -1629,7 +1639,7 @@ td {
     font-weight: 600;
 }
 
-/* Columna 2: Micro KPI Grid (El corazón de la nueva visualización) */
+/* Columna 2: Micro KPI Grid (El coraz�n de la nueva visualizaci�n) */
 .widget-corte-desglose-rapido {
     display: flex;
     gap: 4px;
@@ -1652,7 +1662,7 @@ td {
 }
 
 .mini-kpi:last-child {
-    border-right: none; /* Quita la última línea divisoria */
+    border-right: none; /* Quita la �ltima l�nea divisoria */
 }
 
 .kpi-titulo {
@@ -1671,7 +1681,7 @@ td {
 .kpi-positivo { color: #27ae60; }
 .kpi-negativo { color: #e74c3c; }
 
-/* Columna 3: Botones de Acción */
+/* Columna 3: Botones de Acci�n */
 .widget-corte-acciones {
     display: flex;
     gap: 10px;
@@ -1729,7 +1739,7 @@ td {
 }
 
 /* =========================================
-   SECCIÓN DE INGRESOS EXTRA
+   SECCI�N DE INGRESOS EXTRA
    ========================================= */
 .seccion-ingresos-extra {
     margin-bottom: 20px;
@@ -1763,11 +1773,11 @@ td {
 }
 
 .btn-agregar-ingreso:hover {
-    background-color: #219653; /* Un tono más oscuro al pasar el mouse */
+    background-color: #219653; /* Un tono m�s oscuro al pasar el mouse */
 }
 
 /* =========================================
-   MODAL ADMINISTRADOR (AUTORIZACIÓN)
+   MODAL ADMINISTRADOR (AUTORIZACI�N)
    ========================================= */
 .modal-fondo-admin {
     position: fixed;
@@ -1840,7 +1850,7 @@ td {
     border-radius: 4px;
 }
 
-/* Clases de utilidad para márgenes */
+/* Clases de utilidad para m�rgenes */
 .mb-10 { margin-bottom: 10px; }
 .mb-15 { margin-bottom: 15px; }
 
@@ -1867,7 +1877,7 @@ td {
 
 .btn-autorizar-admin {
     padding: 10px;
-    flex: 2; /* Hace que el botón principal sea un poco más ancho */
+    flex: 2; /* Hace que el bot�n principal sea un poco m�s ancho */
     background: #1976d2;
     color: white;
     border: none;
@@ -1894,10 +1904,10 @@ td {
     font-size: 0.9em;
 }
 
-/* Contenedor y botones de acción */
+/* Contenedor y botones de acci�n */
 .widget-corte-acciones {
     display: flex;
-    gap: 10px; /* Separa los botones de forma limpia sin usar márgenes fijos */
+    gap: 10px; /* Separa los botones de forma limpia sin usar m�rgenes fijos */
 }
 
 .btn-widget-desglose {
@@ -1910,12 +1920,12 @@ td {
 }
 
 .btn-widget-desglose:hover {
-    background-color: #1565c0; /* Azul un poco más oscuro al pasar el cursor */
+    background-color: #1565c0; /* Azul un poco m�s oscuro al pasar el cursor */
 }
 
 
 /* =========================================
-    Estilos para el PDF / Zona de Impresión
+    Estilos para el PDF / Zona de Impresi�n
    ========================================= */
 .tabla-impresion tfoot td {
     background-color: #f8fafc;
@@ -1930,7 +1940,7 @@ td {
     border-radius: 6px;
     font-size: 13px;
     background-color: #fff;
-    page-break-inside: avoid; /* Evita que el resumen se corte entre páginas */
+    page-break-inside: avoid; /* Evita que el resumen se corte entre p�ginas */
 }
 
 .resumen-caja-chica-print h3 {
@@ -1973,7 +1983,7 @@ td {
     }
     .form-ingreso-extra{
         grid-template-columns: 1fr;
-    
+
     }
     .btn-agregar-ingreso {
         width:100%;
@@ -1991,18 +2001,18 @@ td {
     }
 
     /* =========================================
-    RESPONSIVO PARA PANTALLAS MÓVILES (CELULARES)
+    RESPONSIVO PARA PANTALLAS M�VILES (CELULARES)
     ========================================= */
 
     /* 1. Apilar los 3 bloques principales del widget verticalmente */
-   
+
 
     .widget-corte-principal {
         text-align: center;
         align-items: center;
     }
 
-    /* 2. Transformar los 4 KPIs en una cuadrícula limpia de 2x2 */
+    /* 2. Transformar los 4 KPIs en una cuadr�cula limpia de 2x2 */
     .widget-corte-desglose-rapido {
         display: grid;
         grid-template-columns: repeat(2, 1fr); /* Crea 2 columnas iguales */
@@ -2011,21 +2021,21 @@ td {
         background: rgba(255, 255, 255, 0.8);
     }
 
-    /* 3. Limpiar los bordes laterales viejos y añadir división por filas */
+    /* 3. Limpiar los bordes laterales viejos y a�adir divisi�n por filas */
     .mini-kpi {
         padding: 8px 5px;
-        border-right: none !important; /* Eliminamos la línea vertical que rompía el diseño */
+        border-right: none !important; /* Eliminamos la l�nea vertical que romp�a el dise�o */
         text-align: center;
     }
 
-    /* Opcional: Agregar una ligera separación interna entre filas */
-    .mini-kpi:nth-child(1), 
+    /* Opcional: Agregar una ligera separaci�n interna entre filas */
+    .mini-kpi:nth-child(1),
     .mini-kpi:nth-child(2) {
         border-bottom: 1px dashed #cbd5e1;
         padding-bottom: 12px;
     }
 
-    /* 4. Ajustar los botones para que abarquen el ancho completo del móvil */
+    /* 4. Ajustar los botones para que abarquen el ancho completo del m�vil */
     .widget-corte-acciones {
         width: 100%;
         justify-content: center;
@@ -2035,16 +2045,16 @@ td {
     .btn-widget-historial {
         flex: 1; /* Hace que ambos botones midan exactamente lo mismo */
         text-align: center;
-        padding: 12px 10px; /* Un poco más grandes para que sea fácil tocarlos con el dedo */
+        padding: 12px 10px; /* Un poco m�s grandes para que sea f�cil tocarlos con el dedo */
     }
 
     .banner-historico-container{
         flex-direction: column;
     }
-    
+
 }
 
-/* Labels para móvil (Fecha:, Mes:, etc.) */
+/* Labels para m�vil (Fecha:, Mes:, etc.) */
 .label-movil {
     font-weight: bold;
     color: #555;
@@ -2099,14 +2109,242 @@ td {
 
 .card-pago {
     background: #fff;
-    border: 2px solid #1a73e8;
-    padding: 15px;
+    border: 1px solid #c7d7f3;
+    border-left: 5px solid #1a73e8;
+    padding: 14px;
     border-radius: 8px;
-    margin-top: 10px;
+    margin-top: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#resultado-busqueda {
+    scroll-margin: 16px;
+}
+
+.resultado-cliente-header {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.resultado-cliente-main {
+    min-width: 0;
+}
+
+.resultado-nombre-linea {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+}
+
+.resultado-nombre-linea h4 {
+    margin: 0;
+    color: #172033;
+    font-size: 1.18rem;
+    line-height: 1.2;
+}
+
+.resultado-header-controles {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: nowrap;
+    align-self: flex-start;
+    margin-left: auto;
+}
+
+.badge-ip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #111827;
+    color: #fff;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.resultado-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.resultado-resumen-linea {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    color: #334155;
+    font-size: 0.94rem;
+    line-height: 1.35;
+}
+
+.resultado-resumen-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+    padding: 9px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    white-space: nowrap;
+}
+
+.resultado-resumen-etiqueta {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.resultado-resumen-linea strong {
+    color: #172033;
+    font-size: 0.94rem;
+    text-align: right;
+    white-space: normal;
+}
+
+.estado-cuenta-box {
+    max-height: 145px;
+    overflow-y: auto;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.estado-cuenta-box strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #334155;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+}
+
+.estado-cuenta-box.estado-cuenta-adeudo {
+    border-color: #f2b8b5;
+    background: #fff6f5;
+}
+
+.estado-cuenta-box.estado-cuenta-favor {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.estado-cuenta-box.estado-cuenta-corriente {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.cobro-inline {
+    padding-top: 10px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.cobro-inline label {
+    display: block;
+    margin-bottom: 7px;
+    color: #334155;
+    font-weight: 800;
+}
+
+.cobro-inline-controles {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) minmax(160px, auto);
+    gap: 8px;
+}
+
+.cobro-inline input {
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 2px solid #1a73e8;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.cobro-inline input.monto-reactivacion {
+    border-color: #b42318;
+    background: #fff8f7;
+}
+
+.btn-pago-principal {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #188038;
+    font-size: 0.98rem;
+}
+
+.btn-pago-principal:hover {
+    background: #146c2e;
+}
+
+.cobro-ayuda {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.cobro-ayuda-reactivar {
+    color: #b42318;
+    font-weight: 800;
+}
+
+@media (max-width: 640px) {
+    .card-pago {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .cobro-inline-controles {
+        grid-template-columns: 1fr;
+    }
+
+    .resultado-resumen-linea {
+        grid-template-columns: 1fr;
+    }
+
+    .resultado-header-controles {
+        gap: 6px;
+        margin-left: 0;
+    }
+
+    .badge-servicio-resultado {
+        max-width: 128px;
+        justify-content: center;
+        padding: 5px 8px;
+        font-size: 0.76rem;
+        text-align: center;
+        white-space: normal;
+    }
+
+    .btn-detalles-cobrador {
+        flex: 0 0 auto;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+    }
+
+    .btn-detalles-texto {
+        display: none;
+    }
+
 }
 
 
-/* Contenedor principal de búsqueda */
+/* Contenedor principal de b�squeda */
 .search-box-container {
     display: flex;
     align-items: center;
@@ -2172,15 +2410,15 @@ td {
 
 /* Estilo del mensaje de adeudo */
 .msg-adeudo {
-    margin-top: 5px;
-    color: #d32f2f;
+    margin: 0;
     font-weight: 500;
+    line-height: 1.35;
 }
 
 .hidden { display: none; }
 .hidden { display: none !important; }
 
-/* Fondo oscuro detrás del modal */
+/* Fondo oscuro detr�s del modal */
 .modal {
     position: fixed;
     z-index: 2000;
@@ -2265,10 +2503,10 @@ td {
 
 .resumen-pago-fecha{
     text-align: center;
-    color: #666; 
-    font-size: 1em; 
+    color: #666;
+    font-size: 1em;
     padding-top: 10px;
-    padding-bottom: 10px; 
+    padding-bottom: 10px;
     border-bottom: 1px dashed #ccc;
 }
 .resumen-pago-fila small {
@@ -2285,7 +2523,7 @@ td {
 
 .acciones-pago-exitoso {
     display: flex;
-    flex-wrap: wrap; /* Permite que los elementos bajen a la siguiente línea */
+    flex-wrap: wrap; /* Permite que los elementos bajen a la siguiente l�nea */
     gap: 10px; /* Espacio entre los botones */
     margin-top: 20px;
 }
@@ -2325,7 +2563,7 @@ td {
     color: white;
 }
 
-/* Estilo específico para el botón de Cerrar */
+/* Estilo espec�fico para el bot�n de Cerrar */
 .btn-cerrar-pago {
     width: 100%; /* Toma todo el ancho disponible */
     flex-basis: 100%; /* Le dice a flexbox que este elemento ocupa toda la fila */
@@ -2343,7 +2581,7 @@ td {
 
 /* Efecto Hover (cuando pasas el mouse por encima) */
 .btn-cerrar-pago:hover {
-    background-color: #c0392b; /* Un rojo más oscuro al hacer hover */
+    background-color: #c0392b; /* Un rojo m�s oscuro al hacer hover */
 }
 
 
@@ -2352,27 +2590,27 @@ td {
 /* Fondo oscuro que cubre toda la pantalla */
 .modal-fondo {
     position: fixed;
-    z-index: 1000; /* Asegura que esté por encima de todo */
+    z-index: 1000; /* Asegura que est� por encima de todo */
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6); 
-    display: flex; 
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
     align-items: center; /* Centra verticalmente */
     justify-content: center; /* Centra horizontalmente */
 }
 
 /* La caja blanca del modal */
-/* --- BASE: DISEÑO PARA MÓVIL (Mobile First) --- */
+/* --- BASE: DISE�O PARA M�VIL (Mobile First) --- */
 .modal-caja {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     width: 90%;
-    max-width: 450px; /* Tamaño pequeño por defecto */
+    max-width: 450px; /* Tama�o peque�o por defecto */
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    transition: max-width 0.3s ease; /* Animación suave al cambiar de tamaño */
+    transition: max-width 0.3s ease; /* Animaci�n suave al cambiar de tama�o */
 }
 .modal-cabecera {
     display: flex;
@@ -2407,12 +2645,12 @@ td {
     align-items: center;
 } */
 
-/* Ocultamos los encabezados de tabla en móvil */
-.encabezado-tabla { 
-    display: none; 
+/* Ocultamos los encabezados de tabla en m�vil */
+.encabezado-tabla {
+    display: none;
 }
 
-/* Diseño del item del pago en móvil (Texto a la izq, Monto a la der) */
+/* Dise�o del item del pago en m�vil (Texto a la izq, Monto a la der) */
 .item-pago {
     display: grid;
     grid-template-columns: 1fr auto; /* Dos columnas: Detalles | Monto */
@@ -2424,16 +2662,16 @@ td {
 .col-mes { grid-column: 1; grid-row: 1; font-weight: bold; }
 .col-fecha { grid-column: 1; grid-row: 2; font-size: 13px; color: #666; }
 .col-cobro { grid-column: 1; grid-row: 3; font-size: 13px; color: #666; }
-.col-monto { 
-    grid-column: 2; 
+.col-monto {
+    grid-column: 2;
     grid-row: 1 / span 3; /* El monto ocupa el alto de las 3 filas */
-    display: flex; 
-    align-items: center; 
-    font-size: 18px; 
-    font-weight: bold; 
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
 }
 
-/* Botón de cerrar abajo */
+/* Bot�n de cerrar abajo */
 .btn-cerrar-modal {
     margin-top: 15px;
     padding: 10px;
@@ -2453,9 +2691,9 @@ td {
     margin-top: 15px; /* Espacio con los datos de arriba */
 }
 .grupo-botones-pago .btn-pago {
-    margin-top: 10px; /* Aseguramos que no queden márgenes raros */   
+    margin-top: 10px; /* Aseguramos que no queden m�rgenes raros */
 }
-/* Estilo del botón de eliminar */
+/* Estilo del bot�n de eliminar */
 .btn-eliminar-pago {
     background: none;
     border: none;
@@ -2483,7 +2721,7 @@ td {
 
 /* =======================================================
    ESTILOS COMPLETOS PARA EL Detalle de cliente (RESPONSIVO)
-   Diseño: Mobile First (Tarjetas) -> PC (Tabla)
+   Dise�o: Mobile First (Tarjetas) -> PC (Tabla)
 ======================================================= */
 /* --- ESTILOS DEL MODAL --- */
 .modal-overlay {
@@ -2506,7 +2744,7 @@ td {
 
 
 
-/* --- ESTILOS DE LA FICHA TÉCNICA --- */
+/* --- ESTILOS DE LA FICHA T�CNICA --- */
 .seccion-detalle {
     padding: 20px;
     border-bottom: 1px solid #eee;
@@ -2582,8 +2820,8 @@ td {
     letter-spacing: 0;
 }
 
-/* Botón WhatsApp */
-.acciones-contacto { 
+/* Bot�n WhatsApp */
+.acciones-contacto {
     display: flex;
     width: 50%;
     align-items: center;
@@ -2627,6 +2865,52 @@ td {
     margin: 6px 0 0;
     color: #2c3e50;
     line-height: 1.45;
+}
+
+.btn-scroll-rapido {
+    position: fixed;
+    right: max(18px, calc((100vw - min(90vw, 1000px)) / 2 - 64px));
+    bottom: 22px;
+    z-index: 900;
+    width: 46px;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #c7d7f3;
+    border-radius: 50%;
+    background: #111827;
+    color: #fff;
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.25);
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.btn-scroll-rapido.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.btn-scroll-rapido:hover,
+.btn-scroll-rapido:focus-visible {
+    background: #0b57d0;
+    outline: none;
+}
+
+@media (max-width: 640px) {
+    .btn-scroll-rapido {
+        right: 14px;
+        bottom: 14px;
+        width: 42px;
+        height: 42px;
+        font-size: 1.32rem;
+    }
 }
 
 .tabla-contenedor { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; }
@@ -2683,12 +2967,12 @@ td {
     cursor: pointer;
 }
 
-/* --- ADAPTACIÓN: DISEÑO PARA ESCRITORIO (Pantallas grandes) --- */
+/* --- ADAPTACI�N: DISE�O PARA ESCRITORIO (Pantallas grandes) --- */
 @media (min-width: 805px) {
-    .modal-caja { 
-        max-width: 705px; /* Hacemos la ventana más ancha */
+    .modal-caja {
+        max-width: 705px; /* Hacemos la ventana m�s ancha */
     }
-    
+
     /* Mostramos los encabezados en rojo como en tu boceto */
     .encabezado-tabla {
         display: grid;
@@ -2708,31 +2992,31 @@ td {
     }
 
     /* Ajustamos los estilos para que se vea plano y no apilado */
-    .col-mes, .col-fecha, .col-cobro { 
-        grid-column: auto; 
-        grid-row: auto; 
-        font-size: 14px; 
+    .col-mes, .col-fecha, .col-cobro {
+        grid-column: auto;
+        grid-row: auto;
+        font-size: 14px;
         color: #333;
     }
-    .col-monto { 
-        grid-column: auto; 
-        grid-row: auto; 
-        display: block; 
-        font-size: 16px; 
+    .col-monto {
+        grid-column: auto;
+        grid-row: auto;
+        display: block;
+        font-size: 16px;
     }
 
     /* Ocultamos las etiquetas "Mes:", "Fecha:", etc., porque ya hay encabezados */
-    .cabecera-modal-corte .label-movil { display: none; } 
+    .cabecera-modal-corte .label-movil { display: none; }
 
     .grupo-botones-pago {
         gap: 10px; /* Espacio entre los botones */
         flex-direction: row; /* Los pone en fila horizontal */
     }
-    
+
     /* Hacemos que ambos botones midan exactamente lo mismo (50% y 50%) */
     .grupo-botones-pago .btn-pago {
-        flex: 1; 
-        margin-top: 0; /* Aseguramos que no queden márgenes raros */
+        flex: 1;
+        margin-top: 0; /* Aseguramos que no queden m�rgenes raros */
     }
 
     .reporte-item-pago .monto-estado{
@@ -2745,11 +3029,11 @@ td {
 
     #lista-supervision-cobradores {
         grid-template-columns: repeat(2, 1fr); /* Divide el espacio en 2 columnas iguales */
-    } 
+    }
 }
 @media (min-width: 980px) {
     .modal-caja-corte {
-        max-width: 900px; /* Hacemos la ventana más ancha */
+        max-width: 900px; /* Hacemos la ventana m�s ancha */
     }
 
     /* Mostramos el Encabezado de la Tabla */
@@ -2781,8 +3065,8 @@ td {
     }
 
     /* Ocultamos las etiquetas "Mes:", "Fecha:", etc., porque ya hay encabezados */
-    
-    /* Ajustes específicos para escritorio */
+
+    /* Ajustes espec�ficos para escritorio */
     .reporte-item-pago div {
         font-size: 14px;
         color: #333;
@@ -2794,16 +3078,16 @@ td {
     }
 
     /* .col-monto {
-        display: block; /* Desactivamos el flex de móvil 
+        display: block; /* Desactivamos el flex de m�vil
         font-size: 14px !important;
         font-weight: normal;
         color: #333;
         margin-top: 0;
     } */
-    /* El "Monto:" de móvil se oculta */
+    /* El "Monto:" de m�vil se oculta */
     .col-monto:before { display: none; }
-    .reporte-item-pago .label-movil { display: none; } 
-    
+    .reporte-item-pago .label-movil { display: none; }
+
 
     .col-estado {
         text-align: left; /* Alineado a la izquierda */
@@ -2815,10 +3099,10 @@ td {
         right: 10px;
     }
     .reporte-item-pago {
-        position: relative; /* Para que el botón se posicione respecto a la tarjeta */
+        position: relative; /* Para que el bot�n se posicione respecto a la tarjeta */
     }
 
-    /* Si estás en modo supervisión, redistribuye las columnas para ocupar el 100% del ancho */
+    /* Si est�s en modo supervisi�n, redistribuye las columnas para ocupar el 100% del ancho */
 .sin-accion .reporte-grid-header{
     grid-template-columns: 1fr 2fr 1fr .5fr ; /* Adapta estos valores a las proporciones originales de tus primeras 4 columnas */
 }
@@ -2826,10 +3110,10 @@ td {
     grid-template-columns: 1fr 2fr 1fr .5fr; /* Adapta estos valores a las proporciones originales de tus primeras 4 columnas */
 }
     /* =========================================================
-   VISTA DE ESCRITORIO (Pantallas de 980px o más)
+   VISTA DE ESCRITORIO (Pantallas de 980px o m�s)
    Transforma las tarjetas en filas estilo tabla
    ========================================================= */
-   
+
     /* 1. La tarjeta se vuelve una fila horizontal */
     .cliente-card {
         display: flex;
@@ -2840,23 +3124,23 @@ td {
         gap: 10px;
     }
 
-    /* 2. La primera columna: Información y Día de pago */
+    /* 2. La primera columna: Informaci�n y D�a de pago */
     .cliente-header {
         display: flex;
         flex-direction: row;
         align-items: center;
-        flex: 0 0 320px; /* Ancho fijo para mantener la alineación de la "tabla" */
+        flex: 0 0 320px; /* Ancho fijo para mantener la alineaci�n de la "tabla" */
         gap: 15px;
         justify-content: space-between;
         margin-bottom: 0px;
     }
-    /* 3. Ocultar el Scrollbar (la línea gris) de los meses */
-    .cliente-historial-pagos { /* Cambia esto por la clase que envuelve tus círculos verdes */
+    /* 3. Ocultar el Scrollbar (la l�nea gris) de los meses */
+    .cliente-historial-pagos { /* Cambia esto por la clase que envuelve tus c�rculos verdes */
         overflow-x: auto;
         display: flex;
         scrollbar-width: none; /* Para Firefox */
     }
-    .cliente-historial-pagos::-webkit-scrollbar { /* Cambia esto por la clase que envuelve tus círculos verdes */
+    .cliente-historial-pagos::-webkit-scrollbar { /* Cambia esto por la clase que envuelve tus c�rculos verdes */
         display: none;
     }
     .cliente-info-principal {
@@ -2876,15 +3160,15 @@ td {
     /* 3. La columna central: Los meses */
     .cliente-historial-pagos.dynamic-history {
         flex: 1; /* Ocupa todo el espacio disponible en el medio */
-        border-top: none; /* Quitamos la línea divisoria del celular */
+        border-top: none; /* Quitamos la l�nea divisoria del celular */
         padding: 0;
-        flex-wrap: nowrap; /* Obligamos a que estén en una sola línea */
-        overflow-x: auto; /* Si hay muchísimos pagos, permite deslizar hacia los lados */
+        flex-wrap: nowrap; /* Obligamos a que est�n en una sola l�nea */
+        overflow-x: auto; /* Si hay much�simos pagos, permite deslizar hacia los lados */
         align-items: center;
         gap: 8px;
     }
 
-    /* Opcional: Hacemos la barra de desplazamiento horizontal más elegante en PC */
+    /* Opcional: Hacemos la barra de desplazamiento horizontal m�s elegante en PC */
     .cliente-historial-pagos.dynamic-history::-webkit-scrollbar {
         height: 6px;
     }
@@ -2893,12 +3177,12 @@ td {
         border-radius: 4px;
     }
 
-    /* Hacemos los círculos un poquitito más pequeños para que quepan más en la fila */
+    /* Hacemos los c�rculos un poquitito m�s peque�os para que quepan m�s en la fila */
     .pago-burbuja {
         width: 55px;
         height: 55px;
         font-size: 0.7rem;
-        flex-shrink: 0; /* Evita que los círculos se aplasten si el espacio es reducido */
+        flex-shrink: 0; /* Evita que los c�rculos se aplasten si el espacio es reducido */
     }
 
     /* 4. La columna final: Botones */
@@ -2922,14 +3206,14 @@ td {
         flex: none;
     }
     /* 3. Manipulamos el icono (etiqueta i) */
-    .btn-registrar-pago i, 
+    .btn-registrar-pago i,
     .btn-detalles-slim i {
-        font-size: 1.2rem !important; /* Le devolvemos el tamaño al icono */
-        margin: 0 !important;        /* Quitamos márgenes que separaban el texto */
+        font-size: 1.2rem !important; /* Le devolvemos el tama�o al icono */
+        margin: 0 !important;        /* Quitamos m�rgenes que separaban el texto */
         display: inline-block;
     }
-    
-    
+
+
 }
 
 .reporte-item-pago .monto-estado{
@@ -2964,10 +3248,10 @@ td {
 .btn-solicitar-cierre:hover { background-color: #1b5e20; }
 
 /* =======================================================
-   ESTILOS EXCLUSIVOS PARA LA TABLA DE IMPRESIÓN
+   ESTILOS EXCLUSIVOS PARA LA TABLA DE IMPRESI�N
 ======================================================= */
 
-/* 1. Ocultamos esta sección en el navegador normal */
+/* 1. Ocultamos esta secci�n en el navegador normal */
 .oculto-en-pantalla {
     display: none;
 }
@@ -3199,35 +3483,265 @@ td {
     flex-wrap: wrap;
 }
 
-.resultado-header-acciones {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+.card-pago .resultado-cliente-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px 10px;
+    flex-wrap: nowrap;
+}
+
+.card-pago .resultado-cliente-header .resultado-header-controles {
+    justify-self: end;
+    margin-left: 0;
 }
 
 .btn-detalles-cobrador {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     width: auto;
-    border: none;
-    border-radius: 6px;
-    padding: 7px 12px;
-    background: #1a73e8;
-    color: #fff;
+    min-height: 28px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: #eff6ff;
+    color: #0b57d0;
+    font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
 }
 
+.btn-detalles-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #0b57d0;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.btn-detalles-texto {
+    line-height: 1;
+}
+
 .btn-detalles-cobrador:hover {
-    background: #1557b0;
+    background: #dbeafe;
 }
 
 .modal-content-cobrador {
-    max-width: 860px;
+    max-width: 900px;
+}
+
+.modal-cobrador-header {
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 0;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f8fafc;
+}
+
+.modal-cobrador-titulo {
+    min-width: 0;
+}
+
+.modal-cobrador-nombre-linea {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+}
+
+.modal-cobrador-titulo h2 {
+    color: #172033;
+    font-size: 1.25rem;
+    line-height: 1.2;
+}
+
+.modal-cobrador-codigo {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #111827;
+    color: #fff;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.modal-cobrador-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.modal-cobrador-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 28px;
+    padding: 5px 10px;
+    border: 1px solid #dbe3ef;
+    border-radius: 999px;
+    background: #fff;
+    color: #334155;
+    font-size: 0.82rem;
+    line-height: 1.2;
+}
+
+.modal-cobrador-chip span {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.modal-cobrador-chip strong {
+    color: #111827;
+    font-family: Consolas, 'Courier New', monospace;
+    font-weight: 800;
+}
+
+.modal-body-cobrador {
+    background: #fff;
 }
 
 .grid-info-cliente-cobrador {
     align-items: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    margin-bottom: 0;
+}
+
+.seccion-ficha-cobrador,
+.seccion-pagos-cobrador {
+    padding: 16px 20px;
+}
+
+.seccion-detalle-header h3 {
+    margin: 0;
+    color: #172033;
+    font-size: 1rem;
+}
+
+.grid-info-cliente-cobrador .info-grupo {
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.grid-info-cliente-cobrador .info-grupo label {
+    color: #64748b;
+    font-size: 0.76rem;
+}
+
+.grid-info-cliente-cobrador .info-grupo p {
+    margin-top: 4px;
+    color: #172033;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.detalle-cobrador-separador {
+    display: inline-block;
+    margin: 0 8px;
+    color: #94a3b8;
+}
+
+.acciones-contacto-cobrador {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn-contacto.whatsapp.btn-whatsapp-cobrador-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;
+    height: 45px;
+    min-height: 45px;
+    padding: 0;
+    border-radius: 8px;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.whatsapp-icono {
+    width: 45px;
+    height: 45px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: 0 0 auto;
+}
+
+.whatsapp-telefono-oculto {
+    display: none;
+}
+
+.seccion-pagos-cobrador {
+    margin-top: 0;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: none;
+}
+
+.seccion-pagos-cobrador .lista-pagos-ul {
+    max-height: none;
+    overflow-y: visible;
+    margin-top: 10px;
+}
+
+.seccion-pagos-cobrador .item-pago {
+    padding: 10px 0;
+}
+
+@media (max-width: 640px) {
+    .modal-cobrador-header {
+        padding: 16px;
+    }
+
+    .modal-cobrador-titulo h2 {
+        font-size: 1.12rem;
+    }
+
+    .modal-cobrador-meta {
+        gap: 6px;
+    }
+
+
+
+    .grid-info-cliente-cobrador {
+        grid-template-columns: 1fr;
+    }
+
+    .seccion-ficha-cobrador,
+    .seccion-pagos-cobrador {
+        padding: 14px 16px;
+    }
+
+    .acciones-contacto-cobrador .btn-contacto.whatsapp {
+        width: 45px;
+        text-align: center;
+    }
 }
 
 .badge-servicio-resultado {
@@ -3267,7 +3781,7 @@ td {
     letter-spacing: 0;
 }
 
-/* Botón WhatsApp */
+/* Bot�n WhatsApp */
 .acciones-contacto { margin-top: 20px; }
 .btn-contacto.whatsapp {
     display: inline-block; background-color: #25D366; color: white;

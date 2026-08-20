@@ -278,7 +278,7 @@
                 </div>
             </div>
 
-            <div class="main-section">
+            <div>
                 <h3 class="admin-titulo">Clientes Registrados
                     <span id="contador-clientes" class="contador-badge">0</span>
                     <span id="total-mbps-garantizados" class="contador-badge contador-badge-info hidden">0 Mbps garantizados</span>
@@ -385,27 +385,44 @@
 
             <div id="resultado-busqueda" class="hidden">
                 <div class="card-pago">
-                    <div class="card-header">
-                        <div>
-                            <h4 id="res-nombre"></h4>
-                            <span id="res-ip" class="badge-ip"></span>
+                    <div class="card-header resultado-cliente-header">
+                        <div class="resultado-cliente-main">
+                            <div class="resultado-nombre-linea">
+                                <h4 id="res-nombre"></h4>
+                                <span id="res-ip" class="badge-ip"></span>
+                            </div>
                         </div>
-                        <div class="resultado-header-acciones">
-                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()">Detalles</button>
+                        <div class="resultado-header-controles">
+                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()" aria-label="Detalles">
+                                <span class="btn-detalles-icon" aria-hidden="true">i</span>
+                                <span class="btn-detalles-texto">Detalles</span>
+                            </button>
                             <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <p><strong>Fecha de pago:</strong> <span id="res-dia"></span></p>
-                        <p><strong>Costo del Paquete:</strong> $<span id="res-costo"></span></p>
-                        <div class="info-box">
-                            <strong>Estado de Cuenta:</strong>
+                    <div class="card-body resultado-card-body">
+                        <div class="resultado-resumen-linea">
+                            <div class="resultado-resumen-item">
+                                <span class="resultado-resumen-etiqueta">Fecha de pago</span>
+                                <strong id="res-dia"></strong>
+                            </div>
+                            <div class="resultado-resumen-item">
+                                <span class="resultado-resumen-etiqueta">Paquete</span>
+                                <strong id="res-paquete-resumen">-</strong>
+                            </div>
+                        </div>
+                        <div id="estado-cuenta-box" class="info-box estado-cuenta-box">
+                            <strong>Estado de cuenta</strong>
                             <p id="res-ultimo-pago" class="msg-adeudo"></p>
                         </div>
                     </div>
-                    <div class="grupo-botones-pago">
-                        <button id="btn-preparar-pago" onclick="prepararPago()" class="btn-pago button">Seleccionar Mes a Pagar</button>
-                        <button id="btn-ver-pagos" class="btn-pago button">Ver Pagos</button>
+                    <div class="cobro-inline">
+                        <label for="monto-pago-input">Monto recibido en efectivo ($)</label>
+                        <div class="cobro-inline-controles">
+                            <input type="number" id="monto-pago-input" min="1" step="1" inputmode="decimal" placeholder="$ 0.00">
+                            <button id="btn-preparar-pago" onclick="prepararPago()" class="btn-pago btn-pago-principal button">Registrar pago</button>
+                        </div>
+                        <p id="res-cobro-ayuda" class="cobro-ayuda">El sistema distribuirá este monto automáticamente empezando por el mes más antiguo pendiente.</p>
                     </div>
                 </div>
             </div>
@@ -427,36 +444,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div id="modalPago" class="modal hidden" onclick="cerrarModalPorFondo(event, 'modalPago', cerrarModalPago)">
-        <div class="modal-content">
-            <div class="modal-cabecera">
-                <h2 style="margin-bottom: 10px;">Registrar Cobro</h2>
-                <span class="cerrar-x-modal" onclick="cerrarModalPago()">&times;</span>
-            </div>
-            <p style="margin-bottom: 20px; color: #555;">
-                Cliente: <strong id="modal-nombre-cliente"></strong>
-            </p>
-
-            <div class="input-group">
-                <label style="display: block; font-weight: bold; margin-bottom: 8px;">
-                    Monto recibido en efectivo ($):
-                </label>
-                <input type="number" id="monto-pago-input" 
-                    placeholder="Ej: 1000" 
-                    style="width: 100%; padding: 12px; font-size: 1.5em; border: 2px solid #1a73e8; border-radius: 8px; text-align: center;">
-                
-                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                    * El sistema distribuirá este monto automáticamente empezando por el mes más antiguo pendiente.
-                </p>
-            </div>
-
-            <button onclick="procesarPagoFinal()" class="btn-success button" 
-                    style="width: 100%; padding: 15px; margin-top: 20px; font-size: 1.1em; background-color: #28a745; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">
-                Confirmar y Pagar
-            </button>
         </div>
     </div>
 
@@ -743,16 +730,27 @@
 
     <div id="modal-detalles-cliente-cobrador" class="modal-overlay hidden" onclick="cerrarModalPorFondo(event, 'modal-detalles-cliente-cobrador', cerrarModalDetallesClienteCobrador)">
         <div class="modal-content modal-content-cobrador">
-            <div class="modal-cabecera">
-                <div>
-                    <h2 id="detalle-cobrador-nombre">Ficha técnica</h2>
+            <div class="modal-cabecera modal-cobrador-header">
+                <div class="modal-cobrador-titulo">
+                    <div class="modal-cobrador-nombre-linea">
+                        <h2 id="detalle-cobrador-nombre">Ficha técnica</h2>
+                        <span id="detalle-cobrador-codigo-cliente" class="modal-cobrador-codigo">-</span>
+                    </div>
+                    <div class="modal-cobrador-meta">
+                        <span class="modal-cobrador-chip modal-cobrador-chip-tecnico">
+                            <span>IP</span>
+                            <strong id="detalle-cobrador-ip">-</strong>
+                        </span>
+                    </div>
                 </div>
                 <span class="cerrar-x-modal" onclick="cerrarModalDetallesClienteCobrador()">&times;</span>
             </div>
 
-            <div class="modal-body">
-                <div class="seccion-detalle">
-                    <h3>📌 Ficha Técnica</h3>
+            <div class="modal-body modal-body-cobrador">
+                <div class="seccion-detalle seccion-ficha-cobrador">
+                    <div class="seccion-detalle-header">
+                        <h3>Datos del servicio</h3>
+                    </div>
                     <div class="grid-info-cliente grid-info-cliente-cobrador">
                         <div class="info-grupo">
                             <label>Dirección Física</label>
@@ -765,23 +763,12 @@
                         </div>
 
                         <div class="info-grupo">
-                            <label>Fecha de Instalación</label>
-                            <p id="detalle-cobrador-fecha-inst">-</p>
-                        </div>
-
-                        <div class="info-grupo">
-                            <label>Día de Pago</label>
-                            <p id="detalle-cobrador-dia-pago" class="resaltado-azul">-</p>
-                        </div>
-
-                        <div class="info-grupo">
-                            <label>Número de Cliente</label>
-                            <p id="detalle-cobrador-codigo-cliente" class="resaltado-azul">-</p>
-                        </div>
-
-                        <div class="info-grupo">
-                            <label>Dirección IP</label>
-                            <p id="detalle-cobrador-ip" class="resaltado-tecnico">-</p>
+                            <label>Fecha de Instalación / Día de Pago</label>
+                            <p>
+                                <span id="detalle-cobrador-fecha-inst">-</span>
+                                <span class="detalle-cobrador-separador">|</span>
+                                <span id="detalle-cobrador-dia-pago" class="resaltado-azul">-</span>
+                            </p>
                         </div>
 
                         <div class="info-grupo">
@@ -790,12 +777,24 @@
                         </div>
                     </div>
 
-                    <div class="acciones-contacto">
-                        <a id="btn-whatsapp-cobrador" href="#" target="_blank" class="btn-contacto whatsapp">
-                            💬 Enviar WhatsApp al <span id="detalle-cobrador-telefono"></span>
+                    <div class="acciones-contacto acciones-contacto-cobrador">
+                        <a id="btn-whatsapp-cobrador" href="#" target="_blank" class="btn-contacto whatsapp btn-whatsapp-cobrador-icono" aria-label="Enviar WhatsApp">
+                            <svg class="whatsapp-icono" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M12 4.25a7.65 7.65 0 0 0-6.46 11.75l-.83 3.2 3.28-.79A7.65 7.65 0 1 0 12 4.25Z"/>
+                                <path d="M9.35 8.25c-.18.08-.9.5-.9 1.57 0 1.72 2.08 4.13 4.33 5.07 1.02.42 1.55.36 1.95.25.44-.12.95-.7 1.08-1.15.07-.25.05-.43-.09-.51l-1.34-.64c-.15-.07-.34-.06-.45.08l-.55.67c-.11.13-.29.16-.45.08a6.3 6.3 0 0 1-2.55-2.26c-.1-.16-.08-.34.04-.47l.43-.48c.12-.14.15-.33.08-.5l-.6-1.39c-.08-.18-.28-.35-.5-.35h-.48Z"/>
+                            </svg>
+                            <span id="detalle-cobrador-telefono" class="whatsapp-telefono-oculto"></span>
                         </a>
                         <div id="editar-box-cobrador"></div>
                     </div>
+                </div>
+
+                <div class="seccion-detalle seccion-pagos-cobrador">
+                    <div class="seccion-detalle-header">
+                        <h3>Pagos recientes</h3>
+                    </div>
+                    <ul id="listaPagosHistorialCobrador" class="lista-pagos-ul">
+                    </ul>
                 </div>
             </div>
         </div>
@@ -1022,6 +1021,10 @@
             </div>
         </div>
     </div>
+
+    <button id="btn-scroll-rapido" class="btn-scroll-rapido hidden" type="button" aria-label="Ir al final">
+        <span id="btn-scroll-rapido-icono" aria-hidden="true">↓</span>
+    </button>
    
     <script>
         const host = window.location.hostname; 
@@ -1154,6 +1157,16 @@
             if (velocidad) detalles.push(`${velocidad} Mbps`);
 
             return detalles.join(' | ');
+        }
+
+        function formatearResumenPaqueteResultado(cliente) {
+            const paquete = formatearPaqueteCliente(cliente);
+            const costo = parseFloat(cliente?.costo_mensual);
+            const costoTexto = Number.isFinite(costo)
+                ? `$${costo.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} pesos`
+                : '$0 pesos';
+
+            return `${paquete} | ${costoTexto}`;
         }
 
         function obtenerPaqueteSeleccionado() {
@@ -2383,6 +2396,7 @@
         document.addEventListener('DOMContentLoaded', () => {
 
             aplicarFiltros();
+            inicializarBotonScrollRapido();
             // Primero, cargamos los clientes al iniciar la página
             cargarVistaAdminClientes();
         });
@@ -2884,10 +2898,30 @@
 
         function configurarBotonPagoResultado() {
             const boton = document.getElementById('btn-preparar-pago');
+            const ayuda = document.getElementById('res-cobro-ayuda');
+            const inputMonto = document.getElementById('monto-pago-input');
             if (!boton) return;
 
             const esSuspensionFaltaPago = suspensionResultadoActual?.tipo_evento === 'falta_pago';
-            boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Seleccionar Mes a Pagar';
+            const minimoReactivacion = parseFloat(estadoCuentaResultadoActual?.adeudo_actual) || 0;
+            const minimoTexto = minimoReactivacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Registrar pago';
+
+            if (ayuda) {
+                ayuda.classList.toggle('cobro-ayuda-reactivar', esSuspensionFaltaPago);
+                ayuda.textContent = esSuspensionFaltaPago
+                    ? `Monto mínimo para reactivar: $${minimoTexto}. Puedes cobrar más si el cliente entrega un monto mayor.`
+                    : 'El sistema distribuirá este monto automáticamente empezando por el mes más antiguo pendiente.';
+            }
+
+            if (inputMonto) {
+                inputMonto.classList.toggle('monto-reactivacion', esSuspensionFaltaPago);
+                inputMonto.placeholder = esSuspensionFaltaPago ? `$ ${minimoTexto}` : '$ 0.00';
+
+                if (esSuspensionFaltaPago && minimoReactivacion > 0 && !inputMonto.value) {
+                    inputMonto.value = minimoReactivacion.toFixed(2);
+                }
+            }
         }
 
         function abrirDetallesClienteCobradorSeleccionado() {
@@ -2909,6 +2943,7 @@
             const modal = document.getElementById('modal-detalles-cliente-cobrador');
             modal.classList.remove('hidden');
             document.getElementById('detalle-cobrador-nombre').textContent = 'Cargando ficha...';
+            document.getElementById('listaPagosHistorialCobrador').innerHTML = '<li style="text-align: center; padding: 20px;">Buscando historial...</li>';
 
             try {
                 const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
@@ -2950,6 +2985,7 @@
                         <i class="fas fa-eye">✏️</i>
                     </button>
                 `;
+                cargarHistorialPagosEnLista(idCliente, document.getElementById('listaPagosHistorialCobrador'));
             } catch (error) {
                 console.error('Error cargando ficha limitada:', error);
                 document.getElementById('detalle-cobrador-nombre').textContent = 'Error al cargar ficha';
@@ -2961,11 +2997,32 @@
             document.getElementById('modal-detalles-cliente-cobrador').classList.add('hidden');
         }
 
+        function enfocarResultadoBusqueda() {
+            const resultado = document.getElementById('resultado-busqueda');
+            if (!resultado || resultado.classList.contains('hidden')) return;
+
+            const margenVista = 16;
+            const rect = resultado.getBoundingClientRect();
+            const alturaVista = window.innerHeight || document.documentElement.clientHeight;
+            const posicionResultado = rect.top + window.pageYOffset;
+            const cabeCompleto = rect.height + (margenVista * 2) <= alturaVista;
+            const destino = cabeCompleto
+                ? posicionResultado - ((alturaVista - rect.height) / 2)
+                : posicionResultado - margenVista;
+
+            window.scrollTo({
+                top: Math.max(destino, 0),
+                behavior: 'smooth'
+            });
+        }
+
         async function seleccionarCliente(cliente) {
             
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
             document.getElementById('btn-detalles-cobrador').classList.add('hidden');
+            document.getElementById('monto-pago-input').value = '';
+            document.getElementById('estado-cuenta-box').classList.remove('estado-cuenta-adeudo', 'estado-cuenta-favor', 'estado-cuenta-corriente');
             clienteSeleccionado = cliente;
             estadoCuentaResultadoActual = null;
             suspensionResultadoActual = null;
@@ -2992,17 +3049,12 @@
 
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
-                document.getElementById('res-ip').innerText = `No. cliente: ${cliente.codigo_cliente || 'Sin codigo'}`;
-                const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                document.getElementById('res-costo').innerText = costoFormateado;
+                document.getElementById('res-ip').innerText = cliente.codigo_cliente || 'Sin codigo';
+                document.getElementById('res-paquete-resumen').innerText = formatearResumenPaqueteResultado(cliente);
                 document.getElementById('res-dia').textContent = cliente.dia_pago;
                 configurarEstadoServicioResultado(data.cliente || cliente, estadoCuenta.servicio);
                 configurarBotonPagoResultado();
 
-                document.getElementById('btn-ver-pagos').onclick = function() {
-                    abrirHistorial(cliente.id, cliente.nombre_completo);
-                };
-                
                 const msgUltimoPago = document.getElementById('res-ultimo-pago');
                 const deudaReal = parseFloat(estadoCuenta.adeudo_actual) || 0;
                 const saldoFavor = parseFloat(estadoCuenta.saldo_favor) || 0;
@@ -3010,6 +3062,7 @@
                 const mesesPendientes = estadoCuenta.meses_adeudados || [];
 
                 if (deudaReal > 0) {
+                    document.getElementById('estado-cuenta-box').classList.add('estado-cuenta-adeudo');
                     const deudaFormateada = deudaReal.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                     const mesesTexto = mesesPendientes.length > 0
                         ? `<br><span style="color: #555; font-size: 0.9em;">Meses pendientes: ${mesesPendientes.map(item => {
@@ -3031,24 +3084,25 @@
                         ${mesesTexto}
                     `;
                 } else if (saldoFavor > 0) {
+                    document.getElementById('estado-cuenta-box').classList.add('estado-cuenta-favor');
                     const saldoFormateado = saldoFavor.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                     msgUltimoPago.innerHTML = `<span style="color: #1a73e8; font-weight: bold;">✅ Saldo a favor: $${saldoFormateado}</span>`;
                 } else {
+                    document.getElementById('estado-cuenta-box').classList.add('estado-cuenta-corriente');
                     msgUltimoPago.innerHTML = `<span style="color: #2e7d32; font-weight: bold;">✅ Cuenta al corriente (Sin adeudos)</span>`;
                 }
 
                 document.getElementById('btn-detalles-cobrador').classList.remove('hidden');
                 document.getElementById('resultado-busqueda').classList.remove('hidden');
+                requestAnimationFrame(enfocarResultadoBusqueda);
             } catch (error) {
                 console.error("Error:", error);
             }
         }
 
          function seleccionarClienteDirecto(cliente) {
-            // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             cerrarModalDetalles()
-            // 2. Ejecutamos la lógica de selección que ya tenemos programada
+            // Ejecutamos la lógica de selección que ya tenemos programada
             seleccionarCliente(cliente);
         }
         
@@ -3180,27 +3234,30 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
 
             const minimoReactivacion = parseFloat(estadoCuentaResultadoActual?.adeudo_actual) || 0;
             const minimoTexto = minimoReactivacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const inputMonto = document.getElementById('monto-pago-input');
 
             if (minimoReactivacion <= 0) {
                 alert('El cliente no tiene adeudo pendiente para cobrar desde esta vista.');
                 return;
             }
 
-            const montoTexto = prompt(
-                `Monto recibido para reactivar el servicio.\n\nMínimo requerido: $${minimoTexto}`,
-                minimoReactivacion.toFixed(2)
-            );
-
-            if (montoTexto === null) return;
-
-            const montoRecibido = parseFloat(montoTexto.replace(/[^0-9.]/g, ''));
+            const montoRecibido = parseFloat(inputMonto?.value);
             if (!montoRecibido || montoRecibido <= 0) {
                 alert('Captura un monto válido para reactivar.');
+                inputMonto?.focus();
                 return;
             }
 
             if (montoRecibido < minimoReactivacion) {
                 alert(`Para reactivar el servicio debes cobrar al menos $${minimoTexto}.`);
+                inputMonto?.focus();
+                inputMonto?.select();
+                return;
+            }
+
+            const montoTexto = montoRecibido.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const confirmarCobro = confirm(`¿Confirmas cobrar $${montoTexto} y reactivar el servicio de ${clienteSeleccionado.nombre_completo}?`);
+            if (!confirmarCobro) {
                 return;
             }
 
@@ -3238,16 +3295,7 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
                 return;
             }
 
-            document.getElementById('modal-nombre-cliente').innerText = clienteSeleccionado.nombre_completo;
-            
-            // Dejamos el campo vacío para que el cobrador escriba lo que recibió
-            const inputMonto = document.getElementById('monto-pago-input');
-            inputMonto.value = ''; 
-            
-            document.getElementById('modalPago').classList.remove('hidden');
-
-            // Ponemos el cursor automáticamente en el cuadro de texto
-            setTimeout(() => inputMonto.focus(), 200);
+            procesarPagoFinal();
         }
         // Función para CERRAR el modal
         function cerrarHistorial() {
@@ -3259,6 +3307,12 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
             document.getElementById('nombreClienteHistorial').textContent = nombreCliente;
             
             const lista = document.getElementById('listaPagosHistorial');
+            cargarHistorialPagosEnLista(clienteId, lista);
+        }
+
+        async function cargarHistorialPagosEnLista(clienteId, lista) {
+            if (!lista) return;
+
             lista.innerHTML = '<li style="text-align: center; padding: 20px;">Buscando historial...</li>';
 
             try {
@@ -3307,10 +3361,12 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
         
 
         async function procesarPagoFinal() {
-            const monto = parseFloat(document.getElementById('monto-pago-input').value);
+            const inputMonto = document.getElementById('monto-pago-input');
+            const monto = parseFloat(inputMonto?.value);
             
             if (!monto || monto <= 0) {
                 alert("Por favor ingresa un monto válido");
+                inputMonto?.focus();
                 return;
             }
             
@@ -3358,8 +3414,9 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
         }
 
         function cerrarModalPago() {
-            document.getElementById('modalPago').classList.add('hidden');
-            document.getElementById('monto-pago-input').value = ''; // Limpiar campo
+            const inputMonto = document.getElementById('monto-pago-input');
+
+            if (inputMonto) inputMonto.value = ''; // Limpiar campo
         }
 
 
@@ -6212,6 +6269,83 @@ ${linkVelocidad}
                 cargarVistaAdminClientes();
             });
             document.querySelectorAll('.chip-filtro-admin').forEach(chip => chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido)));
+        }
+
+        let temporizadorScrollRapido = null;
+
+        function paginaTieneScrollVertical() {
+            return document.documentElement.scrollHeight > window.innerHeight + 24;
+        }
+
+        function obtenerEstadoScrollRapido() {
+            const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
+            const scrollActual = window.pageYOffset || document.documentElement.scrollTop || 0;
+            return {
+                irArriba: scrollActual > maxScroll / 2,
+                maxScroll
+            };
+        }
+
+        function actualizarBotonScrollRapido(mostrar) {
+            const boton = document.getElementById('btn-scroll-rapido');
+            const icono = document.getElementById('btn-scroll-rapido-icono');
+            if (!boton || !icono) return;
+
+            if (!paginaTieneScrollVertical()) {
+                boton.classList.add('hidden');
+                boton.classList.remove('visible');
+                return;
+            }
+
+            const { irArriba } = obtenerEstadoScrollRapido();
+            icono.textContent = irArriba ? '↑' : '↓';
+            boton.setAttribute('aria-label', irArriba ? 'Ir arriba' : 'Ir al final');
+
+            if (mostrar) {
+                boton.classList.remove('hidden');
+                requestAnimationFrame(() => boton.classList.add('visible'));
+            }
+        }
+
+        function ocultarBotonScrollRapido() {
+            const boton = document.getElementById('btn-scroll-rapido');
+            if (!boton) return;
+
+            boton.classList.remove('visible');
+            setTimeout(() => {
+                if (!boton.classList.contains('visible')) {
+                    boton.classList.add('hidden');
+                }
+            }, 220);
+        }
+
+        function mostrarBotonScrollRapidoTemporal() {
+            actualizarBotonScrollRapido(true);
+            clearTimeout(temporizadorScrollRapido);
+            temporizadorScrollRapido = setTimeout(ocultarBotonScrollRapido, 1800);
+        }
+
+        function alternarScrollRapido() {
+            const { irArriba, maxScroll } = obtenerEstadoScrollRapido();
+            window.scrollTo({
+                top: irArriba ? 0 : maxScroll,
+                behavior: 'smooth'
+            });
+            mostrarBotonScrollRapidoTemporal();
+        }
+
+        function inicializarBotonScrollRapido() {
+            const boton = document.getElementById('btn-scroll-rapido');
+            if (!boton) return;
+
+            boton.addEventListener('click', alternarScrollRapido);
+            boton.addEventListener('mouseenter', () => clearTimeout(temporizadorScrollRapido));
+            boton.addEventListener('mouseleave', mostrarBotonScrollRapidoTemporal);
+            boton.addEventListener('focus', () => clearTimeout(temporizadorScrollRapido));
+            boton.addEventListener('blur', mostrarBotonScrollRapidoTemporal);
+            window.addEventListener('scroll', mostrarBotonScrollRapidoTemporal, { passive: true });
+            window.addEventListener('resize', () => actualizarBotonScrollRapido(false));
+            actualizarBotonScrollRapido(false);
         }
     </script>
 </body>

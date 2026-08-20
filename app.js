@@ -2,9 +2,95 @@
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
+
+const LOG_DIR = path.join(__dirname, 'logs');
+let contadorEventosSistema = 0;
+
+function obtenerArchivoLogDiario() {
+    const fecha = new Date().toISOString().slice(0, 10);
+    return path.join(LOG_DIR, `sistema-${fecha}.log`);
+}
+
+function limpiarValorLog(valor) {
+    if (valor === undefined || valor === null || valor === '') return 'N/A';
+    if (Array.isArray(valor)) return valor.length ? valor.join(',') : '[]';
+    if (typeof valor === 'object') return JSON.stringify(valor);
+    const texto = String(valor).replace(/\s+/g, ' ').trim();
+    return /[\s=|]/.test(texto) ? JSON.stringify(texto) : texto;
+}
+
+function formatearCamposLog(datos = {}) {
+    return Object.entries(datos)
+        .filter(([, valor]) => valor !== undefined)
+        .map(([clave, valor]) => `${clave}=${limpiarValorLog(valor)}`)
+        .join(' ');
+}
+
+function escribirLineaLog(linea, esError = false) {
+    if (esError) {
+        console.error(linea);
+    } else {
+        console.log(linea);
+    }
+
+    try {
+        fs.mkdirSync(LOG_DIR, { recursive: true });
+        fs.appendFileSync(obtenerArchivoLogDiario(), `${linea}\n`, 'utf8');
+    } catch (errorLog) {
+        console.error('[LOG_ERROR]', errorLog.message);
+    }
+}
+
+function registrarUso(evento, datos = {}) {
+    const contador = String(++contadorEventosSistema).padStart(6, '0');
+    const campos = formatearCamposLog(datos);
+    const linea = `${new Date().toISOString()} [USO#${contador}] [${evento}]${campos ? ` ${campos}` : ''}`;
+    escribirLineaLog(linea);
+}
+
+function registrarError(evento, error, datos = {}) {
+    const campos = formatearCamposLog({
+        ...datos,
+        codigo_error: error?.code,
+        error: error?.message || error
+    });
+    const linea = `${new Date().toISOString()} [ERROR] [${evento}]${campos ? ` ${campos}` : ''}`;
+    escribirLineaLog(linea, true);
+}
+
+function obtenerIpCliente(req) {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor) return String(forwardedFor).split(',')[0].trim();
+    return req.ip || req.socket?.remoteAddress || 'N/A';
+}
+
+function resumirDetallePago(registros = []) {
+    if (!Array.isArray(registros) || registros.length === 0) return 'sin_registros';
+
+    return registros.map(registro => {
+        const partes = [
+            registro.es_cargo ? 'cargo' : 'mensualidad',
+            registro.mes_registrado || registro.mes || 'sin_mes',
+            `$${Number(parseFloat(registro.monto) || 0).toFixed(2)}`,
+            registro.tipo || 'sin_tipo'
+        ];
+
+        if (parseFloat(registro.ajuste_aplicado) > 0) {
+            partes.push(`ajuste=$${Number(parseFloat(registro.ajuste_aplicado) || 0).toFixed(2)}`);
+        }
+
+        if (parseFloat(registro.cargo_aplicado) > 0) {
+            partes.push(`cargo_aplicado=$${Number(parseFloat(registro.cargo_aplicado) || 0).toFixed(2)}`);
+        }
+
+        return partes.join(':');
+    }).join('|');
+}
 
 // Servir archivos estáticos desde la carpeta "public"
 app.use(express.static('public'));
@@ -194,7 +280,13 @@ app.post('/api/login', async (req, res) => {
             const localidadesPermitidas = localidadesDb.map(loc => loc.localidad_id);
             // ----------------------------------------------------
 
-            console.log(`Usuario ${usuario.nombre} logueado. Localidades:`, localidadesPermitidas);
+            registrarUso('LOGIN_OK', {
+                usuario_id: usuario.id,
+                usuario: usuario.nombre,
+                rol: usuario.rol_id,
+                localidades: localidadesPermitidas,
+                ip: obtenerIpCliente(req)
+            });
 
             // Devolvemos la info al frontend
             res.json({
@@ -208,12 +300,32 @@ app.post('/api/login', async (req, res) => {
                 }
             });
         } else {
+            registrarUso('LOGIN_FALLIDO', {
+                correo: correo ? String(correo).replace(/(.{2}).*(@.*)/, '$1***$2') : 'N/A',
+                ip: obtenerIpCliente(req)
+            });
             res.status(401).json({ success: false, mensaje: "Correo o contraseña incorrectos" });
         }
     } catch (err) {
-        console.error('Error en login:', err);
+        registrarError('LOGIN_ERROR', err, {
+            correo: correo ? String(correo).replace(/(.{2}).*(@.*)/, '$1***$2') : 'N/A',
+            ip: obtenerIpCliente(req)
+        });
         res.status(500).json({ error: "Error en el servidor" });
     }
+});
+
+app.post('/api/logout', (req, res) => {
+    const { usuarioId, nombre, rol } = req.body || {};
+
+    registrarUso('LOGOUT', {
+        usuario_id: usuarioId,
+        usuario: nombre,
+        rol,
+        ip: obtenerIpCliente(req)
+    });
+
+    res.json({ success: true });
 });
 // 5. Iniciar el servidor
 const PORT = process.env.PORT || 3000;
@@ -411,8 +523,7 @@ app.post('/api/clientes', async (req, res) => {
         const query = `INSERT INTO clientes 
                     (nombre_completo, alias_cliente, url_portal, telefono, correo, direccion, observaciones, es_renta, fecha_instalacion, dia_pago, direccion_ip, \`señal\`, paquete, paquete_id, costo_mensual, localidad_id, codigo_cliente)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        console.log("Query", query);
-        console.log("Datos recibidos para el nuevo cliente:", req.body);
+        // Evita imprimir SQL completo o datos personales completos en consola.
     // 2. Abrimos el bloque try/catch
     
         connection = await db.getConnection();
@@ -434,6 +545,16 @@ app.post('/api/clientes', async (req, res) => {
         );
 
         await connection.commit();
+        registrarUso('CLIENTE_CREADO', {
+            usuario_id: usuarioIdAlta,
+            cliente_id: result.insertId,
+            codigo_cliente: codigoClienteAlta,
+            cliente: nombre_completo,
+            localidad_id,
+            paquete_id: paqueteSeleccionado.id,
+            costo_mensual: Number(costoMensual || 0).toFixed(2),
+            ip: obtenerIpCliente(req)
+        });
         // 4a. Si todo sale bien, respondemos aquí
         res.json({
             success: true,
@@ -446,12 +567,20 @@ app.post('/api/clientes', async (req, res) => {
             try {
                 await connection.rollback();
             } catch (rollbackError) {
-                console.error("Error al revertir alta de cliente:", rollbackError);
+                registrarError('CLIENTE_CREADO_ROLLBACK_ERROR', rollbackError, {
+                    usuario_id: req.body?.usuario_id,
+                    ip: obtenerIpCliente(req)
+                });
             }
         }
 
         // 4b. Si hay un error, el 'catch' lo atrapa automáticamente
-        console.error("Error al crear cliente:", error);
+        registrarError('CLIENTE_CREADO_ERROR', error, {
+            usuario_id: req.body?.usuario_id,
+            cliente: req.body?.nombre_completo,
+            localidad_id: req.body?.localidad_id,
+            ip: obtenerIpCliente(req)
+        });
         if (error.code === 'ER_DUP_ENTRY' && String(error.message || '').includes('codigo_cliente')) {
             return res.status(409).json({
                 success: false,
@@ -470,6 +599,8 @@ app.get('/api/buscar-clientes', async (req, res) => {
     try {
         const term = String(req.query.q || '').trim(); // Lo que el cliente escribe
         if (term.length < 2) return res.json([]);
+        const usuarioId = parseInt(req.query.usuario_id, 10) || null;
+        const tipoBusqueda = String(req.query.tipo || 'general');
         // 1. Recibimos el "gafete" del frontend desde la URL
         const rol = parseInt(req.query.rol);
         // Convertimos el texto "[1,3]" de vuelta a un arreglo real de Javascript [1, 3]
@@ -494,22 +625,44 @@ app.get('/api/buscar-clientes', async (req, res) => {
                 params.push(localidadesPermitidas);
             } else {
                 // Medida de seguridad: Si es cobrador pero no le han asignado localidades, devolvemos una lista vacía
+                registrarUso('BUSQUEDA_CLIENTE', {
+                    usuario_id: usuarioId,
+                    rol,
+                    tipo: tipoBusqueda,
+                    termino: term,
+                    resultados: 0,
+                    estado: 'sin_localidades',
+                    ip: obtenerIpCliente(req)
+                });
                 return res.json([]); 
             }
         }
 
         query += ` ORDER BY nombre_completo ASC LIMIT 10`;
 
-        console.log("query" + query+ " params "+params)
+        // Log estructurado: evita imprimir SQL completo en consola.
         // 3. Hacemos el await y destructuramos [results]. Mantenemos tus variables dinámicas intactas.
         const [results] = await db.query(query, params);
+        registrarUso('BUSQUEDA_CLIENTE', {
+            usuario_id: usuarioId,
+            rol,
+            tipo: tipoBusqueda,
+            termino: term,
+            resultados: results.length,
+            localidades: rol === 2 ? 'todas' : localidadesPermitidas,
+            ip: obtenerIpCliente(req)
+        });
         
         // 4. Si todo va bien, enviamos el resultado
         res.json(results);
 
     } catch (error) {
         // Manejamos el error en el catch
-        console.error("Error al buscar clientes:", error);
+        registrarError('BUSQUEDA_CLIENTE_ERROR', error, {
+            usuario_id: req.query.usuario_id,
+            termino: req.query.q,
+            ip: obtenerIpCliente(req)
+        });
         res.status(500).json({ error: "Error interno al realizar la búsqueda en la base de datos" });
     }
 });
@@ -616,11 +769,12 @@ app.post('/api/registrar-pago', async (req, res) => {
     const connection = db;
 
     try {
-        const [cliente] = await db.query('SELECT costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?', [clienteId]);
+        const [cliente] = await db.query('SELECT id, codigo_cliente, nombre_completo, costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?', [clienteId]);
         if (!cliente.length) return res.status(404).json({ error: "Cliente no encontrado" });
         const clienteData = cliente[0];
         const costoMensual = parseFloat(clienteData.costo_mensual) || 0;
-        let saldoRestante = parseFloat(montoRecibido);
+        const montoTotalRecibido = parseFloat(montoRecibido);
+        let saldoRestante = montoTotalRecibido;
 
         if (!saldoRestante || saldoRestante <= 0) {
             return res.status(400).json({ error: "Monto invalido" });
@@ -771,10 +925,30 @@ app.post('/api/registrar-pago', async (req, res) => {
             cursor = avanzarMesContable(cursor.anio, cursor.mesIndex, 1);
         }
 
+        const totalAplicado = registros.reduce((total, registro) => total + (parseFloat(registro.monto) || 0), 0);
+
+        registrarUso('PAGO_REGISTRADO', {
+            usuario_id: usuarioId,
+            cliente_id: clienteData.id,
+            codigo_cliente: clienteData.codigo_cliente,
+            cliente: clienteData.nombre_completo,
+            monto_recibido: Number(montoTotalRecibido || 0).toFixed(2),
+            total_aplicado: Number(totalAplicado || 0).toFixed(2),
+            saldo_sobrante: Number(saldoRestante || 0).toFixed(2),
+            registros: registros.length,
+            detalle: resumirDetallePago(registros),
+            ip: obtenerIpCliente(req)
+        });
+
         res.json({ success: true, detalle: registros });
 
     } catch (error) {
-        console.error(error);
+        registrarError('PAGO_REGISTRADO_ERROR', error, {
+            usuario_id: usuarioId,
+            cliente_id: clienteId,
+            monto_recibido: montoRecibido,
+            ip: obtenerIpCliente(req)
+        });
         res.status(500).json({ error: "Error interno procesando el cobro" });
     }
 });
@@ -1553,6 +1727,8 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = [], historialPa
 
 app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
     const clienteId = req.params.id;
+    const usuarioId = parseInt(req.query.usuario_id, 10) || null;
+    const origen = String(req.query.origen || 'consulta_estado');
 
     try {
         await finalizarAusenciasProgramadasVencidas(db, clienteId);
@@ -1611,6 +1787,20 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
 
         const estadoCuenta = calcularEstadoCuentaServidor(clienteRows[0], pagos, bitacora, historialPaquetes);
 
+        if (origen === 'seleccion') {
+            registrarUso('CLIENTE_SELECCIONADO', {
+                usuario_id: usuarioId,
+                cliente_id: clienteRows[0].id,
+                codigo_cliente: clienteRows[0].codigo_cliente,
+                cliente: clienteRows[0].nombre_completo,
+                localidad: clienteRows[0].localidad_nombre,
+                estado_servicio: clienteRows[0].estado_servicio,
+                adeudo_actual: Number(parseFloat(estadoCuenta.adeudo_actual) || 0).toFixed(2),
+                saldo_favor: Number(parseFloat(estadoCuenta.saldo_favor) || 0).toFixed(2),
+                ip: obtenerIpCliente(req)
+            });
+        }
+
         res.json({
             cliente: clienteRows[0],
             historial_pagos: pagos,
@@ -1619,7 +1809,12 @@ app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {
             estado_cuenta: estadoCuenta
         });
     } catch (error) {
-        console.error('Error al calcular estado de cuenta completo:', error);
+        registrarError('ESTADO_CUENTA_COMPLETO_ERROR', error, {
+            usuario_id: usuarioId,
+            cliente_id: clienteId,
+            origen,
+            ip: obtenerIpCliente(req)
+        });
         res.status(500).json({ error: 'Error al calcular estado de cuenta del cliente' });
     }
 });
@@ -2331,7 +2526,7 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
         await connection.beginTransaction();
 
         const [clienteRows] = await connection.query(
-            'SELECT costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?',
+            'SELECT id, codigo_cliente, nombre_completo, costo_mensual, fecha_instalacion, dia_pago FROM clientes WHERE id = ?',
             [clienteId]
         );
 
@@ -2524,6 +2719,20 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
         }
 
         await connection.commit();
+        const totalAplicado = registros.reduce((total, registro) => total + (parseFloat(registro.monto) || 0), 0);
+
+        registrarUso('PAGO_REACTIVACION_REGISTRADO', {
+            usuario_id: usuarioId,
+            cliente_id: clienteData.id,
+            codigo_cliente: clienteData.codigo_cliente,
+            cliente: clienteData.nombre_completo,
+            monto_recibido: Number(montoTotalRecibido || 0).toFixed(2),
+            total_aplicado: Number(totalAplicado || 0).toFixed(2),
+            saldo_sobrante: Number(saldoRestante || 0).toFixed(2),
+            registros: registros.length,
+            detalle: resumirDetallePago(registros),
+            ip: obtenerIpCliente(req)
+        });
 
         res.json({
             success: true,
@@ -2533,7 +2742,12 @@ app.post('/api/clientes/:id/reactivar-con-pago', async (req, res) => {
         });
     } catch (error) {
         await connection.rollback();
-        console.error('Error al reactivar con pago:', error);
+        registrarError('PAGO_REACTIVACION_ERROR', error, {
+            usuario_id: usuarioId,
+            cliente_id: clienteId,
+            monto_recibido: montoRecibido,
+            ip: obtenerIpCliente(req)
+        });
         res.status(500).json({ success: false, error: error.message });
     } finally {
         connection.release();

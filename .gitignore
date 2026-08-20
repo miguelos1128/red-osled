@@ -4,6 +4,9 @@ node_modules/
 # Variables de entorno (¡NUNCA subas tus contraseñas!)
 .env
 
+# Logs locales del sistema
+logs/
+
 # Archivos de sistema operativo
 .DS_Store
 Thumbs.db

@@ -1073,6 +1073,46 @@
         const usuario = JSON.parse(usuarioJson);
         document.getElementById('user-name').innerText = usuario.nombre;
 
+        function obtenerUsuarioActualLog() {
+            try {
+                return JSON.parse(sessionStorage.getItem('usuario') || localStorage.getItem('usuario_actual') || '{}');
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function crearQueryLog(extra = {}) {
+            const params = new URLSearchParams(extra);
+            const usuarioActual = obtenerUsuarioActualLog();
+            if (usuarioActual.id) params.set('usuario_id', usuarioActual.id);
+            return params.toString();
+        }
+
+        function urlEstadoCuentaCompleto(idCliente, origen = 'consulta_estado') {
+            const query = crearQueryLog({ origen });
+            return `${urlBase}/api/clientes/${encodeURIComponent(idCliente)}/estado-cuenta-completo${query ? `?${query}` : ''}`;
+        }
+
+        function notificarLogout(usuarioLogout) {
+            const payload = JSON.stringify({
+                usuarioId: usuarioLogout.id,
+                nombre: usuarioLogout.nombre,
+                rol: usuarioLogout.rol
+            });
+
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(`${urlBase}/api/logout`, new Blob([payload], { type: 'application/json' }));
+                return;
+            }
+
+            fetch(`${urlBase}/api/logout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload,
+                keepalive: true
+            }).catch(() => {});
+        }
+
         const btnHistorial = document.getElementById('btn-ver-historial');
 
         btnHistorial.addEventListener('click', () => {
@@ -1099,7 +1139,10 @@
         document.getElementById('perfil').innerText = perfilUsuario;
         // 3. Función para cerrar sesión
         function logout() {
+            const usuarioLogout = obtenerUsuarioActualLog();
+            notificarLogout(usuarioLogout);
             sessionStorage.clear();
+            localStorage.removeItem('usuario_actual');
             window.location.href = 'index.html';
         }
         let idCobrador = usuario.id
@@ -2850,7 +2893,13 @@
             const localidadesStr = JSON.stringify(usuarioActual.localidades); 
 
             // 3. Hacemos la petición agregando los datos al final de la ruta
-            const url = `${urlBase}/api/buscar-clientes?q=${query}&rol=${rol}&localidades=${localidadesStr}`;
+            const paramsBusqueda = crearQueryLog({
+                q: query,
+                rol,
+                localidades: localidadesStr,
+                tipo
+            });
+            const url = `${urlBase}/api/buscar-clientes?${paramsBusqueda}`;
 
             try {
                 //const response = await fetch(`${urlBase}/api/buscar-clientes?q=${query}`);
@@ -3040,7 +3089,7 @@
 
             try {
                 // Consultamos el estado de cuenta calculado desde el servidor
-                const response = await fetch(`${urlBase}/api/clientes/${cliente.id}/estado-cuenta-completo`);
+                const response = await fetch(urlEstadoCuentaCompleto(cliente.id, 'seleccion'));
                 if (!response.ok) throw new Error("Error al consultar estado de cuenta");
                 const data = await response.json();
                 const estadoCuenta = data.estado_cuenta;
@@ -3114,7 +3163,7 @@
 
             try {
 
-                const response = await fetch(`${urlBase}/api/clientes/${cliente}/estado-cuenta-completo`);
+                const response = await fetch(urlEstadoCuentaCompleto(cliente, 'notificacion'));
 
                 if (!response.ok) {
                     throw new Error("Error al consultar estado de cuenta");
@@ -4019,7 +4068,7 @@ ${linkVelocidad}
             document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
 
             try {
-                const respuestaEstadoCuenta = await fetch(`/api/clientes/${idCliente}/estado-cuenta-completo`);
+                const respuestaEstadoCuenta = await fetch(urlEstadoCuentaCompleto(idCliente, 'detalle'));
 
                 if (!respuestaEstadoCuenta.ok) throw new Error("Error cargando estado de cuenta del cliente");
 
@@ -5030,7 +5079,7 @@ ${linkVelocidad}
             document.getElementById('detalle-nombre-cliente').textContent = "Cargando datos...";
 
             try {
-                const respuestaEstadoCuenta = await fetch(`/api/clientes/${idCliente}/estado-cuenta-completo`);
+                const respuestaEstadoCuenta = await fetch(urlEstadoCuentaCompleto(idCliente, 'detalle'));
 
                 if (!respuestaEstadoCuenta.ok) throw new Error("Error cargando estado de cuenta del cliente");
 

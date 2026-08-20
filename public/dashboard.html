@@ -278,7 +278,7 @@
                 </div>
             </div>
 
-            <div class="main-section">
+            <div>
                 <h3 class="admin-titulo">Clientes Registrados
                     <span id="contador-clientes" class="contador-badge">0</span>
                     <span id="total-mbps-garantizados" class="contador-badge contador-badge-info hidden">0 Mbps garantizados</span>
@@ -1021,6 +1021,10 @@
             </div>
         </div>
     </div>
+
+    <button id="btn-scroll-rapido" class="btn-scroll-rapido hidden" type="button" aria-label="Ir al final">
+        <span id="btn-scroll-rapido-icono" aria-hidden="true">↓</span>
+    </button>
    
     <script>
         const host = window.location.hostname; 
@@ -2382,6 +2386,7 @@
         document.addEventListener('DOMContentLoaded', () => {
 
             aplicarFiltros();
+            inicializarBotonScrollRapido();
             // Primero, cargamos los clientes al iniciar la página
             cargarVistaAdminClientes();
         });
@@ -6255,6 +6260,83 @@ ${linkVelocidad}
                 cargarVistaAdminClientes();
             });
             document.querySelectorAll('.chip-filtro-admin').forEach(chip => chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido)));
+        }
+
+        let temporizadorScrollRapido = null;
+
+        function paginaTieneScrollVertical() {
+            return document.documentElement.scrollHeight > window.innerHeight + 24;
+        }
+
+        function obtenerEstadoScrollRapido() {
+            const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
+            const scrollActual = window.pageYOffset || document.documentElement.scrollTop || 0;
+            return {
+                irArriba: scrollActual > maxScroll / 2,
+                maxScroll
+            };
+        }
+
+        function actualizarBotonScrollRapido(mostrar) {
+            const boton = document.getElementById('btn-scroll-rapido');
+            const icono = document.getElementById('btn-scroll-rapido-icono');
+            if (!boton || !icono) return;
+
+            if (!paginaTieneScrollVertical()) {
+                boton.classList.add('hidden');
+                boton.classList.remove('visible');
+                return;
+            }
+
+            const { irArriba } = obtenerEstadoScrollRapido();
+            icono.textContent = irArriba ? '↑' : '↓';
+            boton.setAttribute('aria-label', irArriba ? 'Ir arriba' : 'Ir al final');
+
+            if (mostrar) {
+                boton.classList.remove('hidden');
+                requestAnimationFrame(() => boton.classList.add('visible'));
+            }
+        }
+
+        function ocultarBotonScrollRapido() {
+            const boton = document.getElementById('btn-scroll-rapido');
+            if (!boton) return;
+
+            boton.classList.remove('visible');
+            setTimeout(() => {
+                if (!boton.classList.contains('visible')) {
+                    boton.classList.add('hidden');
+                }
+            }, 220);
+        }
+
+        function mostrarBotonScrollRapidoTemporal() {
+            actualizarBotonScrollRapido(true);
+            clearTimeout(temporizadorScrollRapido);
+            temporizadorScrollRapido = setTimeout(ocultarBotonScrollRapido, 1800);
+        }
+
+        function alternarScrollRapido() {
+            const { irArriba, maxScroll } = obtenerEstadoScrollRapido();
+            window.scrollTo({
+                top: irArriba ? 0 : maxScroll,
+                behavior: 'smooth'
+            });
+            mostrarBotonScrollRapidoTemporal();
+        }
+
+        function inicializarBotonScrollRapido() {
+            const boton = document.getElementById('btn-scroll-rapido');
+            if (!boton) return;
+
+            boton.addEventListener('click', alternarScrollRapido);
+            boton.addEventListener('mouseenter', () => clearTimeout(temporizadorScrollRapido));
+            boton.addEventListener('mouseleave', mostrarBotonScrollRapidoTemporal);
+            boton.addEventListener('focus', () => clearTimeout(temporizadorScrollRapido));
+            boton.addEventListener('blur', mostrarBotonScrollRapidoTemporal);
+            window.addEventListener('scroll', mostrarBotonScrollRapidoTemporal, { passive: true });
+            window.addEventListener('resize', () => actualizarBotonScrollRapido(false));
+            actualizarBotonScrollRapido(false);
         }
     </script>
 </body>

@@ -81,15 +81,26 @@ button {
 
 /* Contenedor principal */
 .container {
-    width: 90%;
+    width: 100%;
     max-width: 1000px;
     margin: 20px auto;
     background: #ffffff;
-    padding: 20px;
+    padding: 0px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
-
+.header{
+    margin: 20px
+}
+.widget-corte{
+    margin: 20px;
+}
+.main-section{
+    padding: 20px;
+}
+.admin-actions-panel{
+    margin: 20px;
+}
 /* Encabezado */
 .header {
     display: flex;
@@ -101,7 +112,7 @@ button {
 
 /* Acciones */
 .actions {
-    margin: 20px 0;
+    margin: 20px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -109,7 +120,7 @@ button {
 
 .admin-actions-panel {
     display: block;
-    margin: 14px 0 18px;
+    margin: 20pxs;
     border-bottom: 1px solid #eee;
 }
 
@@ -898,7 +909,7 @@ td {
     align-items: center;
     gap: 12px; /* Espacio entre el texto y el n�mero */
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin: 20px;
 }
 
 /* Estilo del contador */
@@ -2852,6 +2863,52 @@ td {
     margin: 6px 0 0;
     color: #2c3e50;
     line-height: 1.45;
+}
+
+.btn-scroll-rapido {
+    position: fixed;
+    right: max(18px, calc((100vw - min(90vw, 1000px)) / 2 - 64px));
+    bottom: 22px;
+    z-index: 900;
+    width: 46px;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #c7d7f3;
+    border-radius: 50%;
+    background: #111827;
+    color: #fff;
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.25);
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.btn-scroll-rapido.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.btn-scroll-rapido:hover,
+.btn-scroll-rapido:focus-visible {
+    background: #0b57d0;
+    outline: none;
+}
+
+@media (max-width: 640px) {
+    .btn-scroll-rapido {
+        right: 14px;
+        bottom: 14px;
+        width: 42px;
+        height: 42px;
+        font-size: 1.32rem;
+    }
 }
 
 .tabla-contenedor { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; }

@@ -2123,15 +2123,6 @@ td {
     min-width: 0;
 }
 
-.resultado-label {
-    display: block;
-    margin-bottom: 4px;
-    color: #64748b;
-    font-size: 0.76rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
 .resultado-nombre-linea {
     display: flex;
     align-items: center;
@@ -2144,6 +2135,14 @@ td {
     color: #172033;
     font-size: 1.18rem;
     line-height: 1.2;
+}
+
+.resultado-header-controles {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .badge-ip {
@@ -2165,31 +2164,27 @@ td {
     gap: 10px;
 }
 
-.resultado-resumen-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.resultado-dato {
-    min-width: 0;
-    padding: 10px 12px;
+.resultado-resumen-linea {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    padding: 9px 12px;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     background: #f8fafc;
+    color: #334155;
+    font-size: 0.94rem;
+    line-height: 1.35;
 }
 
-.resultado-dato span {
-    display: block;
-    margin-bottom: 3px;
-    color: #64748b;
-    font-size: 0.78rem;
-    font-weight: 700;
+.resultado-resumen-linea span {
+    white-space: nowrap;
 }
 
-.resultado-dato strong {
+.resultado-resumen-linea strong {
     color: #172033;
-    font-size: 1.05rem;
+    font-size: 0.94rem;
 }
 
 .estado-cuenta-box {
@@ -2273,69 +2268,28 @@ td {
     line-height: 1.35;
 }
 
-.resultado-actions-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding-top: 10px;
-    border-top: 1px solid #e5e7eb;
-}
-
-.resultado-actions-buttons {
-    display: flex;
-    gap: 8px;
-    margin-left: auto;
-}
-
-.resultado-actions-buttons .btn-pago,
-.resultado-actions-buttons .btn-detalles-cobrador {
-    width: auto;
-    min-height: 34px;
-    margin: 0;
-    padding: 8px 12px;
-    border: 1px solid #c7d2fe;
-    border-radius: 8px;
-    background: #eef2ff;
-    color: #1a3f87;
-    font-size: 0.86rem;
-}
-
-.resultado-actions-buttons .btn-pago:hover,
-.resultado-actions-buttons .btn-detalles-cobrador:hover {
-    background: #dbeafe;
-    color: #0b57d0;
-}
-
 @media (max-width: 640px) {
     .card-pago {
         padding: 12px;
         gap: 10px;
     }
 
-    .resultado-resumen-grid,
     .cobro-inline-controles {
         grid-template-columns: 1fr;
     }
 
-    .resultado-actions-bar {
-        align-items: stretch;
-    }
-
-    .resultado-actions-buttons {
+    .resultado-header-controles {
         width: 100%;
-        margin-left: 0;
-    }
-
-    .resultado-actions-buttons .btn-pago,
-    .resultado-actions-buttons .btn-detalles-cobrador {
-        flex: 1;
+        justify-content: space-between;
     }
 
     .badge-servicio-resultado {
-        width: 100%;
+        flex: 1;
         justify-content: center;
+    }
+
+    .btn-detalles-cobrador {
+        flex: 1;
     }
 }
 
@@ -3433,27 +3387,21 @@ td {
     flex-wrap: wrap;
 }
 
-.resultado-header-acciones {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
 .btn-detalles-cobrador {
     width: auto;
-    border: none;
-    border-radius: 6px;
-    padding: 7px 12px;
-    background: #1a73e8;
-    color: #fff;
+    min-height: 28px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: #eff6ff;
+    color: #0b57d0;
+    font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
 }
 
 .btn-detalles-cobrador:hover {
-    background: #1557b0;
+    background: #dbeafe;
 }
 
 .modal-content-cobrador {
@@ -3462,6 +3410,10 @@ td {
 
 .grid-info-cliente-cobrador {
     align-items: start;
+}
+
+.seccion-pagos-cobrador {
+    margin-top: 16px;
 }
 
 .badge-servicio-resultado {

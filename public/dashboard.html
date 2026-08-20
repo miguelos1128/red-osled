@@ -387,23 +387,20 @@
                 <div class="card-pago">
                     <div class="card-header resultado-cliente-header">
                         <div class="resultado-cliente-main">
-                            <span class="resultado-label">Cliente seleccionado</span>
                             <div class="resultado-nombre-linea">
-                            <h4 id="res-nombre"></h4>
-                            <span id="res-ip" class="badge-ip"></span>
+                                <h4 id="res-nombre"></h4>
+                                <span id="res-ip" class="badge-ip"></span>
                             </div>
+                        </div>
+                        <div class="resultado-header-controles">
+                            <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
+                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()">Detalles y pagos</button>
                         </div>
                     </div>
                     <div class="card-body resultado-card-body">
-                        <div class="resultado-resumen-grid">
-                            <div class="resultado-dato">
-                                <span>Fecha de pago</span>
-                                <strong id="res-dia"></strong>
-                            </div>
-                            <div class="resultado-dato">
-                                <span>Costo del paquete</span>
-                                <strong>$<span id="res-costo"></span></strong>
-                            </div>
+                        <div class="resultado-resumen-linea">
+                            <span><strong>Fecha de pago:</strong> <span id="res-dia"></span></span>
+                            <span><strong>Paquete:</strong> $<span id="res-costo"></span></span>
                         </div>
                         <div id="estado-cuenta-box" class="info-box estado-cuenta-box">
                             <strong>Estado de cuenta</strong>
@@ -413,17 +410,10 @@
                     <div class="cobro-inline">
                         <label for="monto-pago-input">Monto recibido en efectivo ($)</label>
                         <div class="cobro-inline-controles">
-                            <input type="number" id="monto-pago-input" min="1" step="1" inputmode="decimal" placeholder="Ej. 1000">
-                            <button id="btn-preparar-pago" onclick="prepararPago()" class="btn-pago btn-pago-principal button">Confirmar Pago</button>
+                            <input type="number" id="monto-pago-input" min="1" step="1" inputmode="decimal" placeholder="$ 0.00">
+                            <button id="btn-preparar-pago" onclick="prepararPago()" class="btn-pago btn-pago-principal button">Registrar pago</button>
                         </div>
                         <p id="res-cobro-ayuda" class="cobro-ayuda">El sistema distribuirá este monto automáticamente empezando por el mes más antiguo pendiente.</p>
-                    </div>
-                    <div class="resultado-actions-bar">
-                        <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
-                        <div class="resultado-actions-buttons">
-                            <button id="btn-ver-pagos" class="btn-pago btn-pago-secundario button">Ver Pagos</button>
-                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()">Detalles</button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -784,6 +774,12 @@
                         </a>
                         <div id="editar-box-cobrador"></div>
                     </div>
+                </div>
+
+                <div class="seccion-detalle seccion-pagos-cobrador">
+                    <h3>Pagos</h3>
+                    <ul id="listaPagosHistorialCobrador" class="lista-pagos-ul">
+                    </ul>
                 </div>
             </div>
         </div>
@@ -2876,7 +2872,7 @@
             if (!boton) return;
 
             const esSuspensionFaltaPago = suspensionResultadoActual?.tipo_evento === 'falta_pago';
-            boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Confirmar Pago';
+            boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Registrar pago';
 
             if (ayuda) {
                 ayuda.textContent = esSuspensionFaltaPago
@@ -2904,6 +2900,7 @@
             const modal = document.getElementById('modal-detalles-cliente-cobrador');
             modal.classList.remove('hidden');
             document.getElementById('detalle-cobrador-nombre').textContent = 'Cargando ficha...';
+            document.getElementById('listaPagosHistorialCobrador').innerHTML = '<li style="text-align: center; padding: 20px;">Buscando historial...</li>';
 
             try {
                 const usuarioActual = JSON.parse(localStorage.getItem('usuario_actual') || '{}');
@@ -2945,6 +2942,7 @@
                         <i class="fas fa-eye">✏️</i>
                     </button>
                 `;
+                cargarHistorialPagosEnLista(idCliente, document.getElementById('listaPagosHistorialCobrador'));
             } catch (error) {
                 console.error('Error cargando ficha limitada:', error);
                 document.getElementById('detalle-cobrador-nombre').textContent = 'Error al cargar ficha';
@@ -3015,10 +3013,6 @@
                 configurarEstadoServicioResultado(data.cliente || cliente, estadoCuenta.servicio);
                 configurarBotonPagoResultado();
 
-                document.getElementById('btn-ver-pagos').onclick = function() {
-                    abrirHistorial(cliente.id, cliente.nombre_completo);
-                };
-                
                 const msgUltimoPago = document.getElementById('res-ultimo-pago');
                 const deudaReal = parseFloat(estadoCuenta.adeudo_actual) || 0;
                 const saldoFavor = parseFloat(estadoCuenta.saldo_favor) || 0;
@@ -3271,6 +3265,12 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
             document.getElementById('nombreClienteHistorial').textContent = nombreCliente;
             
             const lista = document.getElementById('listaPagosHistorial');
+            cargarHistorialPagosEnLista(clienteId, lista);
+        }
+
+        async function cargarHistorialPagosEnLista(clienteId, lista) {
+            if (!lista) return;
+
             lista.innerHTML = '<li style="text-align: center; padding: 20px;">Buscando historial...</li>';
 
             try {
@@ -3372,10 +3372,8 @@ Gracias por tu confianza y puntualidad en tus pagos ${emojiGracias}`;
         }
 
         function cerrarModalPago() {
-            const modalPago = document.getElementById('modalPago');
             const inputMonto = document.getElementById('monto-pago-input');
 
-            modalPago?.classList.add('hidden');
             if (inputMonto) inputMonto.value = ''; // Limpiar campo
         }
 

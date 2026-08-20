@@ -2207,6 +2207,8 @@ td {
 .resultado-resumen-linea strong {
     color: #172033;
     font-size: 0.94rem;
+    text-align: right;
+    white-space: normal;
 }
 
 .estado-cuenta-box {

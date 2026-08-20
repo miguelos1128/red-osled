@@ -408,7 +408,7 @@
                             </div>
                             <div class="resultado-resumen-item">
                                 <span class="resultado-resumen-etiqueta">Paquete</span>
-                                <strong>$<span id="res-costo"></span></strong>
+                                <strong id="res-paquete-resumen">-</strong>
                             </div>
                         </div>
                         <div id="estado-cuenta-box" class="info-box estado-cuenta-box">
@@ -1157,6 +1157,16 @@
             if (velocidad) detalles.push(`${velocidad} Mbps`);
 
             return detalles.join(' | ');
+        }
+
+        function formatearResumenPaqueteResultado(cliente) {
+            const paquete = formatearPaqueteCliente(cliente);
+            const costo = parseFloat(cliente?.costo_mensual);
+            const costoTexto = Number.isFinite(costo)
+                ? `$${costo.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} pesos`
+                : '$0 pesos';
+
+            return `${paquete} | ${costoTexto}`;
         }
 
         function obtenerPaqueteSeleccionado() {
@@ -3040,8 +3050,7 @@
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
                 document.getElementById('res-ip').innerText = cliente.codigo_cliente || 'Sin codigo';
-                const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                document.getElementById('res-costo').innerText = costoFormateado;
+                document.getElementById('res-paquete-resumen').innerText = formatearResumenPaqueteResultado(cliente);
                 document.getElementById('res-dia').textContent = cliente.dia_pago;
                 configurarEstadoServicioResultado(data.cliente || cliente, estadoCuenta.servicio);
                 configurarBotonPagoResultado();

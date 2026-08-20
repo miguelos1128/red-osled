@@ -393,14 +393,23 @@
                             </div>
                         </div>
                         <div class="resultado-header-controles">
+                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()" aria-label="Detalles">
+                                <span class="btn-detalles-icon" aria-hidden="true">i</span>
+                                <span class="btn-detalles-texto">Detalles</span>
+                            </button>
                             <span id="res-estado-servicio" class="badge-servicio-resultado">-</span>
-                            <button id="btn-detalles-cobrador" type="button" class="btn-detalles-cobrador hidden" onclick="abrirDetallesClienteCobradorSeleccionado()">Detalles y pagos</button>
                         </div>
                     </div>
                     <div class="card-body resultado-card-body">
                         <div class="resultado-resumen-linea">
-                            <span><strong>Fecha de pago:</strong> <span id="res-dia"></span></span>
-                            <span><strong>Paquete:</strong> $<span id="res-costo"></span></span>
+                            <div class="resultado-resumen-item">
+                                <span class="resultado-resumen-etiqueta">Fecha de pago</span>
+                                <strong id="res-dia"></strong>
+                            </div>
+                            <div class="resultado-resumen-item">
+                                <span class="resultado-resumen-etiqueta">Paquete</span>
+                                <strong>$<span id="res-costo"></span></strong>
+                            </div>
                         </div>
                         <div id="estado-cuenta-box" class="info-box estado-cuenta-box">
                             <strong>Estado de cuenta</strong>
@@ -2869,15 +2878,28 @@
         function configurarBotonPagoResultado() {
             const boton = document.getElementById('btn-preparar-pago');
             const ayuda = document.getElementById('res-cobro-ayuda');
+            const inputMonto = document.getElementById('monto-pago-input');
             if (!boton) return;
 
             const esSuspensionFaltaPago = suspensionResultadoActual?.tipo_evento === 'falta_pago';
+            const minimoReactivacion = parseFloat(estadoCuentaResultadoActual?.adeudo_actual) || 0;
+            const minimoTexto = minimoReactivacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             boton.textContent = esSuspensionFaltaPago ? 'Cobrar y Reactivar' : 'Registrar pago';
 
             if (ayuda) {
+                ayuda.classList.toggle('cobro-ayuda-reactivar', esSuspensionFaltaPago);
                 ayuda.textContent = esSuspensionFaltaPago
-                    ? 'Ingresa el monto recibido. Para reactivar debe cubrir al menos el adeudo actual.'
+                    ? `Monto mínimo para reactivar: $${minimoTexto}. Puedes cobrar más si el cliente entrega un monto mayor.`
                     : 'El sistema distribuirá este monto automáticamente empezando por el mes más antiguo pendiente.';
+            }
+
+            if (inputMonto) {
+                inputMonto.classList.toggle('monto-reactivacion', esSuspensionFaltaPago);
+                inputMonto.placeholder = esSuspensionFaltaPago ? `$ ${minimoTexto}` : '$ 0.00';
+
+                if (esSuspensionFaltaPago && minimoReactivacion > 0 && !inputMonto.value) {
+                    inputMonto.value = minimoReactivacion.toFixed(2);
+                }
             }
         }
 
@@ -3006,7 +3028,7 @@
 
                 // Llenamos los datos básicos
                 document.getElementById('res-nombre').innerText = cliente.nombre_completo;
-                document.getElementById('res-ip').innerText = `No. cliente: ${cliente.codigo_cliente || 'Sin codigo'}`;
+                document.getElementById('res-ip').innerText = cliente.codigo_cliente || 'Sin codigo';
                 const costoFormateado = parseFloat(cliente.costo_mensual).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 document.getElementById('res-costo').innerText = costoFormateado;
                 document.getElementById('res-dia').textContent = cliente.dia_pago;

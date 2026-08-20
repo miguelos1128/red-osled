@@ -2961,6 +2961,25 @@
             document.getElementById('modal-detalles-cliente-cobrador').classList.add('hidden');
         }
 
+        function enfocarResultadoBusqueda() {
+            const resultado = document.getElementById('resultado-busqueda');
+            if (!resultado || resultado.classList.contains('hidden')) return;
+
+            const margenVista = 16;
+            const rect = resultado.getBoundingClientRect();
+            const alturaVista = window.innerHeight || document.documentElement.clientHeight;
+            const posicionResultado = rect.top + window.pageYOffset;
+            const cabeCompleto = rect.height + (margenVista * 2) <= alturaVista;
+            const destino = cabeCompleto
+                ? posicionResultado - ((alturaVista - rect.height) / 2)
+                : posicionResultado - margenVista;
+
+            window.scrollTo({
+                top: Math.max(destino, 0),
+                behavior: 'smooth'
+            });
+        }
+
         async function seleccionarCliente(cliente) {
             
             // LIMPIEZA INICIAL
@@ -3039,16 +3058,15 @@
 
                 document.getElementById('btn-detalles-cobrador').classList.remove('hidden');
                 document.getElementById('resultado-busqueda').classList.remove('hidden');
+                requestAnimationFrame(enfocarResultadoBusqueda);
             } catch (error) {
                 console.error("Error:", error);
             }
         }
 
          function seleccionarClienteDirecto(cliente) {
-            // 1. Hacemos scroll hacia abajo para que el cobrador vea la tarjeta
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             cerrarModalDetalles()
-            // 2. Ejecutamos la lógica de selección que ya tenemos programada
+            // Ejecutamos la lógica de selección que ya tenemos programada
             seleccionarCliente(cliente);
         }
         

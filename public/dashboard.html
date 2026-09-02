@@ -2397,6 +2397,7 @@
 
             aplicarFiltros();
             inicializarBotonScrollRapido();
+            inicializarMontoPagoResultado();
             // Primero, cargamos los clientes al iniciar la página
             cargarVistaAdminClientes();
         });
@@ -3016,7 +3017,21 @@
             });
         }
 
-        async function seleccionarCliente(cliente) {
+        function enfocarMontoPagoResultado() {
+            const inputMonto = document.getElementById('monto-pago-input');
+            if (!inputMonto) return;
+
+            setTimeout(() => {
+                inputMonto.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 250);
+
+            setTimeout(() => {
+                inputMonto.focus({ preventScroll: true });
+                inputMonto.select();
+            }, 550);
+        }
+
+        async function seleccionarCliente(cliente, enfocarMonto = false) {
             
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
@@ -3094,7 +3109,10 @@
 
                 document.getElementById('btn-detalles-cobrador').classList.remove('hidden');
                 document.getElementById('resultado-busqueda').classList.remove('hidden');
-                requestAnimationFrame(enfocarResultadoBusqueda);
+                requestAnimationFrame(() => {
+                    enfocarResultadoBusqueda();
+                    if (enfocarMonto) enfocarMontoPagoResultado();
+                });
             } catch (error) {
                 console.error("Error:", error);
             }
@@ -3103,7 +3121,7 @@
          function seleccionarClienteDirecto(cliente) {
             cerrarModalDetalles()
             // Ejecutamos la lógica de selección que ya tenemos programada
-            seleccionarCliente(cliente);
+            seleccionarCliente(cliente, true);
         }
         
         // 2. Al hacer clic en un cliente de la lista
@@ -6269,6 +6287,19 @@ ${linkVelocidad}
                 cargarVistaAdminClientes();
             });
             document.querySelectorAll('.chip-filtro-admin').forEach(chip => chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido)));
+        }
+
+        function inicializarMontoPagoResultado() {
+            const inputMonto = document.getElementById('monto-pago-input');
+            const botonPago = document.getElementById('btn-preparar-pago');
+            if (!inputMonto || !botonPago) return;
+
+            inputMonto.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') return;
+
+                event.preventDefault();
+                botonPago.click();
+            });
         }
 
         let temporizadorScrollRapido = null;

@@ -178,13 +178,27 @@ app.post('/api/login', async (req, res) => {
     const { correo, password } = req.body;
     
     // Consulta 1: Verificamos credenciales
-    const queryUsuario = 'SELECT id, nombre, rol_id FROM usuarios WHERE correo = ? AND password = ?';
+    const queryUsuario = 'SELECT id, nombre, rol_id, activo FROM usuarios WHERE correo = ? AND password = ?';
 
     try {
         const [results] = await db.query(queryUsuario, [correo, password]);
 
         if (results.length > 0) {
             const usuario = results[0];
+
+            if (parseInt(usuario.activo, 10) !== 1) {
+                registrarUso('LOGIN_USUARIO_INACTIVO', {
+                    usuario_id: usuario.id,
+                    usuario: usuario.nombre,
+                    rol: usuario.rol_id,
+                    ip: obtenerIpCliente(req)
+                });
+
+                return res.status(403).json({
+                    success: false,
+                    mensaje: "Usuario inactivo. Solicita a un administrador general que reactive tu acceso."
+                });
+            }
             
             // --- NUEVO CÓDIGO: Buscar localidades autorizadas ---
             const queryLocalidades = 'SELECT localidad_id FROM usuario_localidad WHERE usuario_id = ?';
@@ -215,11 +229,20 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ error: "Error en el servidor" });
     }
 });
-// 5. Iniciar el servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`📡 Servidor corriendo en http://localhost:${PORT}`);
+
+app.post('/api/logout', (req, res) => {
+    const { usuarioId, nombre, rol } = req.body || {};
+
+    registrarUso('LOGOUT', {
+        usuario_id: usuarioId,
+        usuario: nombre,
+        rol,
+        ip: obtenerIpCliente(req)
+    });
+
+    res.json({ success: true });
 });
+const PORT = process.env.PORT || 3000;
 
 async function obtenerPaqueteActivoPorId(paqueteId, ejecutor = db) {
     const id = parseInt(paqueteId, 10);
@@ -249,6 +272,144 @@ function validarAdministradorRequest(req, res) {
         error: 'Acceso denegado: solo el administrador puede usar herramientas administrativas.'
     });
     return false;
+}
+
+async function asegurarColumnaActivoUsuarios() {
+    const [columnas] = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'usuarios'
+           AND COLUMN_NAME = 'activo'`
+    );
+
+    if (parseInt(columnas[0]?.total, 10) > 0) return;
+
+    await db.query(
+        'ALTER TABLE usuarios ADD COLUMN activo TINYINT(1) NOT NULL DEFAULT 1 AFTER rol_id'
+    );
+
+    registrarUso('MIGRACION_USUARIOS_ACTIVO_APLICADA', {
+        tabla: 'usuarios',
+        columna: 'activo'
+    });
+}
+
+function obtenerRolRequest(req) {
+    return req.body?.rol_usuario ?? req.query?.rol_usuario ?? req.query?.rol;
+}
+
+function obtenerUsuarioActualIdRequest(req) {
+    return parseInt(
+        req.body?.usuario_actual_id ?? req.query?.usuario_actual_id ?? req.query?.usuario_id,
+        10
+    ) || null;
+}
+
+async function validarAdministradorGeneralRequest(req, res) {
+    const rol = obtenerRolRequest(req);
+    if (!esRolAdministrador(rol)) {
+        res.status(403).json({
+            success: false,
+            error: 'Acceso denegado: solo el administrador general puede administrar usuarios.'
+        });
+        return false;
+    }
+
+    const usuarioActualId = obtenerUsuarioActualIdRequest(req);
+    if (!usuarioActualId) {
+        res.status(400).json({
+            success: false,
+            error: 'No se recibio el usuario administrador que solicita la accion.'
+        });
+        return false;
+    }
+
+    const [usuarios] = await db.query(
+        `SELECT id
+         FROM usuarios
+         WHERE id = ? AND rol_id = 2 AND activo = 1
+         LIMIT 1`,
+        [usuarioActualId]
+    );
+
+    if (usuarios.length === 0) {
+        res.status(403).json({
+            success: false,
+            error: 'Acceso denegado: tu usuario no esta activo como administrador general.'
+        });
+        return false;
+    }
+
+    return true;
+}
+
+function normalizarLocalidadesUsuario(localidades) {
+    if (!Array.isArray(localidades)) return [];
+
+    return [...new Set(
+        localidades
+            .map(id => parseInt(id, 10))
+            .filter(id => Number.isInteger(id) && id > 0)
+    )];
+}
+
+function normalizarRolSistema(rolId) {
+    const rol = parseInt(rolId, 10);
+    return [1, 2, 3].includes(rol) ? rol : null;
+}
+
+function normalizarActivoUsuario(valor, valorDefecto = 1) {
+    if (valor === undefined || valor === null || valor === '') return valorDefecto ? 1 : 0;
+    return parseInt(valor, 10) ? 1 : 0;
+}
+
+function validarCorreoUsuario(correo) {
+    const valor = String(correo || '').trim();
+    return valor.length > 0 && valor.length <= 100 && !/\s/.test(valor);
+}
+
+async function validarLocalidadesExistentes(ejecutor, localidades) {
+    if (localidades.length === 0) return true;
+
+    const [rows] = await ejecutor.query(
+        'SELECT id FROM localidades WHERE id IN (?)',
+        [localidades]
+    );
+
+    const idsValidos = new Set(rows.map(localidad => parseInt(localidad.id, 10)));
+    return localidades.every(localidadId => idsValidos.has(localidadId));
+}
+
+function mapearUsuarioAdmin(usuario) {
+    return {
+        ...usuario,
+        activo: parseInt(usuario.activo, 10) ? 1 : 0,
+        localidades: String(usuario.localidades || '')
+            .split(',')
+            .filter(Boolean)
+            .map(id => parseInt(id, 10))
+    };
+}
+
+async function consultarUsuarioAdminPorId(ejecutor, usuarioId) {
+    const [usuarios] = await ejecutor.query(
+        `SELECT
+            u.id,
+            u.nombre,
+            u.correo,
+            u.rol_id,
+            u.activo,
+            COALESCE(GROUP_CONCAT(ul.localidad_id ORDER BY ul.localidad_id SEPARATOR ','), '') AS localidades
+         FROM usuarios u
+         LEFT JOIN usuario_localidad ul ON ul.usuario_id = u.id
+         WHERE u.id = ?
+         GROUP BY u.id, u.nombre, u.correo, u.rol_id, u.activo
+         LIMIT 1`,
+        [usuarioId]
+    );
+
+    return usuarios[0] ? mapearUsuarioAdmin(usuarios[0]) : null;
 }
 
 function normalizarDatosPaquete(body = {}) {
@@ -3138,6 +3299,285 @@ app.get('/api/historico-cortes/:usuarioId', async (req, res) => {
     }
 }); */
 
+app.get('/api/admin/usuarios', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const [usuarios] = await db.query(
+            `SELECT
+                u.id,
+                u.nombre,
+                u.correo,
+                u.rol_id,
+                u.activo,
+                COALESCE(GROUP_CONCAT(ul.localidad_id ORDER BY ul.localidad_id SEPARATOR ','), '') AS localidades
+             FROM usuarios u
+             LEFT JOIN usuario_localidad ul ON ul.usuario_id = u.id
+             GROUP BY u.id, u.nombre, u.correo, u.rol_id, u.activo
+             ORDER BY u.activo DESC, u.rol_id ASC, u.nombre ASC`
+        );
+
+        const [roles] = await db.query(
+            `SELECT id, nombre_rol
+             FROM roles
+             WHERE id IN (1, 2, 3)
+             ORDER BY id ASC`
+        );
+
+        const [localidades] = await db.query(
+            `SELECT id, nombre, color, codigo_localidad
+             FROM localidades
+             ORDER BY nombre ASC`
+        );
+
+        res.json({
+            success: true,
+            usuarios: usuarios.map(mapearUsuarioAdmin),
+            roles,
+            localidades
+        });
+    } catch (error) {
+        console.error("Error al obtener usuarios administrativos:", error);
+        res.status(500).json({ success: false, error: "Error al cargar usuarios: " + error.message });
+    }
+});
+
+app.post('/api/admin/usuarios', async (req, res) => {
+    let connection;
+
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const nombre = String(req.body.nombre || '').trim();
+        const correo = String(req.body.correo || '').trim().toLowerCase();
+        const password = String(req.body.password || '').trim();
+        const rolId = normalizarRolSistema(req.body.rol_id);
+        const activo = 1;
+        const localidades = normalizarLocalidadesUsuario(req.body.localidades);
+        const errores = [];
+
+        if (!nombre) errores.push('El nombre del usuario es obligatorio.');
+        if (!validarCorreoUsuario(correo)) errores.push('Captura un usuario/correo valido para iniciar sesion, sin espacios.');
+        if (!password) errores.push('La contrasena inicial es obligatoria.');
+        if (!rolId) errores.push('Selecciona un rol valido.');
+        if (rolId && rolId !== 2 && localidades.length === 0) {
+            errores.push('Recepcionista y Administrador Local deben tener al menos una localidad asignada.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [rolRows] = await connection.query(
+            'SELECT id FROM roles WHERE id = ? LIMIT 1',
+            [rolId]
+        );
+        if (rolRows.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'El rol seleccionado no existe en la base de datos.' });
+        }
+
+        const [usuariosCorreo] = await connection.query(
+            'SELECT id FROM usuarios WHERE correo = ? LIMIT 1',
+            [correo]
+        );
+        if (usuariosCorreo.length > 0) {
+            await connection.rollback();
+            return res.status(409).json({ success: false, error: 'Ya existe un usuario con ese correo.' });
+        }
+
+        const localidadesValidas = await validarLocalidadesExistentes(connection, localidades);
+        if (!localidadesValidas) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'Una o mas localidades seleccionadas no existen.' });
+        }
+
+        const [result] = await connection.query(
+            `INSERT INTO usuarios (nombre, correo, password, rol_id, activo)
+             VALUES (?, ?, ?, ?, ?)`,
+            [nombre, correo, password, rolId, activo]
+        );
+
+        if (rolId !== 2 && localidades.length > 0) {
+            await connection.query(
+                'INSERT INTO usuario_localidad (usuario_id, localidad_id) VALUES ?',
+                [localidades.map(localidadId => [result.insertId, localidadId])]
+            );
+        }
+
+        await connection.commit();
+
+        const usuarioCreado = await consultarUsuarioAdminPorId(db, result.insertId);
+        registrarUso('USUARIO_CREADO', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            usuario_id: result.insertId,
+            rol_id: rolId,
+            localidades,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Usuario creado correctamente.',
+            usuario: usuarioCreado
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir creacion de usuario:", rollbackError);
+            }
+        }
+
+        console.error("Error al crear usuario:", error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: 'Ya existe un usuario con ese correo.' });
+        }
+        res.status(500).json({ success: false, error: "Error al crear usuario: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.put('/api/admin/usuarios/:id', async (req, res) => {
+    let connection;
+
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const usuarioId = parseInt(req.params.id, 10);
+        const usuarioActualId = obtenerUsuarioActualIdRequest(req);
+        const nombre = String(req.body.nombre || '').trim();
+        const rolId = normalizarRolSistema(req.body.rol_id);
+        const activo = normalizarActivoUsuario(req.body.activo, 1);
+        const localidades = normalizarLocalidadesUsuario(req.body.localidades);
+        const errores = [];
+
+        if (!usuarioId) errores.push('Usuario no valido.');
+        if (!nombre) errores.push('El nombre del usuario es obligatorio.');
+        if (!rolId) errores.push('Selecciona un rol valido.');
+        if (activo === 1 && rolId && rolId !== 2 && localidades.length === 0) {
+            errores.push('Recepcionista y Administrador Local activos deben tener al menos una localidad asignada.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [usuarios] = await connection.query(
+            `SELECT id, nombre, correo, rol_id, activo
+             FROM usuarios
+             WHERE id = ?
+             FOR UPDATE`,
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
+        }
+
+        const usuarioActual = usuarios[0];
+
+        if (usuarioId === usuarioActualId && activo === 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'No puedes desactivar tu propio usuario mientras estas usando el sistema.'
+            });
+        }
+
+        const dejaDeSerAdminActivo = parseInt(usuarioActual.rol_id, 10) === 2
+            && (rolId !== 2 || activo === 0);
+
+        if (dejaDeSerAdminActivo) {
+            const [admins] = await connection.query(
+                `SELECT COUNT(*) AS total
+                 FROM usuarios
+                 WHERE rol_id = 2 AND activo = 1 AND id <> ?`,
+                [usuarioId]
+            );
+
+            if ((parseInt(admins[0]?.total, 10) || 0) === 0) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    error: 'No se puede completar la accion porque el sistema se quedaria sin administrador general activo.'
+                });
+            }
+        }
+
+        const [rolRows] = await connection.query(
+            'SELECT id FROM roles WHERE id = ? LIMIT 1',
+            [rolId]
+        );
+        if (rolRows.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'El rol seleccionado no existe en la base de datos.' });
+        }
+
+        const localidadesValidas = await validarLocalidadesExistentes(connection, localidades);
+        if (!localidadesValidas) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'Una o mas localidades seleccionadas no existen.' });
+        }
+
+        await connection.query(
+            `UPDATE usuarios
+             SET nombre = ?, rol_id = ?, activo = ?
+             WHERE id = ?`,
+            [nombre, rolId, activo, usuarioId]
+        );
+
+        await connection.query('DELETE FROM usuario_localidad WHERE usuario_id = ?', [usuarioId]);
+
+        if (rolId !== 2 && localidades.length > 0) {
+            await connection.query(
+                'INSERT INTO usuario_localidad (usuario_id, localidad_id) VALUES ?',
+                [localidades.map(localidadId => [usuarioId, localidadId])]
+            );
+        }
+
+        await connection.commit();
+
+        const usuarioActualizado = await consultarUsuarioAdminPorId(db, usuarioId);
+        registrarUso('USUARIO_ACTUALIZADO', {
+            usuario_admin_id: usuarioActualId,
+            usuario_id: usuarioId,
+            rol_id: rolId,
+            activo,
+            localidades,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Usuario actualizado correctamente.',
+            usuario: usuarioActualizado
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir actualizacion de usuario:", rollbackError);
+            }
+        }
+
+        console.error("Error al actualizar usuario:", error);
+        res.status(500).json({ success: false, error: "Error al actualizar usuario: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
 // Ruta para obtener todas las localidades (para el selector del formulario)
 app.get('/api/localidades', async (req, res) => {
     try {
@@ -3193,11 +3633,12 @@ app.get('/api/admin/usuario-localidad', async (req, res) => {
                 u.nombre,
                 u.correo,
                 u.rol_id,
+                u.activo,
                 COALESCE(GROUP_CONCAT(ul.localidad_id ORDER BY ul.localidad_id SEPARATOR ','), '') AS localidades
              FROM usuarios u
              LEFT JOIN usuario_localidad ul ON ul.usuario_id = u.id
-             GROUP BY u.id, u.nombre, u.correo, u.rol_id
-             ORDER BY u.rol_id ASC, u.nombre ASC`
+             GROUP BY u.id, u.nombre, u.correo, u.rol_id, u.activo
+             ORDER BY u.activo DESC, u.rol_id ASC, u.nombre ASC`
         );
 
         const [localidades] = await db.query(
@@ -3631,4 +4072,18 @@ app.post('/api/cancelar-ingreso-extra/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+async function iniciarServidor() {
+    try {
+        await asegurarColumnaActivoUsuarios();
+        app.listen(PORT, () => {
+            console.log(`Servidor corriendo en http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        registrarError('SERVIDOR_INICIO_ERROR', error);
+        process.exit(1);
+    }
+}
+
+iniciarServidor();
 

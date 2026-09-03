@@ -10,7 +10,7 @@
     <div class="login-card">
         <h2>Acceso al Sistema</h2>
         <form action="">
-            <input type="email" id="correo" placeholder="Correo electrónico" required>
+            <input type="text" id="correo" placeholder="Usuario / correo" required>
             <input type="password" id="password" placeholder="Contraseña" required>
             <button onclick="login()">Entrar al Panel</button>
         </form>
@@ -32,9 +32,7 @@
     </div>
 
     <script>
-        const host = window.location.hostname; 
-        const puerto = "3000";
-        const urlBase = `http://${host}:${puerto}`;
+        const urlBase = window.location.origin;
 
         async function login() {
             const correo = document.getElementById('correo').value;

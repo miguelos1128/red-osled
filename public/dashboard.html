@@ -78,7 +78,8 @@
                             <button type="button" class="admin-tab active" data-admin-tool="supervision-cobradores" onclick="cambiarHerramientaAdmin('supervision-cobradores')" role="tab" aria-selected="true">Supervisión cobradores</button>
                             <button type="button" class="admin-tab" data-admin-tool="agregar-cliente" onclick="cambiarHerramientaAdmin('agregar-cliente')" role="tab" aria-selected="false">Agregar cliente</button>
                             <button type="button" class="admin-tab" data-admin-tool="paquetes" onclick="cambiarHerramientaAdmin('paquetes')" role="tab" aria-selected="false">Administrar paquetes</button>
-                            <button type="button" class="admin-tab" data-admin-tool="usuario-localidad" onclick="cambiarHerramientaAdmin('usuario-localidad')" role="tab" aria-selected="false">Usuario Localidad</button>
+                            <button type="button" class="admin-tab" data-admin-tool="usuarios" onclick="cambiarHerramientaAdmin('usuarios')" role="tab" aria-selected="false">Usuarios</button>
+                            <button type="button" class="admin-tab" data-admin-tool="localidades" onclick="cambiarHerramientaAdmin('localidades')" role="tab" aria-selected="false">Localidades</button>
                         </div>
                     </div>
 
@@ -223,10 +224,13 @@
                             </div>
                         </section>
 
-                        <section id="admin-tool-usuario-localidad" class="admin-tool-panel hidden" role="tabpanel">
+                        <section id="admin-tool-usuarios" class="admin-tool-panel hidden" role="tabpanel">
                             <div class="admin-tool-title">
-                                <h4>Usuario Localidad</h4>
-                                <p>Administra las localidades visibles para cada usuario al iniciar sesión.</p>
+                                <h4>Usuarios</h4>
+                            </div>
+
+                            <div class="usuarios-admin-toolbar">
+                                <button type="button" class="button btn-agregar-usuario" onclick="mostrarFormularioUsuarioAdmin()">Agregar usuario</button>
                             </div>
 
                             <div class="usuario-localidad-admin">
@@ -241,29 +245,101 @@
 
                                 <div class="usuario-localidad-editor">
                                     <div id="usuario-localidad-empty" class="usuario-localidad-empty">
-                                        Selecciona un usuario para editar sus localidades.
+                                        Selecciona un usuario o agrega uno nuevo.
                                     </div>
 
-                                    <div id="usuario-localidad-form" class="hidden">
+                                    <div id="usuario-admin-vista" class="usuario-admin-vista hidden">
+                                        <div class="usuario-localidad-editor-header">
+                                            <div>
+                                                <h5 id="usuario-admin-vista-nombre">Usuario</h5>
+                                                <p id="usuario-admin-vista-detalle">-</p>
+                                            </div>
+                                            <div class="usuario-admin-header-actions usuario-admin-view-actions">
+                                                <button type="button" class="usuario-admin-icon-btn" title="Editar usuario" aria-label="Editar usuario" onclick="editarUsuarioAdmin()">
+                                                    <i class="fas fa-pen"></i>
+                                                </button>
+                                                <button type="button" class="usuario-admin-key-btn" title="Cambiar contrasena" aria-label="Cambiar contrasena" onclick="avisarCambioPasswordPendiente()">
+                                                    <i class="fas fa-key"></i>
+                                                </button>
+                                                <span id="usuario-admin-vista-estado" class="usuario-admin-estado-badge activo">Activo</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="usuario-admin-read-grid">
+                                            <div class="usuario-admin-read-item">
+                                                <span>Usuario / correo</span>
+                                                <strong id="usuario-admin-vista-correo">-</strong>
+                                            </div>
+                                            <div class="usuario-admin-read-item">
+                                                <span>Rol</span>
+                                                <strong id="usuario-admin-vista-rol">-</strong>
+                                            </div>
+                                        </div>
+
+                                        <div class="usuario-admin-read-localidades-box">
+                                            <div class="usuario-admin-localidades-header">
+                                                <strong>Localidades</strong>
+                                                <span id="usuario-admin-vista-localidades-contador" class="contador-badge">0</span>
+                                            </div>
+                                            <div id="usuario-admin-vista-localidades" class="usuario-admin-read-localidades"></div>
+                                        </div>
+
+                                        <div class="usuario-localidad-acciones usuario-admin-acciones">
+                                            <button type="button" class="button btn-toggle-usuario" id="btn-toggle-usuario-vista" onclick="cambiarEstadoUsuarioAdmin()">Desactivar</button>
+                                        </div>
+                                    </div>
+
+                                    <form id="usuario-localidad-form" class="hidden" onsubmit="guardarUsuarioAdmin(event)">
+                                        <input type="hidden" id="usuario-admin-id">
                                         <div class="usuario-localidad-editor-header">
                                             <div>
                                                 <h5 id="usuario-localidad-nombre">Usuario</h5>
                                                 <p id="usuario-localidad-detalle">-</p>
                                             </div>
-                                            <span id="usuario-localidad-contador" class="contador-badge">0 localidades</span>
+                                            <div class="usuario-admin-header-actions">
+                                                <span id="usuario-admin-estado" class="usuario-admin-estado-badge activo">Activo</span>
+                                            </div>
                                         </div>
 
-                                        <div class="usuario-localidad-acciones">
-                                            <button type="button" class="button btn-secundario-paquete" onclick="seleccionarTodasLocalidadesUsuarioAdmin()">Todas</button>
-                                            <button type="button" class="button btn-secundario-paquete" onclick="limpiarLocalidadesUsuarioAdmin()">Limpiar</button>
-                                            <button type="button" class="button" onclick="guardarUsuarioLocalidadAdmin()">Guardar permisos</button>
+                                        <div class="usuario-admin-form-grid">
+                                            <label>
+                                                <span>Nombre</span>
+                                                <input type="text" id="usuario-admin-nombre" required>
+                                            </label>
+                                            <label>
+                                                <span>Usuario / correo</span>
+                                                <input type="text" id="usuario-admin-correo" required>
+                                            </label>
+                                            <label id="usuario-admin-password-wrap">
+                                                <span>Contraseña inicial</span>
+                                                <input type="password" id="usuario-admin-password" autocomplete="new-password">
+                                            </label>
+                                            <label>
+                                                <span>Rol</span>
+                                                <select id="usuario-admin-rol" required onchange="actualizarEstadoFormularioUsuarioAdmin()"></select>
+                                            </label>
                                         </div>
 
+                                        <div class="usuario-admin-localidades-header">
+                                            <strong>Localidades</strong>
+                                            <span id="usuario-localidad-contador" class="contador-badge">0 </span>
+                                        </div>
                                         <div id="usuario-localidad-checkboxes" class="usuario-localidad-checkboxes"></div>
-                                    </div>
+
+                                        <div class="usuario-localidad-acciones usuario-admin-acciones">
+                                            <button type="button" class="button btn-secundario-paquete" onclick="restaurarFormularioUsuarioAdmin()">Limpiar</button>
+                                            <button type="submit" class="button" id="btn-guardar-usuario-admin">Guardar usuario</button>
+                                            <button type="button" class="button btn-secundario-paquete" onclick="cancelarFormularioUsuarioAdmin()">Cancelar</button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
+                        </section>
 
+                        <section id="admin-tool-localidades" class="admin-tool-panel hidden" role="tabpanel">
+                            <div class="admin-tool-title">
+                                <h4>Localidades</h4>
+                            </div>
                             <div class="localidad-color-admin">
                                 <div class="admin-tool-title localidad-color-title">
                                     <h4>Colores de localidad</h4>
@@ -1036,9 +1112,7 @@
     </button>
    
     <script>
-        const host = window.location.hostname; 
-        const puerto = "3000";
-        const urlBase = `http://${host}:${puerto}`;
+        const urlBase = window.location.origin;
         // 1. Verificar si hay una sesión activa
         const usuarioJson = sessionStorage.getItem('usuario');
         const buscadorInput = document.getElementById('buscador-nombre');
@@ -1050,7 +1124,10 @@
         let paquetesAdminCatalogo = [];
         let usuariosLocalidadAdmin = [];
         let localidadesUsuarioAdmin = [];
+        let rolesUsuarioAdmin = [];
         let usuarioLocalidadSeleccionadoId = null;
+        let usuarioAdminModoCreacion = false;
+        let usuarioAdminModoEdicion = false;
         let perfilUsuario ="";
         let detallePago;
         let ultimoDetallePago = null;
@@ -1356,15 +1433,19 @@
             }
 
             if (herramienta === 'paquetes') cargarPaquetesAdmin();
-            if (herramienta === 'usuario-localidad') cargarUsuarioLocalidadAdmin();
+            if (herramienta === 'usuarios') cargarUsuarioLocalidadAdmin();
+            if (herramienta === 'localidades') cargarUsuarioLocalidadAdmin();
             if (herramienta === 'supervision-cobradores') cargarSupervisionCobradores();
         }
 
         function obtenerTextoRolUsuarioAdmin(rolId) {
+            const rolCatalogo = rolesUsuarioAdmin.find(rol => parseInt(rol.id, 10) === parseInt(rolId, 10));
+            if (rolCatalogo) return rolCatalogo.nombre_rol;
+
             const roles = {
-                1: 'Cobrador',
+                1: 'Recepcionista',
                 2: 'Administrador',
-                3: 'Supervisor'
+                3: 'Administrador Local'
             };
             return roles[parseInt(rolId, 10)] || `Rol ${rolId || '-'}`;
         }
@@ -1379,21 +1460,24 @@
             if (lista) lista.innerHTML = '<p class="usuario-localidad-empty">Cargando usuarios...</p>';
 
             try {
-                const response = await fetch(`${urlBase}/api/admin/usuario-localidad?rol_usuario=${usuarioActual.rol}`);
+                const response = await fetch(`${urlBase}/api/admin/usuarios?rol_usuario=${usuarioActual.rol}&usuario_actual_id=${usuarioActual.id}`);
                 const data = await response.json();
 
                 if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'No se pudieron cargar los permisos.');
+                    throw new Error(data.error || 'No se pudieron cargar los usuarios.');
                 }
 
                 usuariosLocalidadAdmin = Array.isArray(data.usuarios) ? data.usuarios : [];
                 localidadesUsuarioAdmin = Array.isArray(data.localidades) ? data.localidades : [];
+                rolesUsuarioAdmin = Array.isArray(data.roles) ? data.roles : [];
 
                 if (
                     usuarioLocalidadSeleccionadoId
                     && !usuariosLocalidadAdmin.some(usuario => usuario.id === usuarioLocalidadSeleccionadoId)
                 ) {
                     usuarioLocalidadSeleccionadoId = null;
+                    usuarioAdminModoCreacion = false;
+                    usuarioAdminModoEdicion = false;
                 }
 
                 renderizarUsuariosLocalidadAdmin();
@@ -1434,9 +1518,11 @@
             }
 
             usuariosFiltrados.forEach(usuario => {
+                const activo = parseInt(usuario.activo, 10) === 1;
                 const boton = document.createElement('button');
                 boton.type = 'button';
                 boton.className = 'usuario-localidad-item';
+                boton.classList.toggle('inactivo', !activo);
                 boton.classList.toggle('active', usuario.id === usuarioLocalidadSeleccionadoId);
                 boton.onclick = () => seleccionarUsuarioLocalidadAdmin(usuario.id);
 
@@ -1445,7 +1531,10 @@
 
                 const detalle = document.createElement('span');
                 const totalLocalidades = Array.isArray(usuario.localidades) ? usuario.localidades.length : 0;
-                detalle.textContent = `${obtenerTextoRolUsuarioAdmin(usuario.rol_id)} | ${totalLocalidades} localidades`;
+                const textoLocalidades = parseInt(usuario.rol_id, 10) === 2
+                    ? 'todas las localidades'
+                    : `${totalLocalidades} localidades`;
+                detalle.textContent = `${obtenerTextoRolUsuarioAdmin(usuario.rol_id)} | ${textoLocalidades} | ${activo ? 'Activo' : 'Inactivo'}`;
 
                 boton.appendChild(nombre);
                 boton.appendChild(detalle);
@@ -1455,32 +1544,162 @@
 
         function seleccionarUsuarioLocalidadAdmin(usuarioId) {
             usuarioLocalidadSeleccionadoId = parseInt(usuarioId, 10);
+            usuarioAdminModoCreacion = false;
+            usuarioAdminModoEdicion = false;
             renderizarUsuariosLocalidadAdmin();
             renderizarEditorUsuarioLocalidadAdmin();
         }
 
-        function renderizarEditorUsuarioLocalidadAdmin() {
-            const empty = document.getElementById('usuario-localidad-empty');
-            const form = document.getElementById('usuario-localidad-form');
-            const checkboxes = document.getElementById('usuario-localidad-checkboxes');
-            const nombre = document.getElementById('usuario-localidad-nombre');
-            const detalle = document.getElementById('usuario-localidad-detalle');
-            if (!empty || !form || !checkboxes || !nombre || !detalle) return;
+        function obtenerRolesFormularioUsuarioAdmin() {
+            return rolesUsuarioAdmin.length > 0
+                ? rolesUsuarioAdmin
+                : [
+                    { id: 1, nombre_rol: 'Recepcionista' },
+                    { id: 2, nombre_rol: 'Administrador' },
+                    { id: 3, nombre_rol: 'Administrador Local' }
+                ];
+        }
 
-            const usuario = usuariosLocalidadAdmin.find(item => item.id === usuarioLocalidadSeleccionadoId);
+        function renderizarRolesFormularioUsuarioAdmin(rolSeleccionado) {
+            const selectRol = document.getElementById('usuario-admin-rol');
+            if (!selectRol) return;
 
-            empty.classList.toggle('hidden', Boolean(usuario));
-            form.classList.toggle('hidden', !usuario);
+            selectRol.innerHTML = '';
+            obtenerRolesFormularioUsuarioAdmin().forEach(rol => {
+                const option = document.createElement('option');
+                option.value = rol.id;
+                option.textContent = rol.nombre_rol;
+                selectRol.appendChild(option);
+            });
 
-            if (!usuario) {
-                checkboxes.innerHTML = '';
+            selectRol.value = String(rolSeleccionado || 1);
+        }
+
+        function obtenerRolFormularioUsuarioAdmin() {
+            return parseInt(document.getElementById('usuario-admin-rol')?.value, 10) || null;
+        }
+
+        function obtenerUsuarioSeleccionadoAdmin() {
+            return usuariosLocalidadAdmin.find(item => parseInt(item.id, 10) === parseInt(usuarioLocalidadSeleccionadoId, 10)) || null;
+        }
+
+        function obtenerLocalidadesAsignadasUsuarioAdmin(usuario) {
+            const localidades = Array.isArray(usuario?.localidades) ? usuario.localidades : [];
+            const idsAsignados = new Set(localidades.map(id => parseInt(id, 10)));
+            return localidadesUsuarioAdmin.filter(localidad => idsAsignados.has(parseInt(localidad.id, 10)));
+        }
+
+        function crearPildoraLocalidadUsuarioAdmin(localidad) {
+            const chip = document.createElement('span');
+            chip.className = 'usuario-admin-read-localidad';
+
+            const color = document.createElement('span');
+            color.className = 'usuario-localidad-color';
+            color.style.backgroundColor = localidad.color || '#cccccc';
+
+            const nombre = document.createElement('span');
+            nombre.textContent = localidad.nombre || `Localidad ${localidad.id}`;
+
+            const codigo = document.createElement('span');
+            codigo.className = 'usuario-localidad-codigo';
+            codigo.textContent = localidad.codigo_localidad || String(localidad.id);
+
+            chip.appendChild(color);
+            chip.appendChild(nombre);
+            chip.appendChild(codigo);
+            return chip;
+        }
+
+        function renderizarVistaUsuarioAdmin(usuario) {
+            const nombreTitulo = document.getElementById('usuario-admin-vista-nombre');
+            const detalle = document.getElementById('usuario-admin-vista-detalle');
+            const estadoBadge = document.getElementById('usuario-admin-vista-estado');
+            const correo = document.getElementById('usuario-admin-vista-correo');
+            const rol = document.getElementById('usuario-admin-vista-rol');
+            const contador = document.getElementById('usuario-admin-vista-localidades-contador');
+            const localidades = document.getElementById('usuario-admin-vista-localidades');
+            const btnToggle = document.getElementById('btn-toggle-usuario-vista');
+            if (!usuario || !nombreTitulo || !detalle || !estadoBadge || !correo || !rol || !contador || !localidades || !btnToggle) return;
+
+            const activo = parseInt(usuario.activo, 10) === 1;
+            const rolId = parseInt(usuario.rol_id, 10);
+            const nombreUsuario = usuario.nombre || `Usuario ${usuario.id}`;
+
+            nombreTitulo.textContent = nombreUsuario;
+            detalle.textContent = `${usuario.correo || 'Sin usuario'} | ${obtenerTextoRolUsuarioAdmin(rolId)}`;
+            correo.textContent = usuario.correo || 'Sin usuario';
+            rol.textContent = obtenerTextoRolUsuarioAdmin(rolId);
+
+            estadoBadge.textContent = activo ? 'Activo' : 'Inactivo';
+            estadoBadge.classList.toggle('activo', activo);
+            estadoBadge.classList.toggle('inactivo', !activo);
+
+            btnToggle.textContent = activo ? 'Desactivar' : 'Reactivar';
+            btnToggle.classList.toggle('btn-reactivar-usuario', !activo);
+
+            localidades.innerHTML = '';
+
+            if (rolId === 2) {
+                contador.textContent = 'General';
+                const accesoGeneral = document.createElement('span');
+                accesoGeneral.className = 'usuario-admin-read-localidad general';
+                accesoGeneral.textContent = 'Acceso general a localidades';
+                localidades.appendChild(accesoGeneral);
                 return;
             }
 
-            nombre.textContent = usuario.nombre || `Usuario ${usuario.id}`;
-            detalle.textContent = `${usuario.correo || 'Sin correo'} | ${obtenerTextoRolUsuarioAdmin(usuario.rol_id)}`;
+            const asignadas = obtenerLocalidadesAsignadasUsuarioAdmin(usuario);
+            contador.textContent = `${asignadas.length}`;
 
-            const localidadesAsignadas = new Set((usuario.localidades || []).map(id => parseInt(id, 10)));
+            if (asignadas.length === 0) {
+                const mensaje = document.createElement('p');
+                mensaje.className = 'usuario-localidad-empty';
+                mensaje.textContent = 'Sin localidades asignadas.';
+                localidades.appendChild(mensaje);
+                return;
+            }
+
+            asignadas.forEach(localidad => {
+                localidades.appendChild(crearPildoraLocalidadUsuarioAdmin(localidad));
+            });
+        }
+
+        function renderizarFormularioUsuarioAdmin(usuario) {
+            const checkboxes = document.getElementById('usuario-localidad-checkboxes');
+            const nombreTitulo = document.getElementById('usuario-localidad-nombre');
+            const detalle = document.getElementById('usuario-localidad-detalle');
+            const inputId = document.getElementById('usuario-admin-id');
+            const inputNombre = document.getElementById('usuario-admin-nombre');
+            const inputCorreo = document.getElementById('usuario-admin-correo');
+            const passwordWrap = document.getElementById('usuario-admin-password-wrap');
+            const inputPassword = document.getElementById('usuario-admin-password');
+            const estadoBadge = document.getElementById('usuario-admin-estado');
+            const btnGuardar = document.getElementById('btn-guardar-usuario-admin');
+            if (!checkboxes || !nombreTitulo || !detalle || !inputId || !inputNombre || !inputCorreo || !passwordWrap || !inputPassword || !estadoBadge || !btnGuardar) return;
+
+            const rolSeleccionado = usuario ? parseInt(usuario.rol_id, 10) : 1;
+            const activo = usuario ? parseInt(usuario.activo, 10) === 1 : true;
+
+            inputId.value = usuario?.id || '';
+            inputNombre.value = usuario?.nombre || '';
+            inputCorreo.value = usuario?.correo || '';
+            inputCorreo.readOnly = Boolean(usuario);
+            inputCorreo.classList.toggle('readonly', Boolean(usuario));
+            inputPassword.value = '';
+            passwordWrap.classList.toggle('hidden', Boolean(usuario));
+
+            nombreTitulo.textContent = usuario ? (usuario.nombre || `Usuario ${usuario.id}`) : 'Nuevo usuario';
+            detalle.textContent = usuario
+                ? `${usuario.correo || 'Sin usuario'} | ${obtenerTextoRolUsuarioAdmin(usuario.rol_id)}`
+                : 'Alta de usuario';
+            btnGuardar.textContent = usuario ? 'Guardar cambios' : 'Crear usuario';
+            estadoBadge.textContent = activo ? 'Activo' : 'Inactivo';
+            estadoBadge.classList.toggle('activo', activo);
+            estadoBadge.classList.toggle('inactivo', !activo);
+
+            renderizarRolesFormularioUsuarioAdmin(rolSeleccionado);
+
+            const localidadesAsignadas = new Set((usuario?.localidades || []).map(id => parseInt(id, 10)));
             checkboxes.innerHTML = '';
 
             localidadesUsuarioAdmin.forEach(localidad => {
@@ -1510,6 +1729,57 @@
                 label.appendChild(codigo);
                 checkboxes.appendChild(label);
             });
+
+            actualizarEstadoFormularioUsuarioAdmin();
+        }
+
+        function renderizarEditorUsuarioLocalidadAdmin() {
+            const empty = document.getElementById('usuario-localidad-empty');
+            const vista = document.getElementById('usuario-admin-vista');
+            const form = document.getElementById('usuario-localidad-form');
+            const checkboxes = document.getElementById('usuario-localidad-checkboxes');
+            if (!empty || !vista || !form || !checkboxes) return;
+
+            const usuario = usuarioAdminModoCreacion ? null : obtenerUsuarioSeleccionadoAdmin();
+            if (!usuario && usuarioAdminModoEdicion) usuarioAdminModoEdicion = false;
+
+            const mostrarFormulario = usuarioAdminModoCreacion || usuarioAdminModoEdicion;
+            const mostrarVista = Boolean(usuario) && !mostrarFormulario;
+
+            empty.classList.toggle('hidden', mostrarFormulario || mostrarVista);
+            vista.classList.toggle('hidden', !mostrarVista);
+            form.classList.toggle('hidden', !mostrarFormulario);
+
+            if (mostrarVista) {
+                form.reset();
+                checkboxes.innerHTML = '';
+                renderizarVistaUsuarioAdmin(usuario);
+                return;
+            }
+
+            if (mostrarFormulario) {
+                renderizarFormularioUsuarioAdmin(usuarioAdminModoCreacion ? null : usuario);
+                return;
+            }
+
+            form.reset();
+            checkboxes.innerHTML = '';
+        }
+
+        function actualizarEstadoFormularioUsuarioAdmin() {
+            const rolId = obtenerRolFormularioUsuarioAdmin();
+            const esAdministradorGeneral = rolId === 2;
+            const checkboxes = document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]');
+            const contenedor = document.getElementById('usuario-localidad-checkboxes');
+
+            checkboxes.forEach(input => {
+                if (esAdministradorGeneral) input.checked = false;
+                input.disabled = esAdministradorGeneral;
+            });
+
+            if (contenedor) {
+                contenedor.classList.toggle('usuario-localidad-checkboxes-disabled', esAdministradorGeneral);
+            }
 
             actualizarContadorLocalidadesUsuarioAdmin();
         }
@@ -1600,6 +1870,8 @@
         }
 
         function obtenerLocalidadesSeleccionadasUsuarioAdmin() {
+            if (obtenerRolFormularioUsuarioAdmin() === 2) return [];
+
             return Array.from(document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]:checked'))
                 .map(input => parseInt(input.value, 10))
                 .filter(Boolean);
@@ -1609,61 +1881,217 @@
             const contador = document.getElementById('usuario-localidad-contador');
             if (!contador) return;
 
-            const total = obtenerLocalidadesSeleccionadasUsuarioAdmin().length;
-            contador.textContent = `${total} ${total === 1 ? 'localidad' : 'localidades'}`;
-        }
-
-        function seleccionarTodasLocalidadesUsuarioAdmin() {
-            document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]').forEach(input => {
-                input.checked = true;
-            });
-            actualizarContadorLocalidadesUsuarioAdmin();
-        }
-
-        function limpiarLocalidadesUsuarioAdmin() {
-            document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]').forEach(input => {
-                input.checked = false;
-            });
-            actualizarContadorLocalidadesUsuarioAdmin();
-        }
-
-        async function guardarUsuarioLocalidadAdmin() {
-            const usuario = usuariosLocalidadAdmin.find(item => item.id === usuarioLocalidadSeleccionadoId);
-            if (!usuario) {
-                alert('Selecciona un usuario.');
+            if (obtenerRolFormularioUsuarioAdmin() === 2) {
+                contador.textContent = 'General';
                 return;
             }
 
+            const total = obtenerLocalidadesSeleccionadasUsuarioAdmin().length;
+            contador.textContent = `${total}`;
+        }
+
+        function mostrarFormularioUsuarioAdmin() {
+            usuarioLocalidadSeleccionadoId = null;
+            usuarioAdminModoCreacion = true;
+            usuarioAdminModoEdicion = false;
+            renderizarUsuariosLocalidadAdmin();
+            renderizarEditorUsuarioLocalidadAdmin();
+        }
+
+        function editarUsuarioAdmin() {
+            const usuario = obtenerUsuarioSeleccionadoAdmin();
+            if (!usuario) {
+                alert('Selecciona un usuario antes de editar.');
+                return;
+            }
+
+            usuarioAdminModoCreacion = false;
+            usuarioAdminModoEdicion = true;
+            renderizarUsuariosLocalidadAdmin();
+            renderizarEditorUsuarioLocalidadAdmin();
+        }
+
+        function restaurarFormularioUsuarioAdmin() {
+            if (usuarioAdminModoCreacion) {
+                renderizarFormularioUsuarioAdmin(null);
+                return;
+            }
+
+            const usuario = obtenerUsuarioSeleccionadoAdmin();
+            if (!usuario) {
+                alert('No hay un usuario seleccionado para restaurar.');
+                return;
+            }
+
+            renderizarFormularioUsuarioAdmin(usuario);
+        }
+
+        function cancelarFormularioUsuarioAdmin() {
+            const veniaDeAlta = usuarioAdminModoCreacion;
+            usuarioAdminModoCreacion = false;
+            usuarioAdminModoEdicion = false;
+            if (veniaDeAlta) usuarioLocalidadSeleccionadoId = null;
+            renderizarUsuariosLocalidadAdmin();
+            renderizarEditorUsuarioLocalidadAdmin();
+        }
+
+        function avisarCambioPasswordPendiente() {
+            alert('El cambio de contraseña se dejara para la siguiente etapa para implementarlo con seguridad.');
+        }
+
+        function obtenerPayloadUsuarioAdmin(activoForzado = null) {
             const usuarioActual = obtenerUsuarioActualAdmin();
-            const localidades = obtenerLocalidadesSeleccionadasUsuarioAdmin();
+            const id = document.getElementById('usuario-admin-id').value;
+            const rolId = obtenerRolFormularioUsuarioAdmin();
+            const payload = {
+                rol_usuario: usuarioActual.rol,
+                usuario_actual_id: usuarioActual.id,
+                nombre: document.getElementById('usuario-admin-nombre').value.trim(),
+                rol_id: rolId,
+                activo: activoForzado === null
+                    ? (usuariosLocalidadAdmin.find(usuario => String(usuario.id) === String(id))?.activo ?? 1)
+                    : activoForzado,
+                localidades: obtenerLocalidadesSeleccionadasUsuarioAdmin()
+            };
+
+            if (!id) {
+                payload.correo = document.getElementById('usuario-admin-correo').value.trim();
+                payload.password = document.getElementById('usuario-admin-password').value.trim();
+            }
+
+            return { id, payload };
+        }
+
+        function obtenerPayloadUsuarioAdminDesdeUsuario(usuario, activoForzado = null) {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const rolId = parseInt(usuario?.rol_id, 10) || null;
+            const activo = activoForzado === null
+                ? (parseInt(usuario?.activo, 10) === 1 ? 1 : 0)
+                : activoForzado;
+
+            return {
+                id: usuario?.id || '',
+                payload: {
+                    rol_usuario: usuarioActual.rol,
+                    usuario_actual_id: usuarioActual.id,
+                    nombre: (usuario?.nombre || '').trim(),
+                    rol_id: rolId,
+                    activo,
+                    localidades: rolId === 2
+                        ? []
+                        : (Array.isArray(usuario?.localidades) ? usuario.localidades : [])
+                            .map(id => parseInt(id, 10))
+                            .filter(Boolean)
+                }
+            };
+        }
+
+        function validarPayloadUsuarioAdmin(id, payload) {
+            const errores = [];
+            if (!payload.nombre) errores.push('El nombre del usuario es obligatorio.');
+            if (!payload.rol_id) errores.push('Selecciona un rol valido.');
+            if (!id && (!payload.correo || /\s/.test(payload.correo))) {
+                errores.push('Captura un usuario/correo valido, sin espacios.');
+            }
+            if (!id && !payload.password) errores.push('Captura la contraseña inicial.');
+            if (parseInt(payload.activo, 10) === 1 && parseInt(payload.rol_id, 10) !== 2 && payload.localidades.length === 0) {
+                errores.push('Recepcionista y Administrador Local activos deben tener al menos una localidad asignada.');
+            }
+            return errores;
+        }
+
+        function actualizarUsuarioSesionSiAplica(usuarioActualizado) {
+            const usuarioSesion = obtenerUsuarioActualAdmin();
+            if (!usuarioActualizado || parseInt(usuarioSesion.id, 10) !== parseInt(usuarioActualizado.id, 10)) return;
+
+            usuarioSesion.nombre = usuarioActualizado.nombre;
+            usuarioSesion.rol = parseInt(usuarioActualizado.rol_id, 10);
+            usuarioSesion.localidades = usuarioActualizado.localidades || [];
+            localStorage.setItem('usuario_actual', JSON.stringify(usuarioSesion));
+            sessionStorage.setItem('usuario', JSON.stringify(usuarioSesion));
+            document.getElementById('user-name').innerText = usuarioSesion.nombre;
+        }
+
+        async function guardarUsuarioAdmin(event) {
+            if (event) event.preventDefault();
+
+            const { id, payload } = obtenerPayloadUsuarioAdmin();
+            const errores = validarPayloadUsuarioAdmin(id, payload);
+
+            if (errores.length > 0) {
+                alert(`No se puede guardar el usuario:\n\n${errores.join('\n')}`);
+                return;
+            }
+
+            const url = id
+                ? `${urlBase}/api/admin/usuarios/${id}`
+                : `${urlBase}/api/admin/usuarios`;
+            const method = id ? 'PUT' : 'POST';
 
             try {
-                const response = await fetch(`${urlBase}/api/admin/usuario-localidad/${usuario.id}`, {
-                    method: 'PUT',
+                const response = await fetch(url, {
+                    method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        rol_usuario: usuarioActual.rol,
-                        localidades
-                    })
+                    body: JSON.stringify(payload)
                 });
                 const data = await response.json();
 
                 if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'No se pudieron guardar los permisos.');
+                    throw new Error(data.error || 'No se pudo guardar el usuario.');
                 }
 
-                usuario.localidades = localidades;
-
-                if (parseInt(usuarioActual.id, 10) === parseInt(usuario.id, 10)) {
-                    usuarioActual.localidades = localidades;
-                    localStorage.setItem('usuario_actual', JSON.stringify(usuarioActual));
-                }
-
-                renderizarUsuariosLocalidadAdmin();
-                renderizarEditorUsuarioLocalidadAdmin();
-                alert(`${data.message || 'Permisos actualizados.'}\n\nEl usuario verá los cambios al iniciar sesión nuevamente.`);
+                usuarioAdminModoCreacion = false;
+                usuarioAdminModoEdicion = false;
+                usuarioLocalidadSeleccionadoId = data.usuario?.id || usuarioLocalidadSeleccionadoId;
+                actualizarUsuarioSesionSiAplica(data.usuario);
+                await cargarUsuarioLocalidadAdmin();
+                alert(data.message || 'Usuario guardado correctamente.');
             } catch (error) {
-                console.error('Error guardando usuario-localidad:', error);
+                console.error('Error guardando usuario:', error);
+                alert(error.message);
+            }
+        }
+
+        async function cambiarEstadoUsuarioAdmin() {
+            const usuario = obtenerUsuarioSeleccionadoAdmin();
+            if (!usuario) {
+                alert('Selecciona un usuario antes de cambiar su estado.');
+                return;
+            }
+
+            const activoActual = parseInt(usuario.activo, 10) === 1;
+            const nuevoActivo = activoActual ? 0 : 1;
+            const accion = activoActual ? 'desactivar' : 'reactivar';
+            const confirmar = confirm(`¿Confirmas ${accion} el usuario ${usuario.nombre || usuario.correo || usuario.id}?`);
+            if (!confirmar) return;
+
+            const { id, payload } = obtenerPayloadUsuarioAdminDesdeUsuario(usuario, nuevoActivo);
+            const errores = validarPayloadUsuarioAdmin(id, payload);
+
+            if (errores.length > 0) {
+                alert(`No se puede ${accion} el usuario:\n\n${errores.join('\n')}`);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/usuarios/${usuario.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `No se pudo ${accion} el usuario.`);
+                }
+
+                actualizarUsuarioSesionSiAplica(data.usuario);
+                usuarioAdminModoCreacion = false;
+                usuarioAdminModoEdicion = false;
+                await cargarUsuarioLocalidadAdmin();
+                alert(data.message || `Usuario ${nuevoActivo ? 'reactivado' : 'desactivado'} correctamente.`);
+            } catch (error) {
+                console.error('Error cambiando estado de usuario:', error);
                 alert(error.message);
             }
         }

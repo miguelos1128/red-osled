@@ -921,6 +921,8 @@ td {
     padding: 4px 14px;
     border-radius: 20px; /* Lo hace ver como una p�ldora */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ligera sombra para resaltar */
+    width: 45px;
+    text-align: center;
 }
 
 .contador-badge-info {
@@ -929,6 +931,87 @@ td {
 
 .contador-badge-alerta {
     background-color: #b42318;
+    width: 160px;
+    text-align: center;
+}
+
+.filtros-rango-adeudo {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.filtros-rango-adeudo.hidden {
+    display: none;
+}
+
+.btn-rango-adeudo,
+.btn-rango-adeudo-limpiar {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease, filter 0.16s ease;
+}
+
+.btn-rango-adeudo {
+    position: relative;
+    border: 2px solid #ffffff;
+    opacity: 0.38;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.16);
+}
+
+.btn-rango-adeudo:hover,
+.btn-rango-adeudo.activo {
+    opacity: 1;
+    filter: saturate(1.1);
+}
+
+.btn-rango-adeudo.activo {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.2), 0 4px 8px rgba(15, 23, 42, 0.16);
+}
+
+.btn-rango-adeudo.activo::after {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.btn-rango-adeudo.adeudo-verde {
+    background: #22c55e;
+}
+
+.btn-rango-adeudo.adeudo-amarillo {
+    background: #facc15;
+}
+
+.btn-rango-adeudo.adeudo-naranja {
+    background: #fb923c;
+}
+
+.btn-rango-adeudo.adeudo-rojo {
+    background: #ef4444;
+}
+
+.btn-rango-adeudo-limpiar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 0.78rem;
+}
+
+.btn-rango-adeudo-limpiar:hover:not(:disabled) {
+    color: #b42318;
+    border-color: #f1aaa4;
+    box-shadow: 0 3px 8px rgba(180, 35, 24, 0.14);
 }
 
 /* =======================================================
@@ -3782,7 +3865,6 @@ td {
 }
 
 /* Bot�n WhatsApp */
-.acciones-contacto { margin-top: 20px; }
 .btn-contacto.whatsapp {
     display: inline-block; background-color: #25D366; color: white;
     padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;

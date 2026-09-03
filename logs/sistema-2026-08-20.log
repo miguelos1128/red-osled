@@ -1,0 +1,18 @@
+2026-08-20T23:24:22.314Z [USO#000001] [LOGIN_FALLIDO] correo=mike ip=::1
+2026-08-20T23:24:36.145Z [USO#000002] [LOGIN_OK] usuario_id=1 usuario="Miguel Osornio L" rol=2 localidades=[] ip=::1
+2026-08-20T23:24:53.240Z [USO#000003] [LOGOUT] usuario_id=1 usuario="Miguel Osornio L" rol=2 ip=::1
+2026-08-20T23:24:54.200Z [USO#000004] [LOGIN_OK] usuario_id=1 usuario="Miguel Osornio L" rol=2 localidades=[] ip=::1
+2026-08-20T23:25:24.700Z [USO#000005] [BUSQUEDA_CLIENTE] usuario_id=1 rol=2 tipo=nombre termino=Tania resultados=1 localidades=todas ip=::1
+2026-08-20T23:25:37.426Z [USO#000006] [BUSQUEDA_CLIENTE] usuario_id=1 rol=2 tipo=codigo termino=JU201101 resultados=1 localidades=todas ip=::1
+2026-08-20T23:25:51.660Z [USO#000007] [CLIENTE_SELECCIONADO] usuario_id=1 cliente_id=99 codigo_cliente=JU201101 cliente="Tania Villa" localidad=Jurica estado_servicio=activo adeudo_actual=200.00 saldo_favor=0.00 ip=::1
+2026-08-20T23:26:41.628Z [USO#000008] [PAGO_REGISTRADO] usuario_id=1 cliente_id=99 codigo_cliente=JU201101 cliente="Tania Villa" monto_recibido=200.00 total_aplicado=200.00 saldo_sobrante=0.00 registros=1 detalle="mensualidad:Agosto 2026:$200.00:completo:ajuste=$200.00" ip=::1
+2026-08-20T23:27:26.405Z [USO#000009] [BUSQUEDA_CLIENTE] usuario_id=1 rol=2 tipo=codigo termino=JU201101 resultados=1 localidades=todas ip=::1
+2026-08-20T23:27:26.986Z [USO#000010] [CLIENTE_SELECCIONADO] usuario_id=1 cliente_id=99 codigo_cliente=JU201101 cliente="Tania Villa" localidad=Jurica estado_servicio=activo adeudo_actual=0.00 saldo_favor=0.00 ip=::1
+2026-08-20T23:27:43.571Z [USO#000011] [BUSQUEDA_CLIENTE] usuario_id=1 rol=2 tipo=codigo termino=JC211101 resultados=1 localidades=todas ip=::1
+2026-08-20T23:27:44.281Z [USO#000012] [CLIENTE_SELECCIONADO] usuario_id=1 cliente_id=104 codigo_cliente=JC211101 cliente="Ulises Ezpinoza" localidad="Jurica Centro" estado_servicio=suspendido adeudo_actual=2800.00 saldo_favor=0.00 ip=::1
+2026-08-20T23:30:35.838Z [USO#000013] [PAGO_REACTIVACION_REGISTRADO] usuario_id=1 cliente_id=104 codigo_cliente=JC211101 cliente="Ulises Ezpinoza" monto_recibido=2800.00 total_aplicado=2800.00 saldo_sobrante=0.00 registros=7 detalle="mensualidad:Febrero 2026:$400.00:completo|mensualidad:Marzo 2026:$400.00:completo|mensualidad:Abril 2026:$400.00:completo|mensualidad:Mayo 2026:$400.00:completo|mensualidad:Junio 2026:$400.00:completo|mensualidad:Julio 2026:$400.00:completo|mensualidad:Agosto 2026:$400.00:completo" ip=::1
+2026-08-20T23:30:59.017Z [USO#000014] [BUSQUEDA_CLIENTE] usuario_id=1 rol=2 tipo=codigo termino=JC211101 resultados=1 localidades=todas ip=::1
+2026-08-20T23:31:01.087Z [USO#000015] [CLIENTE_SELECCIONADO] usuario_id=1 cliente_id=104 codigo_cliente=JC211101 cliente="Ulises Ezpinoza" localidad="Jurica Centro" estado_servicio=activo adeudo_actual=0.00 saldo_favor=0.00 ip=::1
+2026-08-20T23:32:44.989Z [USO#000016] [CLIENTE_CREADO] usuario_id=1 cliente_id=163 codigo_cliente=BA260805 cliente="Cliente Prueba Codex 1737" localidad_id=4 paquete_id=2 costo_mensual=400.00 ip=::1
+2026-08-20T23:33:04.282Z [USO#000017] [BUSQUEDA_CLIENTE] usuario_id=1 rol=2 tipo=nombre termino="Cliente Prueba Codex 1737" resultados=1 localidades=todas ip=::1
+2026-08-20T23:33:11.959Z [USO#000018] [BUSQUEDA_CLIENTE] usuario_id=1 rol=2 tipo=codigo termino=BA260805 resultados=1 localidades=todas ip=::1

@@ -283,6 +283,15 @@
                     <span id="contador-clientes" class="contador-badge">0</span>
                     <span id="total-mbps-garantizados" class="contador-badge contador-badge-info hidden">0 Mbps garantizados</span>
                     <span id="total-adeudo-filtrado" class="contador-badge contador-badge-alerta hidden">$0 adeudo</span>
+                    <span id="filtros-rango-adeudo" class="filtros-rango-adeudo hidden" aria-label="Filtros por rango de adeudo">
+                        <button type="button" class="btn-rango-adeudo adeudo-rojo activo" data-rango-adeudo="adeudo-rojo" title="$1,200 o mas" aria-label="Adeudo de $1,200 o mas" aria-pressed="true"></button>
+                        <button type="button" class="btn-rango-adeudo adeudo-naranja activo" data-rango-adeudo="adeudo-naranja" title="$900 a $1,199" aria-label="Adeudo de $900 a $1,199" aria-pressed="true"></button>
+                        <button type="button" class="btn-rango-adeudo adeudo-amarillo activo" data-rango-adeudo="adeudo-amarillo" title="$601 a $899" aria-label="Adeudo de $601 a $899" aria-pressed="true"></button>
+                        <button type="button" class="btn-rango-adeudo adeudo-verde activo" data-rango-adeudo="adeudo-verde" title="$1 a $600" aria-label="Adeudo de $1 a $600" aria-pressed="true"></button>
+                        <button type="button" id="btn-adeudo-rangos-limpiar" class="btn-rango-adeudo-limpiar" title="Desmarcar todos los rangos" aria-label="Desmarcar todos los rangos">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
                 </h3>
 
                 <div class="admin-controles-busqueda">
@@ -1053,6 +1062,8 @@
         let estadoCuentaDetalleActual = null;
         let historialPaquetesDetalleActual = [];
         let filtroLocalidadTodasSeleccionadoAntes = false;
+        const rangosAdeudoAdmin = ['adeudo-rojo', 'adeudo-naranja', 'adeudo-amarillo', 'adeudo-verde'];
+        let rangosAdeudoActivosAdmin = new Set(rangosAdeudoAdmin);
         const filtrosRapidosAdmin = { estadoCuenta: null, renta: false, paquete: null, mostrarGarantizados: false };
 
         if (!usuarioJson) {
@@ -1711,6 +1722,42 @@
             if (monto >= 900) return 'adeudo-naranja';
             if (monto >= 601) return 'adeudo-amarillo';
             return 'adeudo-verde';
+        }
+
+        function activarTodosRangosAdeudoAdmin() {
+            rangosAdeudoActivosAdmin = new Set(rangosAdeudoAdmin);
+        }
+
+        function todosRangosAdeudoEstanActivos() {
+            return rangosAdeudoActivosAdmin.size === rangosAdeudoAdmin.length
+                && rangosAdeudoAdmin.every(rango => rangosAdeudoActivosAdmin.has(rango));
+        }
+
+        function adeudoCoincideRangosActivos(adeudo) {
+            const monto = parseFloat(adeudo) || 0;
+            if (monto <= 0) return false;
+            return rangosAdeudoActivosAdmin.has(obtenerClaseBadgeAdeudo(monto));
+        }
+
+        function actualizarFiltrosRangoAdeudo() {
+            const contenedor = document.getElementById('filtros-rango-adeudo');
+            if (!contenedor) return;
+
+            const mostrar = filtrosRapidosAdmin.estadoCuenta === 'con_adeudo';
+            contenedor.classList.toggle('hidden', !mostrar);
+            contenedor.querySelectorAll('.btn-rango-adeudo').forEach(boton => {
+                const activo = rangosAdeudoActivosAdmin.has(boton.dataset.rangoAdeudo);
+                boton.classList.toggle('activo', activo);
+                boton.setAttribute('aria-pressed', String(activo));
+            });
+
+            const botonLimpiar = document.getElementById('btn-adeudo-rangos-limpiar');
+            if (botonLimpiar) {
+                const hayRangosActivos = rangosAdeudoActivosAdmin.size > 0;
+                const etiqueta = hayRangosActivos ? 'Desmarcar todos los rangos' : 'Activar todos los rangos';
+                botonLimpiar.title = etiqueta;
+                botonLimpiar.setAttribute('aria-label', etiqueta);
+            }
         }
 
         function formatearAdeudoBadge(adeudo) {
@@ -2439,7 +2486,9 @@
         document.addEventListener('DOMContentLoaded', () => {
 
             aplicarFiltros();
+            inicializarFiltrosRangoAdeudo();
             inicializarBotonScrollRapido();
+            inicializarMontoPagoResultado();
             // Primero, cargamos los clientes al iniciar la página
             cargarVistaAdminClientes();
         });
@@ -3065,7 +3114,21 @@
             });
         }
 
-        async function seleccionarCliente(cliente) {
+        function enfocarMontoPagoResultado() {
+            const inputMonto = document.getElementById('monto-pago-input');
+            if (!inputMonto) return;
+
+            setTimeout(() => {
+                inputMonto.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 250);
+
+            setTimeout(() => {
+                inputMonto.focus({ preventScroll: true });
+                inputMonto.select();
+            }, 550);
+        }
+
+        async function seleccionarCliente(cliente, enfocarMonto = false) {
             
             // LIMPIEZA INICIAL
             document.getElementById('resultado-busqueda').classList.add('hidden');
@@ -3143,7 +3206,10 @@
 
                 document.getElementById('btn-detalles-cobrador').classList.remove('hidden');
                 document.getElementById('resultado-busqueda').classList.remove('hidden');
-                requestAnimationFrame(enfocarResultadoBusqueda);
+                requestAnimationFrame(() => {
+                    enfocarResultadoBusqueda();
+                    if (enfocarMonto) enfocarMontoPagoResultado();
+                });
             } catch (error) {
                 console.error("Error:", error);
             }
@@ -3152,7 +3218,7 @@
          function seleccionarClienteDirecto(cliente) {
             cerrarModalDetalles()
             // Ejecutamos la lógica de selección que ya tenemos programada
-            seleccionarCliente(cliente);
+            seleccionarCliente(cliente, true);
         }
         
         // 2. Al hacer clic en un cliente de la lista
@@ -6227,6 +6293,9 @@ ${linkVelocidad}
                     : filtrosRapidosAdmin.estadoCuenta === 'al_corriente'
                         ? adeudo <= 0
                         : true;
+                const coincideRangoAdeudo = filtrosRapidosAdmin.estadoCuenta === 'con_adeudo'
+                    ? adeudoCoincideRangosActivos(adeudo)
+                    : true;
                 const coincideRenta = filtrosRapidosAdmin.renta ? esRenta : true;
                 const paqueteTarjeta = tarjeta.getAttribute('data-paquete') || '';
                 const coincidePaquete = filtrosRapidosAdmin.paquete
@@ -6234,10 +6303,10 @@ ${linkVelocidad}
                     : true;
                 const badgeAdeudo = tarjeta.querySelector('.cliente-badge-adeudo');
                 if (badgeAdeudo) {
-                    badgeAdeudo.classList.toggle('hidden', filtrosRapidosAdmin.estadoCuenta !== 'con_adeudo' || adeudo <= 0);
+                    badgeAdeudo.classList.toggle('hidden', filtrosRapidosAdmin.estadoCuenta !== 'con_adeudo' || adeudo <= 0 || !coincideRangoAdeudo);
                 }
 
-                if (coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRenta && coincidePaquete) {
+                if (coincideBusqueda && coincideLocalidad && coincideAdeudo && coincideRangoAdeudo && coincideRenta && coincidePaquete) {
                     tarjeta.classList.remove('hidden');
                     clientesVisibles++;
                     totalAdeudoFiltrado += adeudo;
@@ -6267,6 +6336,8 @@ ${linkVelocidad}
                 badgeAdeudo.textContent = `$${adeudoTexto} adeudo`;
                 badgeAdeudo.classList.toggle('hidden', filtrosRapidosAdmin.estadoCuenta !== 'con_adeudo');
             }
+
+            actualizarFiltrosRangoAdeudo();
         }
 
         function manejarCambioFiltroLocalidad() {
@@ -6299,15 +6370,66 @@ ${linkVelocidad}
             });
         }
 
+        function ordenarPorAdeudoSiAplicaFiltroRapido(filtro) {
+            const selectOrdenar = document.getElementById('select-ordenar');
+            if (!selectOrdenar || filtro !== 'con_adeudo' || filtrosRapidosAdmin.estadoCuenta !== 'con_adeudo') return;
+
+            selectOrdenar.value = 'adeudo_desc';
+            aplicarOrdenAdminClientes();
+        }
+
         function manejarFiltroRapidoAdmin(filtro) {
             if (filtro === 'renta') filtrosRapidosAdmin.renta = !filtrosRapidosAdmin.renta;
             else if (filtro === 'mbps_garantizados') filtrosRapidosAdmin.mostrarGarantizados = !filtrosRapidosAdmin.mostrarGarantizados;
             else if (filtro.startsWith('paquete_')) {
                 const paquete = filtro.replace('paquete_', '');
                 filtrosRapidosAdmin.paquete = filtrosRapidosAdmin.paquete === paquete ? null : paquete;
-            } else filtrosRapidosAdmin.estadoCuenta = filtrosRapidosAdmin.estadoCuenta === filtro ? null : filtro;
+            } else {
+                const activarFiltro = filtrosRapidosAdmin.estadoCuenta !== filtro;
+                filtrosRapidosAdmin.estadoCuenta = activarFiltro ? filtro : null;
+                if (filtro === 'con_adeudo' && activarFiltro) activarTodosRangosAdeudoAdmin();
+            }
+            ordenarPorAdeudoSiAplicaFiltroRapido(filtro);
             filtrarTarjetasAdmin();
             actualizarChipsFiltrosRapidos();
+        }
+
+        function inicializarFiltrosRangoAdeudo() {
+            const contenedor = document.getElementById('filtros-rango-adeudo');
+            if (!contenedor) return;
+
+            contenedor.querySelectorAll('.btn-rango-adeudo').forEach(boton => {
+                boton.addEventListener('click', () => {
+                    const rango = boton.dataset.rangoAdeudo;
+                    if (!rango) return;
+
+                    if (todosRangosAdeudoEstanActivos()) {
+                        rangosAdeudoActivosAdmin = new Set([rango]);
+                    } else if (rangosAdeudoActivosAdmin.has(rango)) {
+                        rangosAdeudoActivosAdmin.delete(rango);
+                    } else {
+                        rangosAdeudoActivosAdmin.add(rango);
+                    }
+
+                    filtrarTarjetasAdmin();
+                    actualizarFiltrosRangoAdeudo();
+                });
+            });
+
+            const botonLimpiar = document.getElementById('btn-adeudo-rangos-limpiar');
+            if (botonLimpiar) {
+                botonLimpiar.addEventListener('click', () => {
+                    if (rangosAdeudoActivosAdmin.size > 0) {
+                        rangosAdeudoActivosAdmin.clear();
+                    } else {
+                        activarTodosRangosAdeudoAdmin();
+                    }
+                    filtrarTarjetasAdmin();
+                    actualizarFiltrosRangoAdeudo();
+                });
+            }
+
+            actualizarFiltrosRangoAdeudo();
         }
 
         function aplicarFiltros() {
@@ -6318,6 +6440,19 @@ ${linkVelocidad}
                 cargarVistaAdminClientes();
             });
             document.querySelectorAll('.chip-filtro-admin').forEach(chip => chip.addEventListener('click', () => manejarFiltroRapidoAdmin(chip.dataset.filtroRapido)));
+        }
+
+        function inicializarMontoPagoResultado() {
+            const inputMonto = document.getElementById('monto-pago-input');
+            const botonPago = document.getElementById('btn-preparar-pago');
+            if (!inputMonto || !botonPago) return;
+
+            inputMonto.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') return;
+
+                event.preventDefault();
+                botonPago.click();
+            });
         }
 
         let temporizadorScrollRapido = null;

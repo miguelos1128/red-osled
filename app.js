@@ -42,6 +42,30 @@ db.getConnection()
         console.error('❌ Error al conectar a MySQL: ', err.message);
     });
 
+function obtenerIpCliente(req) {
+    const forwardedFor = req.headers?.['x-forwarded-for'];
+    if (Array.isArray(forwardedFor) && forwardedFor.length > 0) {
+        return String(forwardedFor[0]).split(',')[0].trim();
+    }
+    if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
+        return forwardedFor.split(',')[0].trim();
+    }
+
+    return req.ip || req.socket?.remoteAddress || '';
+}
+
+function registrarUso(evento, datos = {}) {
+    try {
+        console.log('[USO]', JSON.stringify({
+            fecha: new Date().toISOString(),
+            evento,
+            ...datos
+        }));
+    } catch (error) {
+        console.warn('No se pudo registrar el uso:', error.message);
+    }
+}
+
 // 4. Rutas de prueba (Endpoints)
 
 // Ruta básica para verificar que el servidor funciona

@@ -252,7 +252,7 @@
                                         <div class="usuario-localidad-editor-header">
                                             <div>
                                                 <h5 id="usuario-admin-vista-nombre">Usuario</h5>
-                                                <p id="usuario-admin-vista-detalle">-</p>
+                                                
                                             </div>
                                             <div class="usuario-admin-header-actions usuario-admin-view-actions">
                                                 <button type="button" class="usuario-admin-icon-btn" title="Editar usuario" aria-label="Editar usuario" onclick="editarUsuarioAdmin()">
@@ -294,7 +294,6 @@
                                         <div class="usuario-localidad-editor-header">
                                             <div>
                                                 <h5 id="usuario-localidad-nombre">Usuario</h5>
-                                                <p id="usuario-localidad-detalle">-</p>
                                             </div>
                                             <div class="usuario-admin-header-actions">
                                                 <span id="usuario-admin-estado" class="usuario-admin-estado-badge activo">Activo</span>
@@ -1612,21 +1611,19 @@
 
         function renderizarVistaUsuarioAdmin(usuario) {
             const nombreTitulo = document.getElementById('usuario-admin-vista-nombre');
-            const detalle = document.getElementById('usuario-admin-vista-detalle');
             const estadoBadge = document.getElementById('usuario-admin-vista-estado');
             const correo = document.getElementById('usuario-admin-vista-correo');
             const rol = document.getElementById('usuario-admin-vista-rol');
             const contador = document.getElementById('usuario-admin-vista-localidades-contador');
             const localidades = document.getElementById('usuario-admin-vista-localidades');
             const btnToggle = document.getElementById('btn-toggle-usuario-vista');
-            if (!usuario || !nombreTitulo || !detalle || !estadoBadge || !correo || !rol || !contador || !localidades || !btnToggle) return;
+            if (!usuario || !nombreTitulo ||  !estadoBadge || !correo || !rol || !contador || !localidades || !btnToggle) return;
 
             const activo = parseInt(usuario.activo, 10) === 1;
             const rolId = parseInt(usuario.rol_id, 10);
             const nombreUsuario = usuario.nombre || `Usuario ${usuario.id}`;
 
             nombreTitulo.textContent = nombreUsuario;
-            detalle.textContent = `${usuario.correo || 'Sin usuario'} | ${obtenerTextoRolUsuarioAdmin(rolId)}`;
             correo.textContent = usuario.correo || 'Sin usuario';
             rol.textContent = obtenerTextoRolUsuarioAdmin(rolId);
 
@@ -1667,7 +1664,6 @@
         function renderizarFormularioUsuarioAdmin(usuario) {
             const checkboxes = document.getElementById('usuario-localidad-checkboxes');
             const nombreTitulo = document.getElementById('usuario-localidad-nombre');
-            const detalle = document.getElementById('usuario-localidad-detalle');
             const inputId = document.getElementById('usuario-admin-id');
             const inputNombre = document.getElementById('usuario-admin-nombre');
             const inputCorreo = document.getElementById('usuario-admin-correo');
@@ -1675,7 +1671,7 @@
             const inputPassword = document.getElementById('usuario-admin-password');
             const estadoBadge = document.getElementById('usuario-admin-estado');
             const btnGuardar = document.getElementById('btn-guardar-usuario-admin');
-            if (!checkboxes || !nombreTitulo || !detalle || !inputId || !inputNombre || !inputCorreo || !passwordWrap || !inputPassword || !estadoBadge || !btnGuardar) return;
+            if (!checkboxes || !nombreTitulo  || !inputId || !inputNombre || !inputCorreo || !passwordWrap || !inputPassword || !estadoBadge || !btnGuardar) return;
 
             const rolSeleccionado = usuario ? parseInt(usuario.rol_id, 10) : 1;
             const activo = usuario ? parseInt(usuario.activo, 10) === 1 : true;
@@ -1689,9 +1685,7 @@
             passwordWrap.classList.toggle('hidden', Boolean(usuario));
 
             nombreTitulo.textContent = usuario ? (usuario.nombre || `Usuario ${usuario.id}`) : 'Nuevo usuario';
-            detalle.textContent = usuario
-                ? `${usuario.correo || 'Sin usuario'} | ${obtenerTextoRolUsuarioAdmin(usuario.rol_id)}`
-                : 'Alta de usuario';
+         
             btnGuardar.textContent = usuario ? 'Guardar cambios' : 'Crear usuario';
             estadoBadge.textContent = activo ? 'Activo' : 'Inactivo';
             estadoBadge.classList.toggle('activo', activo);

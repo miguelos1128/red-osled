@@ -426,7 +426,7 @@ button {
     display: block;
     margin: 0;
     color: #1f2937;
-    font-size: 0.98rem;
+    font-size: 1.1rem;
 }
 
 .usuario-localidad-item span,
@@ -1138,7 +1138,7 @@ td {
     padding: 4px 14px;
     border-radius: 20px; /* Lo hace ver como una p�ldora */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ligera sombra para resaltar */
-    width: 45px;
+    width: auto;
     text-align: center;
 }
 

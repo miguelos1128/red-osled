@@ -393,6 +393,21 @@ function validarCorreoUsuario(correo) {
     return valor.length > 0 && valor.length <= 100 && !/\s/.test(valor);
 }
 
+function normalizarPasswordUsuario(password) {
+    return String(password || '').trim();
+}
+
+function validarPasswordNuevaUsuario(password) {
+    const errores = [];
+    if (!password) {
+        errores.push('Captura la nueva contrasena.');
+    } else if (password.length < 6) {
+        errores.push('La nueva contrasena debe tener al menos 6 caracteres.');
+    }
+
+    return errores;
+}
+
 async function validarLocalidadesExistentes(ejecutor, localidades) {
     if (localidades.length === 0) return true;
 
@@ -3599,6 +3614,124 @@ app.put('/api/admin/usuarios/:id', async (req, res) => {
         res.status(500).json({ success: false, error: "Error al actualizar usuario: " + error.message });
     } finally {
         if (connection) connection.release();
+    }
+});
+
+app.put('/api/admin/usuarios/:id/password', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const usuarioId = parseInt(req.params.id, 10);
+        const password = normalizarPasswordUsuario(req.body.password || req.body.nueva_password);
+        const confirmarPassword = normalizarPasswordUsuario(req.body.confirmar_password);
+        const errores = [];
+
+        if (!usuarioId) errores.push('Usuario no valido.');
+        errores.push(...validarPasswordNuevaUsuario(password));
+        if (confirmarPassword && password !== confirmarPassword) {
+            errores.push('La confirmacion de contrasena no coincide.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        const [usuarios] = await db.query(
+            'SELECT id FROM usuarios WHERE id = ? LIMIT 1',
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
+        }
+
+        await db.query(
+            'UPDATE usuarios SET password = ? WHERE id = ?',
+            [password, usuarioId]
+        );
+
+        registrarUso('USUARIO_PASSWORD_RESTABLECIDO', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            usuario_id: usuarioId,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Contrasena restablecida correctamente.'
+        });
+    } catch (error) {
+        console.error("Error al restablecer contrasena de usuario:", error);
+        res.status(500).json({ success: false, error: "Error al restablecer contrasena: " + error.message });
+    }
+});
+
+app.put('/api/usuarios/:id/password', async (req, res) => {
+    try {
+        const usuarioId = parseInt(req.params.id, 10);
+        const usuarioActualId = obtenerUsuarioActualIdRequest(req);
+        const passwordActual = normalizarPasswordUsuario(req.body.password_actual);
+        const passwordNueva = normalizarPasswordUsuario(req.body.password || req.body.nueva_password);
+        const confirmarPassword = normalizarPasswordUsuario(req.body.confirmar_password);
+        const errores = [];
+
+        if (!usuarioId || !usuarioActualId || usuarioId !== usuarioActualId) {
+            errores.push('Solo puedes cambiar la contrasena de tu propio usuario.');
+        }
+        if (!passwordActual) errores.push('Captura tu contrasena actual.');
+        errores.push(...validarPasswordNuevaUsuario(passwordNueva));
+        if (confirmarPassword && passwordNueva !== confirmarPassword) {
+            errores.push('La confirmacion de contrasena no coincide.');
+        }
+        if (passwordActual && passwordNueva && passwordActual === passwordNueva) {
+            errores.push('La nueva contrasena debe ser diferente a la actual.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        const [usuarios] = await db.query(
+            `SELECT id, password, activo
+             FROM usuarios
+             WHERE id = ?
+             LIMIT 1`,
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
+        }
+
+        const usuario = usuarios[0];
+        if (parseInt(usuario.activo, 10) !== 1) {
+            return res.status(403).json({
+                success: false,
+                error: 'No se puede cambiar la contrasena porque el usuario esta inactivo.'
+            });
+        }
+
+        if (String(usuario.password || '') !== passwordActual) {
+            return res.status(400).json({ success: false, error: 'La contrasena actual no es correcta.' });
+        }
+
+        await db.query(
+            'UPDATE usuarios SET password = ? WHERE id = ?',
+            [passwordNueva, usuarioId]
+        );
+
+        registrarUso('USUARIO_PASSWORD_CAMBIADO', {
+            usuario_id: usuarioId,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Contrasena actualizada correctamente.'
+        });
+    } catch (error) {
+        console.error("Error al cambiar contrasena propia:", error);
+        res.status(500).json({ success: false, error: "Error al cambiar contrasena: " + error.message });
     }
 });
 

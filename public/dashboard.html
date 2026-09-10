@@ -15,7 +15,18 @@
                 <h1>Bienvenido, <span id="user-name">...</span></h1>
                 <h3 id="perfil">Gestión de Clientes (Solo Admin)</h3>
             </div>
-            <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
+            <div class="header-actions">
+                <button class="btn-password-personal button" type="button" onclick="abrirModalPasswordPersonal()">
+                    <svg class="usuario-admin-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="7.5" cy="15.5" r="5"></circle>
+                        <path d="M12 12l8-8"></path>
+                        <path d="M17 7l3 3"></path>
+                        <path d="M14.5 9.5l3 3"></path>
+                    </svg>
+                    <span>Mi contrasena</span>
+                </button>
+                <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
+            </div>
         </div>
 
         <div id="widget-corte" class="widget-corte">
@@ -261,7 +272,7 @@
                                                         <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
                                                     </svg>
                                                 </button>
-                                                <button type="button" class="usuario-admin-key-btn" title="Cambiar contrasena" aria-label="Cambiar contrasena" onclick="avisarCambioPasswordPendiente()">
+                                                <button type="button" class="usuario-admin-key-btn" title="Restablecer contrasena" aria-label="Restablecer contrasena" onclick="abrirModalPasswordAdmin()">
                                                     <svg class="usuario-admin-action-icon" viewBox="0 0 24 24" aria-hidden="true">
                                                         <circle cx="7.5" cy="15.5" r="5"></circle>
                                                         <path d="M12 12l8-8"></path>
@@ -817,6 +828,53 @@
                 <button class="button btn-canccelar-admin" onclick="document.getElementById('modal-admin').classList.add('hidden')">Cancelar</button>
                 <button class="button btn-autorizar-admin" onclick="ejecutarCorteFinal()">Autorizar y Generar PDF</button>
             </div>
+        </div>
+    </div>
+
+    <div id="modal-password-usuario" class="hidden modal-fondo" onclick="cerrarModalPorFondo(event, 'modal-password-usuario', cerrarModalPasswordUsuario)">
+        <div class="modal-caja modal-password-caja">
+            <div class="modal-cabecera">
+                <h4 id="modal-password-titulo">Cambiar contrasena</h4>
+                <span class="cerrar-x-modal" onclick="cerrarModalPasswordUsuario()">&times;</span>
+            </div>
+
+            <form id="form-password-usuario" class="password-form" onsubmit="guardarPasswordUsuario(event)">
+                <input type="hidden" id="password-modo">
+                <input type="hidden" id="password-usuario-id">
+
+                <p id="password-modal-ayuda" class="password-modal-ayuda"></p>
+
+                <label id="password-actual-wrap" class="password-field">
+                    <span>Contrasena actual</span>
+                    <div class="password-input-row">
+                        <input type="password" id="password-actual" autocomplete="current-password">
+                        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisible('password-actual', this)" aria-label="Mostrar contrasena">Mostrar</button>
+                    </div>
+                </label>
+
+                <label class="password-field">
+                    <span>Nueva contrasena</span>
+                    <div class="password-input-row">
+                        <input type="password" id="password-nueva" autocomplete="new-password" required>
+                        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisible('password-nueva', this)" aria-label="Mostrar contrasena">Mostrar</button>
+                    </div>
+                </label>
+
+                <label class="password-field">
+                    <span>Confirmar contrasena</span>
+                    <div class="password-input-row">
+                        <input type="password" id="password-confirmar" autocomplete="new-password" required>
+                        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisible('password-confirmar', this)" aria-label="Mostrar contrasena">Mostrar</button>
+                    </div>
+                </label>
+
+                <p id="password-modal-error" class="password-modal-error"></p>
+
+                <div class="password-modal-acciones">
+                    <button type="button" class="button btn-secundario-paquete" onclick="cerrarModalPasswordUsuario()">Cancelar</button>
+                    <button type="submit" class="button" id="btn-guardar-password">Guardar contrasena</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -1937,8 +1995,181 @@
             renderizarEditorUsuarioLocalidadAdmin();
         }
 
-        function avisarCambioPasswordPendiente() {
-            alert('El cambio de contraseña se dejara para la siguiente etapa para implementarlo con seguridad.');
+        function setErrorPasswordUsuario(mensaje = '') {
+            const error = document.getElementById('password-modal-error');
+            if (error) error.textContent = mensaje;
+        }
+
+        function resetVisibilidadPasswordUsuario() {
+            ['password-actual', 'password-nueva', 'password-confirmar'].forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input) input.type = 'password';
+            });
+
+            document.querySelectorAll('#modal-password-usuario .password-toggle-btn').forEach(boton => {
+                boton.textContent = 'Mostrar';
+            });
+        }
+
+        function prepararModalPasswordUsuario({ modo, usuarioId, titulo, ayuda, requiereActual, textoBoton }) {
+            const modal = document.getElementById('modal-password-usuario');
+            const form = document.getElementById('form-password-usuario');
+            const inputModo = document.getElementById('password-modo');
+            const inputUsuarioId = document.getElementById('password-usuario-id');
+            const tituloModal = document.getElementById('modal-password-titulo');
+            const ayudaModal = document.getElementById('password-modal-ayuda');
+            const actualWrap = document.getElementById('password-actual-wrap');
+            const actualInput = document.getElementById('password-actual');
+            const btnGuardar = document.getElementById('btn-guardar-password');
+            if (!modal || !form || !inputModo || !inputUsuarioId || !tituloModal || !ayudaModal || !actualWrap || !actualInput || !btnGuardar) return;
+
+            form.reset();
+            resetVisibilidadPasswordUsuario();
+            setErrorPasswordUsuario('');
+            inputModo.value = modo;
+            inputUsuarioId.value = usuarioId;
+            tituloModal.textContent = titulo;
+            ayudaModal.textContent = ayuda;
+            btnGuardar.textContent = textoBoton;
+            actualWrap.classList.toggle('hidden', !requiereActual);
+            actualInput.required = Boolean(requiereActual);
+            modal.classList.remove('hidden');
+            document.getElementById(requiereActual ? 'password-actual' : 'password-nueva')?.focus();
+        }
+
+        function abrirModalPasswordAdmin() {
+            const usuarioSeleccionado = obtenerUsuarioSeleccionadoAdmin();
+            if (!usuarioSeleccionado) {
+                alert('Selecciona un usuario antes de restablecer su contrasena.');
+                return;
+            }
+
+            prepararModalPasswordUsuario({
+                modo: 'admin',
+                usuarioId: usuarioSeleccionado.id,
+                titulo: 'Restablecer contrasena',
+                ayuda: `Asigna una nueva contrasena temporal para ${usuarioSeleccionado.nombre || usuarioSeleccionado.correo || 'este usuario'}.`,
+                requiereActual: false,
+                textoBoton: 'Restablecer contrasena'
+            });
+        }
+
+        function abrirModalPasswordPersonal() {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            if (!usuarioActual.id) {
+                alert('No se encontro tu sesion activa. Vuelve a iniciar sesion.');
+                return;
+            }
+
+            prepararModalPasswordUsuario({
+                modo: 'personal',
+                usuarioId: usuarioActual.id,
+                titulo: 'Cambiar mi contrasena',
+                ayuda: 'Confirma tu contrasena actual y captura una nueva contrasena para tu acceso.',
+                requiereActual: true,
+                textoBoton: 'Guardar contrasena'
+            });
+        }
+
+        function cerrarModalPasswordUsuario() {
+            const modal = document.getElementById('modal-password-usuario');
+            const form = document.getElementById('form-password-usuario');
+            if (form) form.reset();
+            resetVisibilidadPasswordUsuario();
+            setErrorPasswordUsuario('');
+            modal?.classList.add('hidden');
+        }
+
+        function togglePasswordVisible(inputId, boton) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+
+            const mostrar = input.type === 'password';
+            input.type = mostrar ? 'text' : 'password';
+            if (boton) boton.textContent = mostrar ? 'Ocultar' : 'Mostrar';
+        }
+
+        function validarModalPasswordUsuario(modo, actual, nueva, confirmar) {
+            const errores = [];
+            if (modo === 'personal' && !actual) errores.push('Captura tu contrasena actual.');
+            if (!nueva) {
+                errores.push('Captura la nueva contrasena.');
+            } else if (nueva.length < 6) {
+                errores.push('La nueva contrasena debe tener al menos 6 caracteres.');
+            }
+            if (!confirmar) errores.push('Confirma la nueva contrasena.');
+            if (nueva && confirmar && nueva !== confirmar) errores.push('La confirmacion de contrasena no coincide.');
+            if (modo === 'personal' && actual && nueva && actual === nueva) {
+                errores.push('La nueva contrasena debe ser diferente a la actual.');
+            }
+            return errores;
+        }
+
+        async function guardarPasswordUsuario(event) {
+            if (event) event.preventDefault();
+
+            const modo = document.getElementById('password-modo')?.value;
+            const usuarioId = document.getElementById('password-usuario-id')?.value;
+            const actual = document.getElementById('password-actual')?.value.trim() || '';
+            const nueva = document.getElementById('password-nueva')?.value.trim() || '';
+            const confirmar = document.getElementById('password-confirmar')?.value.trim() || '';
+            const btnGuardar = document.getElementById('btn-guardar-password');
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const errores = validarModalPasswordUsuario(modo, actual, nueva, confirmar);
+
+            if (!modo || !usuarioId) errores.push('No se pudo identificar el usuario para cambiar la contrasena.');
+
+            if (errores.length > 0) {
+                setErrorPasswordUsuario(errores.join(' '));
+                return;
+            }
+
+            const esAdmin = modo === 'admin';
+            const url = esAdmin
+                ? `${urlBase}/api/admin/usuarios/${usuarioId}/password`
+                : `${urlBase}/api/usuarios/${usuarioActual.id}/password`;
+            const payload = esAdmin
+                ? {
+                    rol_usuario: usuarioActual.rol,
+                    usuario_actual_id: usuarioActual.id,
+                    password: nueva,
+                    confirmar_password: confirmar
+                }
+                : {
+                    usuario_actual_id: usuarioActual.id,
+                    password_actual: actual,
+                    password: nueva,
+                    confirmar_password: confirmar
+                };
+
+            if (btnGuardar) {
+                btnGuardar.disabled = true;
+                btnGuardar.textContent = esAdmin ? 'Restableciendo...' : 'Guardando...';
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo guardar la contrasena.');
+                }
+
+                cerrarModalPasswordUsuario();
+                alert(data.message || 'Contrasena guardada correctamente.');
+            } catch (error) {
+                console.error('Error guardando contrasena:', error);
+                setErrorPasswordUsuario(error.message);
+            } finally {
+                if (btnGuardar) {
+                    btnGuardar.disabled = false;
+                    btnGuardar.textContent = esAdmin ? 'Restablecer contrasena' : 'Guardar contrasena';
+                }
+            }
         }
 
         function obtenerPayloadUsuarioAdmin(activoForzado = null) {

@@ -846,25 +846,49 @@
 
                 <label id="password-actual-wrap" class="password-field">
                     <span>Contrasena actual</span>
-                    <div class="password-input-row">
+                    <div class="password-input-wrap">
                         <input type="password" id="password-actual" autocomplete="current-password">
-                        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisible('password-actual', this)" aria-label="Mostrar contrasena">Mostrar</button>
+                        <button type="button" class="password-toggle-btn" tabindex="-1" onclick="togglePasswordVisible('password-actual', this)" aria-label="Mostrar contrasena">
+                            <svg class="password-eye-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
                     </div>
                 </label>
 
                 <label class="password-field">
                     <span>Nueva contrasena</span>
-                    <div class="password-input-row">
-                        <input type="password" id="password-nueva" autocomplete="new-password" required>
-                        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisible('password-nueva', this)" aria-label="Mostrar contrasena">Mostrar</button>
+                    <div class="password-input-wrap">
+                        <input type="password" id="password-nueva" autocomplete="new-password" required oninput="actualizarSeguridadPasswordUsuario()">
+                        <button type="button" class="password-toggle-btn" tabindex="-1" onclick="togglePasswordVisible('password-nueva', this)" aria-label="Mostrar contrasena">
+                            <svg class="password-eye-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
                     </div>
+                    <div id="password-strength" class="password-strength" aria-live="polite">
+                        <div class="password-strength-bars" aria-hidden="true">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span id="password-strength-label" class="password-strength-label">Seguridad: sin evaluar</span>
+                    </div>
+                    <p class="password-tip">Tip: usa mas de 8 caracteres con letras, numeros y un signo.</p>
                 </label>
 
                 <label class="password-field">
                     <span>Confirmar contrasena</span>
-                    <div class="password-input-row">
+                    <div class="password-input-wrap">
                         <input type="password" id="password-confirmar" autocomplete="new-password" required>
-                        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisible('password-confirmar', this)" aria-label="Mostrar contrasena">Mostrar</button>
+                        <button type="button" class="password-toggle-btn" tabindex="-1" onclick="togglePasswordVisible('password-confirmar', this)" aria-label="Mostrar contrasena">
+                            <svg class="password-eye-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
                     </div>
                 </label>
 
@@ -2007,8 +2031,44 @@
             });
 
             document.querySelectorAll('#modal-password-usuario .password-toggle-btn').forEach(boton => {
-                boton.textContent = 'Mostrar';
+                boton.setAttribute('aria-label', 'Mostrar contrasena');
+                boton.classList.remove('visible');
             });
+        }
+
+        function evaluarSeguridadPasswordUsuario(password) {
+            const valor = String(password || '');
+            if (!valor) {
+                return { nivel: 0, etiqueta: 'Sin evaluar', clase: 'vacia' };
+            }
+
+            const tieneLetra = /[a-zA-Z]/.test(valor);
+            const tieneNumero = /[0-9]/.test(valor);
+            const tieneSigno = /[^\w\s]/.test(valor);
+            const longitudValida = valor.length > 8;
+
+            if (longitudValida && tieneLetra && tieneNumero && tieneSigno) {
+                return { nivel: 3, etiqueta: 'Fuerte', clase: 'fuerte' };
+            }
+
+            if (longitudValida && tieneLetra && tieneNumero) {
+                return { nivel: 2, etiqueta: 'Media', clase: 'media' };
+            }
+
+            return { nivel: 1, etiqueta: 'Debil', clase: 'debil' };
+        }
+
+        function actualizarSeguridadPasswordUsuario() {
+            const input = document.getElementById('password-nueva');
+            const medidor = document.getElementById('password-strength');
+            const etiqueta = document.getElementById('password-strength-label');
+            if (!input || !medidor || !etiqueta) return;
+
+            const seguridad = evaluarSeguridadPasswordUsuario(input.value);
+            medidor.classList.remove('vacia', 'debil', 'media', 'fuerte');
+            medidor.classList.add(seguridad.clase);
+            medidor.dataset.nivel = String(seguridad.nivel);
+            etiqueta.textContent = `Seguridad: ${seguridad.etiqueta}`;
         }
 
         function prepararModalPasswordUsuario({ modo, usuarioId, titulo, ayuda, requiereActual, textoBoton }) {
@@ -2025,6 +2085,7 @@
 
             form.reset();
             resetVisibilidadPasswordUsuario();
+            actualizarSeguridadPasswordUsuario();
             setErrorPasswordUsuario('');
             inputModo.value = modo;
             inputUsuarioId.value = usuarioId;
@@ -2076,6 +2137,7 @@
             const form = document.getElementById('form-password-usuario');
             if (form) form.reset();
             resetVisibilidadPasswordUsuario();
+            actualizarSeguridadPasswordUsuario();
             setErrorPasswordUsuario('');
             modal?.classList.add('hidden');
         }
@@ -2086,16 +2148,22 @@
 
             const mostrar = input.type === 'password';
             input.type = mostrar ? 'text' : 'password';
-            if (boton) boton.textContent = mostrar ? 'Ocultar' : 'Mostrar';
+            if (boton) {
+                boton.setAttribute('aria-label', mostrar ? 'Ocultar contrasena' : 'Mostrar contrasena');
+                boton.classList.toggle('visible', mostrar);
+            }
         }
 
         function validarModalPasswordUsuario(modo, actual, nueva, confirmar) {
             const errores = [];
+            const seguridad = evaluarSeguridadPasswordUsuario(nueva);
             if (modo === 'personal' && !actual) errores.push('Captura tu contrasena actual.');
             if (!nueva) {
                 errores.push('Captura la nueva contrasena.');
-            } else if (nueva.length < 6) {
-                errores.push('La nueva contrasena debe tener al menos 6 caracteres.');
+            } else if (nueva.length <= 8) {
+                errores.push('La nueva contrasena debe tener mas de 8 caracteres.');
+            } else if (seguridad.nivel < 3) {
+                errores.push('La nueva contrasena debe ser fuerte: usa letras, numeros y un signo.');
             }
             if (!confirmar) errores.push('Confirma la nueva contrasena.');
             if (nueva && confirmar && nueva !== confirmar) errores.push('La confirmacion de contrasena no coincide.');
@@ -2226,7 +2294,11 @@
             if (!id && (!payload.correo || /\s/.test(payload.correo))) {
                 errores.push('Captura un usuario/correo valido, sin espacios.');
             }
-            if (!id && !payload.password) errores.push('Captura la contraseña inicial.');
+            if (!id && !payload.password) {
+                errores.push('Captura la contrasena inicial.');
+            } else if (!id && evaluarSeguridadPasswordUsuario(payload.password).nivel < 3) {
+                errores.push('La contrasena inicial debe ser fuerte: usa mas de 8 caracteres, letras, numeros y un signo.');
+            }
             if (parseInt(payload.activo, 10) === 1 && parseInt(payload.rol_id, 10) !== 2 && payload.localidades.length === 0) {
                 errores.push('Recepcionista y Administrador Local activos deben tener al menos una localidad asignada.');
             }

@@ -397,12 +397,18 @@ function normalizarPasswordUsuario(password) {
     return String(password || '').trim();
 }
 
-function validarPasswordNuevaUsuario(password) {
+function validarPasswordNuevaUsuario(password, etiqueta = 'La nueva contrasena') {
     const errores = [];
     if (!password) {
-        errores.push('Captura la nueva contrasena.');
-    } else if (password.length < 6) {
-        errores.push('La nueva contrasena debe tener al menos 6 caracteres.');
+        errores.push(`Captura ${etiqueta.toLowerCase()}.`);
+    } else if (password.length <= 8) {
+        errores.push(`${etiqueta} debe tener mas de 8 caracteres.`);
+    } else if (
+        !/[a-zA-Z]/.test(password)
+        || !/[0-9]/.test(password)
+        || !/[^\w\s]/.test(password)
+    ) {
+        errores.push(`${etiqueta} debe ser fuerte: usa letras, numeros y un signo.`);
     }
 
     return errores;
@@ -3397,7 +3403,7 @@ app.post('/api/admin/usuarios', async (req, res) => {
 
         if (!nombre) errores.push('El nombre del usuario es obligatorio.');
         if (!validarCorreoUsuario(correo)) errores.push('Captura un usuario/correo valido para iniciar sesion, sin espacios.');
-        if (!password) errores.push('La contrasena inicial es obligatoria.');
+        errores.push(...validarPasswordNuevaUsuario(password, 'La contrasena inicial'));
         if (!rolId) errores.push('Selecciona un rol valido.');
         if (rolId && rolId !== 2 && localidades.length === 0) {
             errores.push('Recepcionista y Administrador Local deben tener al menos una localidad asignada.');

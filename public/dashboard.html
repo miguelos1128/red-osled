@@ -256,10 +256,18 @@
                                             </div>
                                             <div class="usuario-admin-header-actions usuario-admin-view-actions">
                                                 <button type="button" class="usuario-admin-icon-btn" title="Editar usuario" aria-label="Editar usuario" onclick="editarUsuarioAdmin()">
-                                                    <i class="fas fa-pen"></i>
+                                                    <svg class="usuario-admin-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M12 20h9"></path>
+                                                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                                                    </svg>
                                                 </button>
                                                 <button type="button" class="usuario-admin-key-btn" title="Cambiar contrasena" aria-label="Cambiar contrasena" onclick="avisarCambioPasswordPendiente()">
-                                                    <i class="fas fa-key"></i>
+                                                    <svg class="usuario-admin-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <circle cx="7.5" cy="15.5" r="5"></circle>
+                                                        <path d="M12 12l8-8"></path>
+                                                        <path d="M17 7l3 3"></path>
+                                                        <path d="M14.5 9.5l3 3"></path>
+                                                    </svg>
                                                 </button>
                                                 <span id="usuario-admin-vista-estado" class="usuario-admin-estado-badge activo">Activo</span>
                                             </div>

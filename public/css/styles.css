@@ -482,6 +482,16 @@ button {
     color: #fff;
 }
 
+.usuario-admin-action-icon {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
 .usuario-admin-estado-badge {
     display: inline-flex;
     align-items: center;

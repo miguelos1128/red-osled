@@ -66,6 +66,13 @@ function registrarUso(evento, datos = {}) {
     }
 }
 
+function registrarError(evento, error, datos = {}) {
+    console.error('[ERROR]', evento, {
+        mensaje: error?.message || String(error),
+        ...datos
+    });
+}
+
 // 4. Rutas de prueba (Endpoints)
 
 // Ruta básica para verificar que el servidor funciona
@@ -319,6 +326,27 @@ async function asegurarColumnaActivoUsuarios() {
     });
 }
 
+async function asegurarColumnaActivoLocalidades() {
+    const [columnas] = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'localidades'
+           AND COLUMN_NAME = 'activo'`
+    );
+
+    if (parseInt(columnas[0]?.total, 10) > 0) return;
+
+    await db.query(
+        'ALTER TABLE localidades ADD COLUMN activo TINYINT(1) NOT NULL DEFAULT 1 AFTER codigo_localidad'
+    );
+
+    registrarUso('MIGRACION_LOCALIDADES_ACTIVO_APLICADA', {
+        tabla: 'localidades',
+        columna: 'activo'
+    });
+}
+
 function obtenerRolRequest(req) {
     return req.body?.rol_usuario ?? req.query?.rol_usuario ?? req.query?.rol;
 }
@@ -335,7 +363,7 @@ async function validarAdministradorGeneralRequest(req, res) {
     if (!esRolAdministrador(rol)) {
         res.status(403).json({
             success: false,
-            error: 'Acceso denegado: solo el administrador general puede administrar usuarios.'
+            error: 'Acceso denegado: solo el administrador general puede usar estas herramientas administrativas.'
         });
         return false;
     }
@@ -418,7 +446,7 @@ async function validarLocalidadesExistentes(ejecutor, localidades) {
     if (localidades.length === 0) return true;
 
     const [rows] = await ejecutor.query(
-        'SELECT id FROM localidades WHERE id IN (?)',
+        'SELECT id FROM localidades WHERE id IN (?) AND activo = 1',
         [localidades]
     );
 
@@ -455,6 +483,32 @@ async function consultarUsuarioAdminPorId(ejecutor, usuarioId) {
     );
 
     return usuarios[0] ? mapearUsuarioAdmin(usuarios[0]) : null;
+}
+
+function mapearLocalidadAdmin(localidad) {
+    return {
+        ...localidad,
+        activo: parseInt(localidad.activo, 10) ? 1 : 0,
+        clientes_count: parseInt(localidad.clientes_count, 10) || 0
+    };
+}
+
+async function consultarLocalidadesAdmin(ejecutor = db) {
+    const [localidades] = await ejecutor.query(
+        `SELECT
+            l.id,
+            l.nombre,
+            l.color,
+            l.codigo_localidad,
+            l.activo,
+            COUNT(c.id) AS clientes_count
+         FROM localidades l
+         LEFT JOIN clientes c ON c.localidad_id = l.id
+         GROUP BY l.id, l.nombre, l.color, l.codigo_localidad, l.activo
+         ORDER BY l.activo DESC, l.nombre ASC`
+    );
+
+    return localidades.map(mapearLocalidadAdmin);
 }
 
 function normalizarDatosPaquete(body = {}) {
@@ -499,14 +553,81 @@ function normalizarCodigoLocalidad(codigo) {
     return /^[A-Z0-9]{2}$/.test(codigoNormalizado) ? codigoNormalizado : null;
 }
 
+function normalizarCodigoLocalidadNueva(codigo) {
+    const codigoNormalizado = String(codigo || '').trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(codigoNormalizado) ? codigoNormalizado : null;
+}
+
+function normalizarColorLocalidad(color) {
+    const valor = String(color || '').trim();
+    return /^#[0-9a-fA-F]{6}$/.test(valor) ? valor.toLowerCase() : null;
+}
+
+function normalizarActivoLocalidad(valor, valorDefecto = 1) {
+    if (valor === undefined || valor === null || valor === '') return valorDefecto ? 1 : 0;
+    return parseInt(valor, 10) ? 1 : 0;
+}
+
+const PALETA_LOCALIDADES = [
+    '#2563eb', '#16a34a', '#dc2626', '#f59e0b', '#7c3aed',
+    '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4f46e5',
+    '#0f766e', '#be123c', '#9333ea', '#0284c7', '#84cc16'
+];
+
+function generarColorLocalidadPorIndice(indice) {
+    const tono = (indice * 137) % 360;
+    const c = 0.62;
+    const x = c * (1 - Math.abs(((tono / 60) % 2) - 1));
+    const m = 0.28;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+
+    if (tono < 60) [r, g, b] = [c, x, 0];
+    else if (tono < 120) [r, g, b] = [x, c, 0];
+    else if (tono < 180) [r, g, b] = [0, c, x];
+    else if (tono < 240) [r, g, b] = [0, x, c];
+    else if (tono < 300) [r, g, b] = [x, 0, c];
+    else [r, g, b] = [c, 0, x];
+
+    return `#${[r, g, b]
+        .map(valor => Math.round((valor + m) * 255).toString(16).padStart(2, '0'))
+        .join('')}`;
+}
+
+async function sugerirColorLocalidad(ejecutor = db) {
+    const [localidades] = await ejecutor.query(
+        `SELECT LOWER(color) AS color
+         FROM localidades
+         WHERE color IS NOT NULL`
+    );
+    const usados = new Set(localidades.map(localidad => localidad.color).filter(Boolean));
+
+    const colorDisponible = PALETA_LOCALIDADES.find(color => !usados.has(color));
+    if (colorDisponible) return colorDisponible;
+
+    let intento = localidades.length;
+    let color = generarColorLocalidadPorIndice(intento);
+    while (usados.has(color) && intento < localidades.length + 100) {
+        intento += 1;
+        color = generarColorLocalidadPorIndice(intento);
+    }
+
+    return color;
+}
+
 async function obtenerCodigoLocalidad(ejecutor, localidadId) {
     const [localidades] = await ejecutor.query(
-        'SELECT codigo_localidad FROM localidades WHERE id = ? LIMIT 1',
+        'SELECT codigo_localidad, activo FROM localidades WHERE id = ? LIMIT 1',
         [localidadId]
     );
 
     if (localidades.length === 0) {
         throw new Error('La localidad seleccionada no existe.');
+    }
+
+    if (parseInt(localidades[0].activo, 10) !== 1) {
+        throw new Error('La localidad seleccionada esta inactiva y no puede usarse para nuevos clientes.');
     }
 
     const codigoLocalidad = normalizarCodigoLocalidad(localidades[0].codigo_localidad);
@@ -3369,11 +3490,7 @@ app.get('/api/admin/usuarios', async (req, res) => {
              ORDER BY id ASC`
         );
 
-        const [localidades] = await db.query(
-            `SELECT id, nombre, color, codigo_localidad
-             FROM localidades
-             ORDER BY nombre ASC`
-        );
+        const localidades = await consultarLocalidadesAdmin(db);
 
         res.json({
             success: true,
@@ -3437,7 +3554,7 @@ app.post('/api/admin/usuarios', async (req, res) => {
         const localidadesValidas = await validarLocalidadesExistentes(connection, localidades);
         if (!localidadesValidas) {
             await connection.rollback();
-            return res.status(400).json({ success: false, error: 'Una o mas localidades seleccionadas no existen.' });
+            return res.status(400).json({ success: false, error: 'Una o mas localidades seleccionadas no existen o estan inactivas.' });
         }
 
         const [result] = await connection.query(
@@ -3571,7 +3688,7 @@ app.put('/api/admin/usuarios/:id', async (req, res) => {
         const localidadesValidas = await validarLocalidadesExistentes(connection, localidades);
         if (!localidadesValidas) {
             await connection.rollback();
-            return res.status(400).json({ success: false, error: 'Una o mas localidades seleccionadas no existen.' });
+            return res.status(400).json({ success: false, error: 'Una o mas localidades seleccionadas no existen o estan inactivas.' });
         }
 
         await connection.query(
@@ -3744,7 +3861,19 @@ app.put('/api/usuarios/:id/password', async (req, res) => {
 // Ruta para obtener todas las localidades (para el selector del formulario)
 app.get('/api/localidades', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT id, nombre, color, codigo_localidad FROM localidades ORDER BY nombre ASC');
+        const [rows] = await db.query(
+            `SELECT
+                l.id,
+                l.nombre,
+                l.color,
+                l.codigo_localidad,
+                l.activo,
+                COUNT(c.id) AS clientes_count
+             FROM localidades l
+             LEFT JOIN clientes c ON c.localidad_id = l.id
+             GROUP BY l.id, l.nombre, l.color, l.codigo_localidad, l.activo
+             ORDER BY l.activo DESC, l.nombre ASC`
+        );
         res.json(rows);
     } catch (error) {
         console.error("Error al obtener localidades:", error);
@@ -3804,11 +3933,7 @@ app.get('/api/admin/usuario-localidad', async (req, res) => {
              ORDER BY u.activo DESC, u.rol_id ASC, u.nombre ASC`
         );
 
-        const [localidades] = await db.query(
-            `SELECT id, nombre, color, codigo_localidad
-             FROM localidades
-             ORDER BY nombre ASC`
-        );
+        const localidades = await consultarLocalidadesAdmin(db);
 
         res.json({
             success: true,
@@ -3856,7 +3981,7 @@ app.put('/api/admin/usuario-localidad/:usuarioId', async (req, res) => {
 
         if (localidades.length > 0) {
             const [localidadesValidas] = await connection.query(
-                'SELECT id FROM localidades WHERE id IN (?)',
+                'SELECT id FROM localidades WHERE id IN (?) AND activo = 1',
                 [localidades]
             );
             const idsValidos = new Set(localidadesValidas.map(loc => parseInt(loc.id, 10)));
@@ -3895,21 +4020,186 @@ app.put('/api/admin/usuario-localidad/:usuarioId', async (req, res) => {
     }
 });
 
-app.put('/api/admin/localidades/:id/color', async (req, res) => {
-    if (!validarAdministradorRequest(req, res)) return;
+app.get('/api/admin/localidades', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
 
-    const localidadId = parseInt(req.params.id, 10);
-    const color = String(req.body.color || '').trim();
-
-    if (!localidadId) {
-        return res.status(400).json({ success: false, error: 'Localidad no valida.' });
+        const localidades = await consultarLocalidadesAdmin(db);
+        res.json({ success: true, localidades });
+    } catch (error) {
+        console.error("Error al obtener localidades administrativas:", error);
+        res.status(500).json({ success: false, error: "Error al cargar localidades: " + error.message });
     }
+});
 
-    if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
-        return res.status(400).json({ success: false, error: 'El color debe tener formato hexadecimal, por ejemplo #3498db.' });
+app.post('/api/admin/localidades', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const nombre = String(req.body.nombre || '').trim();
+        const codigo = normalizarCodigoLocalidadNueva(req.body.codigo_localidad);
+        const colorCapturado = normalizarColorLocalidad(req.body.color);
+        const errores = [];
+
+        if (!nombre) errores.push('El nombre de la localidad es obligatorio.');
+        if (!codigo) errores.push('El codigo de localidad debe tener exactamente 2 letras, sin espacios.');
+
+        if (req.body.color && !colorCapturado) {
+            errores.push('El color debe tener formato hexadecimal, por ejemplo #3498db.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        const [existentes] = await db.query(
+            'SELECT id FROM localidades WHERE codigo_localidad = ? LIMIT 1',
+            [codigo]
+        );
+
+        if (existentes.length > 0) {
+            return res.status(409).json({ success: false, error: 'Ya existe una localidad con ese codigo.' });
+        }
+
+        const color = colorCapturado || await sugerirColorLocalidad(db);
+        const [result] = await db.query(
+            `INSERT INTO localidades (nombre, color, codigo_localidad, activo)
+             VALUES (?, ?, ?, 1)`,
+            [nombre, color, codigo]
+        );
+
+        registrarUso('LOCALIDAD_CREADA', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            localidad_id: result.insertId,
+            codigo_localidad: codigo,
+            ip: obtenerIpCliente(req)
+        });
+
+        const localidades = await consultarLocalidadesAdmin(db);
+        res.json({
+            success: true,
+            message: 'Localidad creada correctamente.',
+            localidad: localidades.find(localidad => parseInt(localidad.id, 10) === parseInt(result.insertId, 10)),
+            localidades
+        });
+    } catch (error) {
+        console.error("Error al crear localidad:", error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: 'Ya existe una localidad con ese codigo.' });
+        }
+        res.status(500).json({ success: false, error: "Error al crear localidad: " + error.message });
     }
+});
+
+app.put('/api/admin/localidades/:id/estado', async (req, res) => {
+    let connection;
 
     try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const localidadId = parseInt(req.params.id, 10);
+        const activo = normalizarActivoLocalidad(req.body.activo, 1);
+
+        if (!localidadId) {
+            return res.status(400).json({ success: false, error: 'Localidad no valida.' });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [localidades] = await connection.query(
+            'SELECT id, nombre, activo FROM localidades WHERE id = ? FOR UPDATE',
+            [localidadId]
+        );
+
+        if (localidades.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Localidad no encontrada.' });
+        }
+
+        if (activo === 0) {
+            const [usuariosBloqueados] = await connection.query(
+                `SELECT u.id, u.nombre
+                 FROM usuarios u
+                 INNER JOIN usuario_localidad ul_actual
+                    ON ul_actual.usuario_id = u.id
+                   AND ul_actual.localidad_id = ?
+                 WHERE u.activo = 1
+                   AND u.rol_id <> 2
+                   AND (
+                       SELECT COUNT(*)
+                       FROM usuario_localidad ul
+                       INNER JOIN localidades l
+                          ON l.id = ul.localidad_id
+                         AND l.activo = 1
+                       WHERE ul.usuario_id = u.id
+                         AND l.id <> ?
+                   ) = 0
+                 ORDER BY u.nombre ASC
+                 LIMIT 5`,
+                [localidadId, localidadId]
+            );
+
+            if (usuariosBloqueados.length > 0) {
+                await connection.rollback();
+                const nombres = usuariosBloqueados.map(usuario => usuario.nombre || `Usuario ${usuario.id}`).join(', ');
+                return res.status(400).json({
+                    success: false,
+                    error: `No se puede desactivar porque dejaria usuarios activos sin localidades: ${nombres}.`
+                });
+            }
+        }
+
+        await connection.query(
+            'UPDATE localidades SET activo = ? WHERE id = ?',
+            [activo, localidadId]
+        );
+
+        await connection.commit();
+
+        registrarUso(activo ? 'LOCALIDAD_REACTIVADA' : 'LOCALIDAD_DESACTIVADA', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            localidad_id: localidadId,
+            ip: obtenerIpCliente(req)
+        });
+
+        const localidadesActualizadas = await consultarLocalidadesAdmin(db);
+        res.json({
+            success: true,
+            message: activo ? 'Localidad reactivada correctamente.' : 'Localidad desactivada correctamente.',
+            localidades: localidadesActualizadas
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir estado de localidad:", rollbackError);
+            }
+        }
+
+        console.error("Error al cambiar estado de localidad:", error);
+        res.status(500).json({ success: false, error: "Error al cambiar estado de localidad: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.put('/api/admin/localidades/:id/color', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const localidadId = parseInt(req.params.id, 10);
+        const color = normalizarColorLocalidad(req.body.color);
+
+        if (!localidadId) {
+            return res.status(400).json({ success: false, error: 'Localidad no valida.' });
+        }
+
+        if (!color) {
+            return res.status(400).json({ success: false, error: 'El color debe tener formato hexadecimal, por ejemplo #3498db.' });
+        }
+
         const [result] = await db.query(
             'UPDATE localidades SET color = ? WHERE id = ?',
             [color, localidadId]
@@ -3919,7 +4209,14 @@ app.put('/api/admin/localidades/:id/color', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Localidad no encontrada.' });
         }
 
-        res.json({ success: true, message: 'Color de localidad actualizado correctamente.' });
+        registrarUso('LOCALIDAD_COLOR_ACTUALIZADO', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            localidad_id: localidadId,
+            ip: obtenerIpCliente(req)
+        });
+
+        const localidades = await consultarLocalidadesAdmin(db);
+        res.json({ success: true, message: 'Color de localidad actualizado correctamente.', localidades });
     } catch (error) {
         console.error("Error al actualizar color de localidad:", error);
         res.status(500).json({ success: false, error: "Error al actualizar color de localidad: " + error.message });
@@ -4239,6 +4536,7 @@ app.post('/api/cancelar-ingreso-extra/:id', async (req, res) => {
 async function iniciarServidor() {
     try {
         await asegurarColumnaActivoUsuarios();
+        await asegurarColumnaActivoLocalidades();
         app.listen(PORT, () => {
             console.log(`Servidor corriendo en http://localhost:${PORT}`);
         });

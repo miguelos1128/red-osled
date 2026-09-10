@@ -358,10 +358,30 @@
                             <div class="admin-tool-title">
                                 <h4>Localidades</h4>
                             </div>
+                            <form id="localidad-admin-form" class="localidad-admin-form" onsubmit="crearLocalidadAdmin(event)">
+                                <div class="localidad-admin-form-grid">
+                                    <label>
+                                        <span>Nombre</span>
+                                        <input type="text" id="localidad-admin-nombre" maxlength="100" required>
+                                    </label>
+                                    <label>
+                                        <span>Codigo</span>
+                                        <input type="text" id="localidad-admin-codigo" maxlength="2" required oninput="normalizarCodigoLocalidadInput(this)">
+                                    </label>
+                                    <label>
+                                        <span>Color</span>
+                                        <input type="color" id="localidad-admin-color" value="#cccccc">
+                                    </label>
+                                </div>
+                                <div class="localidad-admin-form-actions">
+                                    <button type="button" class="button btn-secundario-paquete" onclick="sugerirColorLocalidadFormulario()">Sugerir color</button>
+                                    <button type="submit" class="button btn-agregar-usuario">Crear localidad</button>
+                                </div>
+                            </form>
                             <div class="localidad-color-admin">
                                 <div class="admin-tool-title localidad-color-title">
-                                    <h4>Colores de localidad</h4>
-                                    <p>Estos colores se usan en las tarjetas y filtros del panel.</p>
+                                    <h4>Listado de localidades</h4>
+                                    <p>El nombre y codigo no se editan; solo color y estado.</p>
                                 </div>
                                 <div id="localidad-color-lista" class="localidad-color-lista">
                                     <p class="usuario-localidad-empty">Cargando localidades...</p>
@@ -1213,6 +1233,7 @@
         let paquetesAdminCatalogo = [];
         let usuariosLocalidadAdmin = [];
         let localidadesUsuarioAdmin = [];
+        let localidadesAdminCatalogo = [];
         let rolesUsuarioAdmin = [];
         let usuarioLocalidadSeleccionadoId = null;
         let usuarioAdminModoCreacion = false;
@@ -1523,7 +1544,7 @@
 
             if (herramienta === 'paquetes') cargarPaquetesAdmin();
             if (herramienta === 'usuarios') cargarUsuarioLocalidadAdmin();
-            if (herramienta === 'localidades') cargarUsuarioLocalidadAdmin();
+            if (herramienta === 'localidades') cargarLocalidadesAdmin();
             if (herramienta === 'supervision-cobradores') cargarSupervisionCobradores();
         }
 
@@ -1786,7 +1807,9 @@
             const localidadesAsignadas = new Set((usuario?.localidades || []).map(id => parseInt(id, 10)));
             checkboxes.innerHTML = '';
 
-            localidadesUsuarioAdmin.forEach(localidad => {
+            localidadesUsuarioAdmin
+                .filter(localidad => parseInt(localidad.activo, 10) === 1)
+                .forEach(localidad => {
                 const label = document.createElement('label');
                 label.className = 'usuario-localidad-check';
 
@@ -1868,20 +1891,110 @@
             actualizarContadorLocalidadesUsuarioAdmin();
         }
 
+        const paletaLocalidadesAdmin = [
+            '#2563eb', '#16a34a', '#dc2626', '#f59e0b', '#7c3aed',
+            '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4f46e5',
+            '#0f766e', '#be123c', '#9333ea', '#0284c7', '#84cc16'
+        ];
+
+        function normalizarCodigoLocalidadInput(input) {
+            if (!input) return;
+            input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+        }
+
+        function generarColorLocalidadPorIndice(indice) {
+            const tono = (indice * 137) % 360;
+            return hslAHexLocalidad(tono, 62, 48);
+        }
+
+        function hslAHexLocalidad(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const k = n => (n + h / 30) % 12;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            return `#${[f(0), f(8), f(4)]
+                .map(valor => Math.round(255 * valor).toString(16).padStart(2, '0'))
+                .join('')}`;
+        }
+
+        function obtenerColorSugeridoLocalidadAdmin() {
+            const usados = new Set(
+                localidadesAdminCatalogo
+                    .map(localidad => String(localidad.color || '').toLowerCase())
+                    .filter(Boolean)
+            );
+
+            const colorDisponible = paletaLocalidadesAdmin.find(color => !usados.has(color));
+            if (colorDisponible) return colorDisponible;
+
+            let intento = localidadesAdminCatalogo.length;
+            let color = generarColorLocalidadPorIndice(intento);
+            while (usados.has(color) && intento < localidadesAdminCatalogo.length + 100) {
+                intento += 1;
+                color = generarColorLocalidadPorIndice(intento);
+            }
+
+            return color;
+        }
+
+        function sugerirColorLocalidadFormulario() {
+            const inputColor = document.getElementById('localidad-admin-color');
+            if (inputColor) inputColor.value = obtenerColorSugeridoLocalidadAdmin();
+        }
+
+        async function cargarLocalidadesAdmin() {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const contenedor = document.getElementById('localidad-color-lista');
+            if (contenedor) contenedor.innerHTML = '<p class="usuario-localidad-empty">Cargando localidades...</p>';
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/localidades?rol_usuario=${usuarioActual.rol}&usuario_actual_id=${usuarioActual.id}`);
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudieron cargar las localidades.');
+                }
+
+                localidadesAdminCatalogo = Array.isArray(data.localidades) ? data.localidades : [];
+                localidadesUsuarioAdmin = localidadesAdminCatalogo;
+                sugerirColorLocalidadFormulario();
+                renderizarLocalidadesAdmin();
+            } catch (error) {
+                console.error('Error cargando localidades administrativas:', error);
+                if (contenedor) {
+                    contenedor.innerHTML = '';
+                    const mensaje = document.createElement('p');
+                    mensaje.className = 'usuario-localidad-empty';
+                    mensaje.textContent = error.message;
+                    contenedor.appendChild(mensaje);
+                }
+            }
+        }
+
         function renderizarColoresLocalidadAdmin() {
+            if (localidadesAdminCatalogo.length === 0 && localidadesUsuarioAdmin.length > 0) {
+                localidadesAdminCatalogo = localidadesUsuarioAdmin;
+            }
+            renderizarLocalidadesAdmin();
+        }
+
+        function renderizarLocalidadesAdmin() {
             const contenedor = document.getElementById('localidad-color-lista');
             if (!contenedor) return;
 
             contenedor.innerHTML = '';
 
-            if (localidadesUsuarioAdmin.length === 0) {
+            if (localidadesAdminCatalogo.length === 0) {
                 contenedor.innerHTML = '<p class="usuario-localidad-empty">No hay localidades para mostrar.</p>';
                 return;
             }
 
-            localidadesUsuarioAdmin.forEach(localidad => {
+            localidadesAdminCatalogo.forEach(localidad => {
+                const activo = parseInt(localidad.activo, 10) === 1;
                 const item = document.createElement('div');
                 item.className = 'localidad-color-item';
+                item.classList.toggle('inactivo', !activo);
 
                 const info = document.createElement('div');
                 info.className = 'localidad-color-info';
@@ -1890,7 +2003,12 @@
                 nombre.textContent = localidad.nombre || `Localidad ${localidad.id}`;
 
                 const codigo = document.createElement('span');
-                codigo.textContent = localidad.codigo_localidad || String(localidad.id);
+                const clientes = parseInt(localidad.clientes_count, 10) || 0;
+                codigo.textContent = `${localidad.codigo_localidad || String(localidad.id)} | ${clientes} clientes`;
+
+                const estado = document.createElement('span');
+                estado.className = `localidad-estado-badge ${activo ? 'activo' : 'inactivo'}`;
+                estado.textContent = activo ? 'Activa' : 'Inactiva';
 
                 const input = document.createElement('input');
                 input.type = 'color';
@@ -1907,13 +2025,70 @@
                 boton.textContent = 'Guardar';
                 boton.onclick = () => guardarColorLocalidadAdmin(localidad.id);
 
+                const botonEstado = document.createElement('button');
+                botonEstado.type = 'button';
+                botonEstado.className = 'button localidad-estado-btn';
+                botonEstado.classList.toggle('btn-reactivar-usuario', !activo);
+                botonEstado.textContent = activo ? 'Desactivar' : 'Reactivar';
+                botonEstado.onclick = () => cambiarEstadoLocalidadAdmin(localidad.id);
+
                 info.appendChild(nombre);
                 info.appendChild(codigo);
+                info.appendChild(estado);
                 item.appendChild(info);
                 item.appendChild(input);
                 item.appendChild(boton);
+                item.appendChild(botonEstado);
                 contenedor.appendChild(item);
             });
+        }
+
+        async function crearLocalidadAdmin(event) {
+            if (event) event.preventDefault();
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const nombre = document.getElementById('localidad-admin-nombre')?.value.trim() || '';
+            const codigo = document.getElementById('localidad-admin-codigo')?.value.trim().toUpperCase() || '';
+            const color = document.getElementById('localidad-admin-color')?.value || obtenerColorSugeridoLocalidadAdmin();
+            const errores = [];
+
+            if (!nombre) errores.push('El nombre de la localidad es obligatorio.');
+            if (!/^[A-Z]{2}$/.test(codigo)) errores.push('El codigo debe tener exactamente 2 letras, sin espacios.');
+
+            if (errores.length > 0) {
+                alert(`No se puede crear la localidad:\n\n${errores.join('\n')}`);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/localidades`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rol_usuario: usuarioActual.rol,
+                        usuario_actual_id: usuarioActual.id,
+                        nombre,
+                        codigo_localidad: codigo,
+                        color
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo crear la localidad.');
+                }
+
+                localidadesAdminCatalogo = Array.isArray(data.localidades) ? data.localidades : localidadesAdminCatalogo;
+                localidadesUsuarioAdmin = localidadesAdminCatalogo;
+                document.getElementById('localidad-admin-form')?.reset();
+                sugerirColorLocalidadFormulario();
+                renderizarLocalidadesAdmin();
+                await cargarLocalidades();
+                alert(data.message || 'Localidad creada correctamente.');
+            } catch (error) {
+                console.error('Error creando localidad:', error);
+                alert(error.message);
+            }
         }
 
         async function guardarColorLocalidadAdmin(localidadId) {
@@ -1927,6 +2102,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         rol_usuario: usuarioActual.rol,
+                        usuario_actual_id: usuarioActual.id,
                         color
                     })
                 });
@@ -1936,19 +2112,67 @@
                     throw new Error(data.error || 'No se pudo guardar el color.');
                 }
 
-                const localidad = localidadesUsuarioAdmin.find(item => parseInt(item.id, 10) === parseInt(localidadId, 10));
-                if (localidad) localidad.color = color;
+                if (Array.isArray(data.localidades)) {
+                    localidadesAdminCatalogo = data.localidades;
+                    localidadesUsuarioAdmin = data.localidades;
+                } else {
+                    const localidad = localidadesAdminCatalogo.find(item => parseInt(item.id, 10) === parseInt(localidadId, 10));
+                    if (localidad) localidad.color = color;
+                }
 
                 if (configLocalidades[localidadId]) {
                     configLocalidades[localidadId].color = color;
                 }
 
                 renderizarEditorUsuarioLocalidadAdmin();
-                renderizarColoresLocalidadAdmin();
+                renderizarLocalidadesAdmin();
                 cargarVistaAdminClientes();
                 alert(data.message || 'Color actualizado correctamente.');
             } catch (error) {
                 console.error('Error guardando color de localidad:', error);
+                alert(error.message);
+            }
+        }
+
+        async function cambiarEstadoLocalidadAdmin(localidadId) {
+            const localidad = localidadesAdminCatalogo.find(item => parseInt(item.id, 10) === parseInt(localidadId, 10));
+            if (!localidad) {
+                alert('Selecciona una localidad valida.');
+                return;
+            }
+
+            const activoActual = parseInt(localidad.activo, 10) === 1;
+            const nuevoActivo = activoActual ? 0 : 1;
+            const accion = activoActual ? 'desactivar' : 'reactivar';
+            const confirmar = confirm(`¿Confirmas ${accion} la localidad ${localidad.nombre}?`);
+            if (!confirmar) return;
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/localidades/${localidadId}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rol_usuario: usuarioActual.rol,
+                        usuario_actual_id: usuarioActual.id,
+                        activo: nuevoActivo
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `No se pudo ${accion} la localidad.`);
+                }
+
+                localidadesAdminCatalogo = Array.isArray(data.localidades) ? data.localidades : localidadesAdminCatalogo;
+                localidadesUsuarioAdmin = localidadesAdminCatalogo;
+                renderizarLocalidadesAdmin();
+                renderizarEditorUsuarioLocalidadAdmin();
+                await cargarLocalidades();
+                alert(data.message || `Localidad ${nuevoActivo ? 'reactivada' : 'desactivada'} correctamente.`);
+            } catch (error) {
+                console.error('Error cambiando estado de localidad:', error);
                 alert(error.message);
             }
         }
@@ -3389,6 +3613,16 @@
             const localidades = await response.json();
             const select = document.getElementById('selectLocalidad');
             const selectFiltro = document.getElementById('filtro-localidad');
+
+            if (select) {
+                select.innerHTML = '<option value="">Seleccione una localidad...</option>';
+            }
+
+            if (selectFiltro) {
+                selectFiltro.innerHTML = '<option value="todas">Todas las Localidades</option>';
+            }
+
+            configLocalidades = {};
             
             localidades.forEach(loc => {
                 
@@ -3397,9 +3631,10 @@
                 // Si es Supervisor (rol 3), solo ve las que están en su lista de localidades.
                 const esAdmin = usuario.rol === 2;
                 const tienePermiso = usuario.localidades.includes(loc.id);
+                const localidadActiva = parseInt(loc.activo, 10) === 1;
 
                 if (esAdmin || tienePermiso) {
-                    if (select) {
+                    if (select && localidadActiva) {
                         const option = document.createElement('option');
                         option.value = loc.id;
                         option.textContent = loc.nombre;
@@ -3409,14 +3644,17 @@
                     // 1. Llenamos nuestro diccionario global de colores
                     configLocalidades[loc.id] = { 
                         nombre: loc.nombre, 
-                        color: loc.color || '#34495e' // Gris si no tiene color
+                        color: loc.color || '#34495e', // Gris si no tiene color
+                        activo: localidadActiva
                     };
                     
                     // 2. Llenamos el menú <select>
-                    const optionFiltro = document.createElement('option');
-                    optionFiltro.value = loc.id;
-                    optionFiltro.textContent = loc.nombre;
-                    selectFiltro.appendChild(optionFiltro);
+                    if (selectFiltro) {
+                        const optionFiltro = document.createElement('option');
+                        optionFiltro.value = loc.id;
+                        optionFiltro.textContent = localidadActiva ? loc.nombre : `${loc.nombre} (Inactiva)`;
+                        selectFiltro.appendChild(optionFiltro);
+                    }
                 }
 
                

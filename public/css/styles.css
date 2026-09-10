@@ -705,19 +705,57 @@ button {
     background: #fff;
 }
 
+.localidad-admin-form {
+    border: 1px solid #d8dee4;
+    border-radius: 8px;
+    padding: 14px;
+    background: #fff;
+}
+
+.localidad-admin-form-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(90px, 0.5fr) minmax(90px, 0.4fr);
+    gap: 10px;
+}
+
+.localidad-admin-form-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #34495e;
+    font-weight: 700;
+    min-width: 0;
+}
+
+.localidad-admin-form-grid input {
+    margin: 0;
+}
+
+.localidad-admin-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.localidad-admin-form-actions .button {
+    width: auto;
+}
+
 .localidad-color-title {
     margin-bottom: 10px;
 }
 
 .localidad-color-lista {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 10px;
 }
 
 .localidad-color-item {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     gap: 10px;
     align-items: center;
     min-height: 52px;
@@ -725,6 +763,10 @@ button {
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     background: #f8fafc;
+}
+
+.localidad-color-item.inactivo {
+    background: #f3f4f6;
 }
 
 .localidad-color-info strong {
@@ -741,6 +783,29 @@ button {
     font-size: 0.8rem;
 }
 
+.localidad-estado-badge {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    margin-top: 6px;
+    min-height: 24px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.localidad-estado-badge.activo {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.localidad-estado-badge.inactivo {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 .localidad-color-input {
     width: 42px;
     height: 34px;
@@ -754,6 +819,17 @@ button {
     width: auto;
     padding: 8px 10px;
     font-size: 0.84rem;
+}
+
+.localidad-estado-btn {
+    width: auto;
+    padding: 8px 10px;
+    background: #b91c1c;
+    font-size: 0.84rem;
+}
+
+.localidad-estado-btn.btn-reactivar-usuario {
+    background: #15803d;
 }
 
 .paquete-admin-table-actions {
@@ -1116,6 +1192,21 @@ td {
 
     .usuario-admin-read-grid {
         grid-template-columns: 1fr;
+    }
+
+    .localidad-admin-form-grid,
+    .localidad-color-lista,
+    .localidad-color-item {
+        grid-template-columns: 1fr;
+    }
+
+    .localidad-admin-form-actions .button,
+    .localidad-color-item .button {
+        width: 100%;
+    }
+
+    .localidad-color-input {
+        width: 100%;
     }
 
     .usuario-admin-header-actions {

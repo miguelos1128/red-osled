@@ -370,7 +370,11 @@
                                     </label>
                                     <label>
                                         <span>Color</span>
-                                        <input type="color" id="localidad-admin-color" value="#cccccc">
+                                        <div class="localidad-admin-color-control">
+                                            <input type="color" id="localidad-admin-color" value="#cccccc" oninput="actualizarVistaColorLocalidadFormulario()" onchange="actualizarVistaColorLocalidadFormulario()">
+                                            <!-- <span id="localidad-admin-color-preview" class="localidad-admin-color-preview" style="background: #cccccc;"></span> -->
+                                            <strong id="localidad-admin-color-texto">#cccccc</strong>
+                                        </div>
                                     </label>
                                 </div>
                                 <div class="localidad-admin-form-actions">
@@ -1896,6 +1900,7 @@
             '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4f46e5',
             '#0f766e', '#be123c', '#9333ea', '#0284c7', '#84cc16'
         ];
+        let indiceColorSugeridoLocalidad = 0;
 
         function normalizarCodigoLocalidadInput(input) {
             if (!input) return;
@@ -1918,29 +1923,84 @@
                 .join('')}`;
         }
 
-        function obtenerColorSugeridoLocalidadAdmin() {
+        function obtenerColorSugeridoLocalidadAdmin(colorActual = '') {
             const usados = new Set(
                 localidadesAdminCatalogo
                     .map(localidad => String(localidad.color || '').toLowerCase())
                     .filter(Boolean)
             );
+            const actual = String(colorActual || '').toLowerCase();
 
-            const colorDisponible = paletaLocalidadesAdmin.find(color => !usados.has(color));
-            if (colorDisponible) return colorDisponible;
+            for (let intento = 0; intento < 150; intento += 1) {
+                const indice = indiceColorSugeridoLocalidad + intento;
+                const color = indice < paletaLocalidadesAdmin.length
+                    ? paletaLocalidadesAdmin[indice]
+                    : generarColorLocalidadPorIndice(localidadesAdminCatalogo.length + indice);
 
-            let intento = localidadesAdminCatalogo.length;
-            let color = generarColorLocalidadPorIndice(intento);
-            while (usados.has(color) && intento < localidadesAdminCatalogo.length + 100) {
-                intento += 1;
-                color = generarColorLocalidadPorIndice(intento);
+                if (!usados.has(color) && color !== actual) {
+                    indiceColorSugeridoLocalidad = indice + 1;
+                    return color;
+                }
             }
 
-            return color;
+            indiceColorSugeridoLocalidad += 1;
+            return generarColorLocalidadPorIndice(localidadesAdminCatalogo.length + indiceColorSugeridoLocalidad);
         }
 
         function sugerirColorLocalidadFormulario() {
             const inputColor = document.getElementById('localidad-admin-color');
-            if (inputColor) inputColor.value = obtenerColorSugeridoLocalidadAdmin();
+            if (inputColor) {
+                inputColor.value = obtenerColorSugeridoLocalidadAdmin(inputColor.value);
+                actualizarVistaColorLocalidadFormulario();
+            }
+        }
+
+        function actualizarVistaColorLocalidadFormulario() {
+            const inputColor = document.getElementById('localidad-admin-color');
+            /* const preview = document.getElementById('localidad-admin-color-preview'); */
+            const texto = document.getElementById('localidad-admin-color-texto');
+            const color = inputColor?.value || '#cccccc';
+
+            //if (preview) preview.style.backgroundColor = color;
+            if (texto) texto.textContent = color.toLowerCase();
+        }
+
+        function crearSvgIconoLocalidad(tipo) {
+            if (tipo === 'guardar') {
+                return `
+                    <svg class="localidad-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 3h12l2 2v16H5Z"></path>
+                        <path d="M8 3v6h8V3"></path>
+                        <path d="M8 14h8v7H8Z"></path>
+                        <path d="M10 17h4"></path>
+                    </svg>`;
+            }
+
+            if (tipo === 'reactivar') {
+                return `
+                    <svg class="localidad-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20 6L9 17l-5-5"></path>
+                    </svg>`;
+            }
+
+            return `
+                <svg class="localidad-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="M6 6l1 15h10l1-15"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                </svg>`;
+        }
+
+        function actualizarEstadoBotonColorLocalidad(localidadId) {
+            const input = document.getElementById(`localidad-color-${localidadId}`);
+            const boton = document.getElementById(`localidad-color-guardar-${localidadId}`);
+            if (!input || !boton) return;
+
+            const colorActual = String(input.value || '').toLowerCase();
+            const colorOriginal = String(input.dataset.colorOriginal || '').toLowerCase();
+            boton.disabled = colorActual === colorOriginal;
         }
 
         async function cargarLocalidadesAdmin() {
@@ -1958,6 +2018,7 @@
 
                 localidadesAdminCatalogo = Array.isArray(data.localidades) ? data.localidades : [];
                 localidadesUsuarioAdmin = localidadesAdminCatalogo;
+                indiceColorSugeridoLocalidad = 0;
                 sugerirColorLocalidadFormulario();
                 renderizarLocalidadesAdmin();
             } catch (error) {
@@ -2017,19 +2078,29 @@
                 input.value = /^#[0-9a-fA-F]{6}$/.test(localidad.color || '')
                     ? localidad.color
                     : '#cccccc';
+                input.dataset.colorOriginal = input.value;
                 input.title = `Color de ${localidad.nombre || 'localidad'}`;
+                input.oninput = () => actualizarEstadoBotonColorLocalidad(localidad.id);
+                input.onchange = () => actualizarEstadoBotonColorLocalidad(localidad.id);
 
                 const boton = document.createElement('button');
                 boton.type = 'button';
-                boton.className = 'button localidad-color-guardar';
-                boton.textContent = 'Guardar';
+                boton.className = 'button localidad-icon-btn localidad-color-guardar';
+                boton.id = `localidad-color-guardar-${localidad.id}`;
+                boton.title = 'Guardar color';
+                boton.setAttribute('aria-label', `Guardar color de ${localidad.nombre || 'localidad'}`);
+                boton.innerHTML = crearSvgIconoLocalidad('guardar');
+                boton.disabled = true;
                 boton.onclick = () => guardarColorLocalidadAdmin(localidad.id);
 
                 const botonEstado = document.createElement('button');
                 botonEstado.type = 'button';
-                botonEstado.className = 'button localidad-estado-btn';
-                botonEstado.classList.toggle('btn-reactivar-usuario', !activo);
-                botonEstado.textContent = activo ? 'Desactivar' : 'Reactivar';
+                botonEstado.className = activo
+                    ? 'btn-eliminar-pago localidad-estado-icon-btn'
+                    : 'localidad-reactivar-icon-btn localidad-estado-icon-btn btn-reactivar-usuario';
+                botonEstado.title = activo ? 'Desactivar localidad' : 'Reactivar localidad';
+                botonEstado.setAttribute('aria-label', `${activo ? 'Desactivar' : 'Reactivar'} ${localidad.nombre || 'localidad'}`);
+                botonEstado.innerHTML = activo ? crearSvgIconoLocalidad('eliminar') : crearSvgIconoLocalidad('reactivar');
                 botonEstado.onclick = () => cambiarEstadoLocalidadAdmin(localidad.id);
 
                 info.appendChild(nombre);

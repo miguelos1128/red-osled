@@ -731,6 +731,37 @@ button {
     margin: 0;
 }
 
+.localidad-admin-color-control {
+    display: grid;
+    grid-template-columns: 70px auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.localidad-admin-color-control input[type="color"] {
+    width: 70px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.localidad-admin-color-preview {
+    display: block;
+    min-width: 92px;
+    height: 36px;
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.localidad-admin-color-control strong {
+    color: #475569;
+    font-family: monospace;
+    font-size: 0.85rem;
+}
+
 .localidad-admin-form-actions {
     display: flex;
     justify-content: flex-end;
@@ -819,6 +850,55 @@ button {
     width: auto;
     padding: 8px 10px;
     font-size: 0.84rem;
+}
+
+.localidad-icon-btn,
+.localidad-estado-icon-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.localidad-icon-btn {
+    background: #1a73e8;
+}
+
+.localidad-icon-btn:disabled {
+    background: #e5e7eb;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.localidad-icon-btn:disabled:hover {
+    background: #e5e7eb;
+}
+
+.localidad-action-icon {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.localidad-estado-icon-btn {
+    color: #b91c1c;
+}
+
+.localidad-reactivar-icon-btn {
+    background: none;
+    color: #15803d;
+}
+
+.localidad-reactivar-icon-btn:hover {
+    color: #0f7a34;
+    transform: scale(1.2);
 }
 
 .localidad-estado-btn {
@@ -1201,12 +1281,25 @@ td {
     }
 
     .localidad-admin-form-actions .button,
-    .localidad-color-item .button {
+    .localidad-color-item .button:not(.localidad-icon-btn) {
         width: 100%;
+    }
+
+    .localidad-icon-btn,
+    .localidad-estado-icon-btn {
+        justify-self: end;
     }
 
     .localidad-color-input {
         width: 100%;
+    }
+
+    .localidad-admin-color-control {
+        grid-template-columns: 48px minmax(0, 1fr);
+    }
+
+    .localidad-admin-color-control strong {
+        grid-column: 1 / -1;
     }
 
     .usuario-admin-header-actions {

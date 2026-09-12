@@ -347,6 +347,27 @@ async function asegurarColumnaActivoLocalidades() {
     });
 }
 
+async function asegurarTablaClientesBitacoraCambios() {
+    await db.query(
+        `CREATE TABLE IF NOT EXISTS clientes_bitacora_cambios (
+            id INT NOT NULL AUTO_INCREMENT,
+            cliente_id INT NOT NULL,
+            usuario_id INT NULL,
+            campo VARCHAR(64) NOT NULL,
+            etiqueta VARCHAR(100) NULL,
+            valor_anterior TEXT NULL,
+            valor_nuevo TEXT NULL,
+            origen VARCHAR(50) NOT NULL DEFAULT 'edicion_cliente',
+            ip VARCHAR(64) NULL,
+            fecha_cambio DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            INDEX idx_cliente_fecha (cliente_id, fecha_cambio),
+            INDEX idx_usuario_fecha (usuario_id, fecha_cambio),
+            INDEX idx_campo (campo)
+        )`
+    );
+}
+
 function obtenerRolRequest(req) {
     return req.body?.rol_usuario ?? req.query?.rol_usuario ?? req.query?.rol;
 }
@@ -742,6 +763,61 @@ function normalizarDatosClienteEdicion(body = {}) {
     };
 }
 
+const CAMPOS_BITACORA_CLIENTE = [
+    { campo: 'nombre_completo', etiqueta: 'Nombre completo' },
+    { campo: 'alias_cliente', etiqueta: 'Alias' },
+    { campo: 'telefono', etiqueta: 'Telefono' },
+    { campo: 'url_portal', etiqueta: 'URL portal' },
+    { campo: 'direccion', etiqueta: 'Direccion' },
+    { campo: 'observaciones', etiqueta: 'Observaciones' },
+    { campo: 'es_renta', etiqueta: 'Modalidad RENTA' },
+    { campo: 'direccion_ip', etiqueta: 'Direccion IP' },
+    { campo: 'senal', etiqueta: 'Senal' },
+    { campo: 'localidad_id', etiqueta: 'Localidad' }
+];
+
+function mapearDatosClienteActualEdicion(cliente = {}) {
+    const direccionIp = parseInt(cliente.direccion_ip, 10);
+    const senal = parseInt(cliente.senal, 10);
+    const localidadId = parseInt(cliente.localidad_id, 10);
+
+    return {
+        nombre_completo: normalizarTextoClienteEdicion(cliente.nombre_completo),
+        alias_cliente: normalizarTextoClienteEdicion(cliente.alias_cliente) || null,
+        telefono: normalizarTextoClienteEdicion(cliente.telefono).replace(/\D/g, ''),
+        direccion: normalizarTextoClienteEdicion(cliente.direccion),
+        observaciones: normalizarTextoClienteEdicion(cliente.observaciones) || null,
+        url_portal: normalizarTextoClienteEdicion(cliente.url_portal) || null,
+        direccion_ip: Number.isInteger(direccionIp) ? String(direccionIp) : '',
+        senal: Number.isInteger(senal) ? String(senal) : '',
+        es_renta: parseInt(cliente.es_renta, 10) ? 1 : 0,
+        localidad_id: Number.isInteger(localidadId) ? localidadId : null
+    };
+}
+
+function normalizarValorComparacionCliente(valor) {
+    return String(valor ?? '');
+}
+
+function serializarValorBitacoraCliente(valor) {
+    if (valor === null || valor === undefined || valor === '') return null;
+    return String(valor);
+}
+
+function obtenerCambiosBitacoraCliente(datosAnteriores, datosNuevos) {
+    return CAMPOS_BITACORA_CLIENTE
+        .filter(({ campo }) => (
+            normalizarValorComparacionCliente(datosAnteriores[campo])
+            !== normalizarValorComparacionCliente(datosNuevos[campo])
+        ))
+        .map(({ campo, etiqueta }) => ({
+            campo,
+            etiqueta,
+            valor_anterior: serializarValorBitacoraCliente(datosAnteriores[campo]),
+            valor_nuevo: serializarValorBitacoraCliente(datosNuevos[campo])
+        }));
+}
+
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
@@ -871,7 +947,12 @@ app.put('/api/clientes/:id', async (req, res) => {
         await connection.beginTransaction();
 
         const [clientes] = await connection.query(
-            'SELECT id, localidad_id, codigo_cliente FROM clientes WHERE id = ? FOR UPDATE',
+            `SELECT id, codigo_cliente, nombre_completo, alias_cliente, url_portal, telefono,
+                    direccion, observaciones, es_renta, direccion_ip, \`se\u00f1al\` AS senal,
+                    localidad_id
+             FROM clientes
+             WHERE id = ?
+             FOR UPDATE`,
             [clienteId]
         );
 
@@ -880,7 +961,19 @@ app.put('/api/clientes/:id', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
         }
 
-        const localidadActualId = parseInt(clientes[0].localidad_id, 10);
+        const clienteActual = clientes[0];
+        const datosAnteriores = mapearDatosClienteActualEdicion(clienteActual);
+        const cambiosBitacora = obtenerCambiosBitacoraCliente(datosAnteriores, datos);
+
+        if (cambiosBitacora.length === 0) {
+            await connection.rollback();
+            return res.json({
+                success: true,
+                message: 'No hubo cambios por guardar.'
+            });
+        }
+
+        const localidadActualId = parseInt(clienteActual.localidad_id, 10);
         const cambiaLocalidad = localidadActualId !== datos.localidad_id;
         const queryLocalidad = cambiaLocalidad
             ? 'SELECT id FROM localidades WHERE id = ? AND activo = 1 LIMIT 1'
@@ -925,14 +1018,33 @@ app.put('/api/clientes/:id', async (req, res) => {
             ]
         );
 
+        const usuarioAdminId = obtenerUsuarioActualIdRequest(req);
+        await connection.query(
+            `INSERT INTO clientes_bitacora_cambios
+                (cliente_id, usuario_id, campo, etiqueta, valor_anterior, valor_nuevo, origen, ip)
+             VALUES ?`,
+            [cambiosBitacora.map(cambio => [
+                clienteId,
+                usuarioAdminId,
+                cambio.campo,
+                cambio.etiqueta,
+                cambio.valor_anterior,
+                cambio.valor_nuevo,
+                'edicion_cliente',
+                obtenerIpCliente(req)
+            ])]
+        );
+
         await connection.commit();
 
         registrarUso('CLIENTE_ACTUALIZADO', {
-            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            usuario_admin_id: usuarioAdminId,
             cliente_id: clienteId,
             localidad_anterior_id: localidadActualId || null,
             localidad_nueva_id: datos.localidad_id,
-            codigo_cliente: clientes[0].codigo_cliente,
+            codigo_cliente: clienteActual.codigo_cliente,
+            campos_modificados: cambiosBitacora.map(cambio => cambio.campo),
+            total_cambios: cambiosBitacora.length,
             ip: obtenerIpCliente(req)
         });
 
@@ -4702,6 +4814,7 @@ async function iniciarServidor() {
     try {
         await asegurarColumnaActivoUsuarios();
         await asegurarColumnaActivoLocalidades();
+        await asegurarTablaClientesBitacoraCambios();
         app.listen(PORT, () => {
             console.log(`Servidor corriendo en http://localhost:${PORT}`);
         });

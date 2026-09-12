@@ -1100,8 +1100,14 @@
                                 <input type="number" id="edit-cli-senal" min="30" max="90" required oninput="actualizarEstadoGuardarEdicionCliente()">
                             </label>
                             <label class="switch-renta cliente-detalle-renta">
-                                <span>Modalidad RENTA</span>
-                                <input type="checkbox" id="edit-cli-renta" onchange="actualizarEstadoGuardarEdicionCliente()">
+                                <span class="cliente-detalle-renta-label">
+                                    Modalidad RENTA
+                                    <svg class="cliente-renta-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                        <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+                                        <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+                                    </svg>
+                                </span>
+                                <input type="checkbox" id="edit-cli-renta" onchange="confirmarCambioRentaEdicionCliente(this)">
                                 <span class="slider-renta" data-off="OFF" data-on="ON"></span>
                             </label>
                         </div>
@@ -1116,9 +1122,26 @@
                         </label>
 
                         <div class="cliente-detalle-edit-actions">
-                            <button type="button" class="button btn-secundario-paquete" onclick="restaurarEdicionClienteDetalle()">Restaurar</button>
-                            <button type="submit" class="button" id="btn-guardar-edicion-cliente" disabled>Guardar cambios</button>
-                            <button type="button" class="button btn-secundario-paquete" onclick="cancelarEdicionClienteDetalle()">Cancelar</button>
+                            <button type="button" class="cliente-detalle-icon-btn cliente-detalle-restaurar-btn" onclick="restaurarEdicionClienteDetalle()" title="Restaurar cambios" aria-label="Restaurar cambios">
+                                <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M3 9v6h6"></path>
+                                    <path d="M20 15a8 8 0 0 0-14.4-4.8L3 15"></path>
+                                </svg>
+                            </button>
+                            <button type="submit" class="cliente-detalle-icon-btn cliente-detalle-guardar-btn" id="btn-guardar-edicion-cliente" title="Guardar cambios" aria-label="Guardar cambios" disabled>
+                                <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M5 3h12l2 2v16H5Z"></path>
+                                    <path d="M8 3v6h8V3"></path>
+                                    <path d="M8 14h8v7H8Z"></path>
+                                    <path d="M10 17h4"></path>
+                                </svg>
+                            </button>
+                            <button type="button" class="cliente-detalle-icon-btn cliente-detalle-cancelar-btn" onclick="cancelarEdicionClienteDetalle()" title="Cancelar edición" aria-label="Cancelar edición">
+                                <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M18 6L6 18"></path>
+                                    <path d="M6 6l12 12"></path>
+                                </svg>
+                            </button>
                         </div>
                     </form>
 
@@ -3831,7 +3854,37 @@
             });
 
             const renta = document.getElementById('edit-cli-renta');
-            if (renta) renta.checked = Number(datos.es_renta) === 1;
+            if (renta) {
+                const rentaActiva = Number(datos.es_renta) === 1;
+                renta.checked = rentaActiva;
+                renta.dataset.valorConfirmado = rentaActiva ? '1' : '0';
+            }
+            actualizarEstadoGuardarEdicionCliente();
+        }
+
+        function confirmarCambioRentaEdicionCliente(input) {
+            if (!input) return;
+
+            const valorAnterior = input.dataset.valorConfirmado === '1';
+            if (input.checked === valorAnterior) {
+                actualizarEstadoGuardarEdicionCliente();
+                return;
+            }
+
+            const accion = input.checked ? 'activar' : 'quitar';
+            const confirmar = confirm(
+                `Vas a ${accion} la modalidad RENTA de este cliente.\n\n` +
+                'Este cambio puede afectar el control administrativo del servicio. ' +
+                'Si aceptas, el cambio quedara pendiente y solo se aplicara al presionar Guardar cambios.\n\n' +
+                '¿Deseas continuar?'
+            );
+
+            if (!confirmar) {
+                input.checked = valorAnterior;
+            } else {
+                input.dataset.valorConfirmado = input.checked ? '1' : '0';
+            }
+
             actualizarEstadoGuardarEdicionCliente();
         }
 

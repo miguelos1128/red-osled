@@ -3572,6 +3572,22 @@ td {
     margin: 0;
 }
 
+.cliente-detalle-renta-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cliente-renta-lock-icon {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: #64748b;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
 .cliente-detalle-renta .slider-renta {
     flex: 0 0 auto;
 }
@@ -3583,8 +3599,54 @@ td {
     flex-wrap: wrap;
 }
 
-.cliente-detalle-edit-actions .button {
-    width: auto;
+.cliente-detalle-icon-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.cliente-detalle-icon-btn:hover {
+    transform: scale(1.08);
+}
+
+.cliente-detalle-guardar-btn {
+    background: #1a73e8;
+}
+
+.cliente-detalle-guardar-btn:hover {
+    background: #1557b0;
+}
+
+.cliente-detalle-guardar-btn:disabled {
+    background: #e5e7eb;
+    color: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.cliente-detalle-restaurar-btn {
+    background: #2563eb;
+}
+
+.cliente-detalle-restaurar-btn:hover {
+    background: #1d4ed8;
+}
+
+.cliente-detalle-cancelar-btn {
+    background: #64748b;
+}
+
+.cliente-detalle-cancelar-btn:hover {
+    background: #475569;
 }
 
 @media (max-width: 640px) {
@@ -3597,11 +3659,7 @@ td {
     }
 
     .cliente-detalle-edit-actions {
-        flex-direction: column;
-    }
-
-    .cliente-detalle-edit-actions .button {
-        width: 100%;
+        justify-content: flex-end;
     }
 }
 

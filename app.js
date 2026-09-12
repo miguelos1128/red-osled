@@ -685,6 +685,63 @@ async function generarCodigoCliente(ejecutor, localidadId, fechaInstalacion) {
     return `${codigoLocalidad}${periodo}${consecutivo}`;
 }
 
+function normalizarTextoClienteEdicion(valor) {
+    return String(valor ?? '').trim();
+}
+
+function normalizarDatosClienteEdicion(body = {}) {
+    const nombre = normalizarTextoClienteEdicion(body.nombre_completo);
+    const alias = normalizarTextoClienteEdicion(body.alias_cliente);
+    const telefono = normalizarTextoClienteEdicion(body.telefono).replace(/\D/g, '');
+    const direccion = normalizarTextoClienteEdicion(body.direccion);
+    const observaciones = normalizarTextoClienteEdicion(body.observaciones);
+    const urlPortal = normalizarTextoClienteEdicion(body.url_portal);
+    const direccionIp = parseInt(body.direccion_ip, 10);
+    const senal = parseInt(body['se\u00f1al'] ?? body.senal, 10);
+    const localidadId = parseInt(body.localidad_id, 10);
+    const esRenta = parseInt(body.es_renta, 10) ? 1 : 0;
+    const errores = [];
+
+    if (!nombre) errores.push('El nombre completo es obligatorio.');
+    if (nombre.length > 150) errores.push('El nombre completo no puede superar 150 caracteres.');
+    if (alias.length > 50) errores.push('El alias no puede superar 50 caracteres.');
+    if (urlPortal.length > 500) errores.push('La URL del portal no puede superar 500 caracteres.');
+    if (!direccion) errores.push('La direccion es obligatoria.');
+    if (!telefono) {
+        errores.push('El telefono es obligatorio.');
+    } else if (!/^\d{10}$/.test(telefono)) {
+        errores.push('El telefono debe tener exactamente 10 digitos.');
+    }
+    if (!Number.isInteger(localidadId) || localidadId <= 0) {
+        errores.push('Selecciona una localidad valida.');
+    }
+    if (!Number.isInteger(direccionIp) || direccionIp < 1 || direccionIp > 254) {
+        errores.push('La IP debe ser un numero entre 1 y 254.');
+    }
+    if (!Number.isInteger(senal) || senal < 30 || senal > 90) {
+        errores.push('La senal debe ser un valor entre 30 y 90.');
+    }
+    if (urlPortal && !/^https?:\/\/[^\s]+$/i.test(urlPortal)) {
+        errores.push('La URL del portal debe iniciar con http:// o https://.');
+    }
+
+    return {
+        datos: {
+            nombre_completo: nombre,
+            alias_cliente: alias || null,
+            telefono,
+            direccion,
+            observaciones: observaciones || null,
+            url_portal: urlPortal || null,
+            direccion_ip: String(direccionIp),
+            senal: String(senal),
+            es_renta: esRenta,
+            localidad_id: localidadId
+        },
+        errores
+    };
+}
+
 // Ruta para agregar un nuevo cliente (POST)
 // Ruta actualizada para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
@@ -786,6 +843,114 @@ app.post('/api/clientes', async (req, res) => {
             });
         }
         res.status(500).json({ error: "Error al guardar en la BD: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.put('/api/clientes/:id', async (req, res) => {
+    let connection;
+
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const clienteId = parseInt(req.params.id, 10);
+        if (!Number.isInteger(clienteId) || clienteId <= 0) {
+            return res.status(400).json({ success: false, error: 'Cliente no valido.' });
+        }
+
+        const { datos, errores } = normalizarDatosClienteEdicion(req.body);
+        if (errores.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: `No se puede actualizar el cliente:\n\n${errores.join('\n')}`
+            });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [clientes] = await connection.query(
+            'SELECT id, localidad_id, codigo_cliente FROM clientes WHERE id = ? FOR UPDATE',
+            [clienteId]
+        );
+
+        if (clientes.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+        }
+
+        const localidadActualId = parseInt(clientes[0].localidad_id, 10);
+        const cambiaLocalidad = localidadActualId !== datos.localidad_id;
+        const queryLocalidad = cambiaLocalidad
+            ? 'SELECT id FROM localidades WHERE id = ? AND activo = 1 LIMIT 1'
+            : 'SELECT id FROM localidades WHERE id = ? LIMIT 1';
+        const [localidades] = await connection.query(queryLocalidad, [datos.localidad_id]);
+
+        if (localidades.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: cambiaLocalidad
+                    ? 'La localidad seleccionada no existe o esta inactiva.'
+                    : 'La localidad actual del cliente ya no existe.'
+            });
+        }
+
+        await connection.query(
+            `UPDATE clientes
+             SET nombre_completo = ?,
+                 alias_cliente = ?,
+                 url_portal = ?,
+                 telefono = ?,
+                 direccion = ?,
+                 observaciones = ?,
+                 es_renta = ?,
+                 direccion_ip = ?,
+                 \`se\u00f1al\` = ?,
+                 localidad_id = ?
+             WHERE id = ?`,
+            [
+                datos.nombre_completo,
+                datos.alias_cliente,
+                datos.url_portal,
+                datos.telefono,
+                datos.direccion,
+                datos.observaciones,
+                datos.es_renta,
+                datos.direccion_ip,
+                datos.senal,
+                datos.localidad_id,
+                clienteId
+            ]
+        );
+
+        await connection.commit();
+
+        registrarUso('CLIENTE_ACTUALIZADO', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            cliente_id: clienteId,
+            localidad_anterior_id: localidadActualId || null,
+            localidad_nueva_id: datos.localidad_id,
+            codigo_cliente: clientes[0].codigo_cliente,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Cliente actualizado correctamente.'
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir actualizacion de cliente:", rollbackError);
+            }
+        }
+
+        console.error("Error al actualizar cliente:", error);
+        res.status(500).json({ success: false, error: "Error al actualizar cliente: " + error.message });
     } finally {
         if (connection) connection.release();
     }

@@ -3479,6 +3479,132 @@ td {
     white-space: pre-wrap;
 }
 
+.detalle-alias-cliente {
+    margin-top: 6px;
+    color: #59636e;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.btn-editar-cliente-detalle {
+    width: auto;
+    min-width: 0;
+    height: 36px;
+    padding: 8px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 6px;
+    background: #1a73e8;
+    color: #fff;
+    font-size: 0.86rem;
+}
+
+.btn-editar-cliente-detalle:hover {
+    background: #1557b0;
+}
+
+.btn-editar-cliente-detalle.hidden,
+.cliente-detalle-edit-form.hidden {
+    display: none !important;
+}
+
+.cliente-detalle-action-icon {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.cliente-detalle-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.cliente-detalle-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+}
+
+.cliente-detalle-edit-field {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #34495e;
+    font-weight: 600;
+}
+
+.cliente-detalle-edit-field span,
+.cliente-detalle-renta > span:first-child {
+    color: #34495e;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.cliente-detalle-edit-field input,
+.cliente-detalle-edit-field select,
+.cliente-detalle-edit-field textarea {
+    width: 100%;
+    margin: 0;
+    color: #2c3e50;
+}
+
+.cliente-detalle-edit-field textarea {
+    min-height: 74px;
+    resize: vertical;
+}
+
+.cliente-detalle-edit-full {
+    width: 100%;
+}
+
+.cliente-detalle-renta {
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 6px;
+    margin: 0;
+}
+
+.cliente-detalle-renta .slider-renta {
+    flex: 0 0 auto;
+}
+
+.cliente-detalle-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cliente-detalle-edit-actions .button {
+    width: auto;
+}
+
+@media (max-width: 640px) {
+    .btn-editar-cliente-detalle span {
+        display: none;
+    }
+
+    .cliente-detalle-edit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cliente-detalle-edit-actions {
+        flex-direction: column;
+    }
+
+    .cliente-detalle-edit-actions .button {
+        width: 100%;
+    }
+}
+
 /* Detalles resaltados */
 .resaltado-azul { font-weight: bold; color: #2980b9 !important; }
 .resaltado-tecnico { font-family: monospace; background: #f1f2f6; padding: 2px 6px; border-radius: 4px; }

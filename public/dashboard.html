@@ -1012,6 +1012,13 @@
                 <div class="detalle-badges">
                     <span id="detalle-badge-estado" class="badge-estado">Activo</span>
                     <span id="detalle-badge-renta" class="badge-renta hidden">RENTA</span>
+                    <button id="btn-editar-cliente-detalle" type="button" class="btn-editar-cliente-detalle hidden" onclick="activarEdicionClienteDetalle()" title="Editar cliente" aria-label="Editar cliente">
+                        <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                        </svg>
+                        <span>Editar</span>
+                    </button>
                 </div>
                 <span class="cerrar-x-modal" onclick="cerrarModalDetalles()">&times;</span>
             </div>
@@ -1020,6 +1027,7 @@
                 
                 <div class="seccion-detalle">
                     <h3>📌 Ficha Técnica</h3>
+                    <div id="detalle-cliente-vista" class="detalle-cliente-vista">
                     <div class="grid-info-cliente">
                         
                         <div class="info-grupo">
@@ -1053,17 +1061,66 @@
                             <a id="detalle-ip" class="resaltado-tecnico" href="#" target="_blank">-</a>
                         </div>
 
-                        <div class="info-grupo">
-                            <label>Correo Electrónico</label>
-                            <p id="detalle-correo">-</p>
-                        </div>
-
                     </div>
 
                     <div id="detalle-observaciones-grupo" class="info-grupo detalle-observaciones hidden">
                         <label>Observaciones</label>
                         <p id="detalle-observaciones">-</p>
                     </div>
+                    </div>
+
+                    <form id="cliente-detalle-edit-form" class="cliente-detalle-edit-form hidden" onsubmit="guardarEdicionClienteDetalle(event)">
+                        <div class="cliente-detalle-edit-grid">
+                            <label class="cliente-detalle-edit-field">
+                                <span>Nombre completo</span>
+                                <input type="text" id="edit-cli-nombre" maxlength="150" required oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>Alias</span>
+                                <input type="text" id="edit-cli-alias" maxlength="50" oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>Teléfono</span>
+                                <input type="text" id="edit-cli-telefono" maxlength="10" required oninput="normalizarTelefonoEdicionCliente(this); actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>URL portal</span>
+                                <input type="url" id="edit-cli-url" maxlength="500" placeholder="http://192.168.7.128/" oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>Localidad</span>
+                                <select id="edit-cli-localidad" required onchange="actualizarEstadoGuardarEdicionCliente()"></select>
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>IP</span>
+                                <input type="number" id="edit-cli-ip" min="1" max="254" required oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>Señal</span>
+                                <input type="number" id="edit-cli-senal" min="30" max="90" required oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="switch-renta cliente-detalle-renta">
+                                <span>Modalidad RENTA</span>
+                                <input type="checkbox" id="edit-cli-renta" onchange="actualizarEstadoGuardarEdicionCliente()">
+                                <span class="slider-renta" data-off="OFF" data-on="ON"></span>
+                            </label>
+                        </div>
+
+                        <label class="cliente-detalle-edit-field cliente-detalle-edit-full">
+                            <span>Dirección física</span>
+                            <textarea id="edit-cli-direccion" required oninput="actualizarEstadoGuardarEdicionCliente()"></textarea>
+                        </label>
+                        <label class="cliente-detalle-edit-field cliente-detalle-edit-full">
+                            <span>Observaciones</span>
+                            <textarea id="edit-cli-observaciones" oninput="actualizarEstadoGuardarEdicionCliente()"></textarea>
+                        </label>
+
+                        <div class="cliente-detalle-edit-actions">
+                            <button type="button" class="button btn-secundario-paquete" onclick="restaurarEdicionClienteDetalle()">Restaurar</button>
+                            <button type="submit" class="button" id="btn-guardar-edicion-cliente" disabled>Guardar cambios</button>
+                            <button type="button" class="button btn-secundario-paquete" onclick="cancelarEdicionClienteDetalle()">Cancelar</button>
+                        </div>
+                    </form>
 
                     <div class="acciones-contacto">
                         <a id="btn-whatsapp" href="#" target="_blank" class="btn-contacto whatsapp">
@@ -1252,6 +1309,8 @@
         let suspensionServicioActual = null;
         let estadoCuentaDetalleActual = null;
         let historialPaquetesDetalleActual = [];
+        let clienteDetalleOriginal = null;
+        let clienteDetalleModoEdicion = false;
         let filtroLocalidadTodasSeleccionadoAntes = false;
         const rangosAdeudoAdmin = ['adeudo-rojo', 'adeudo-naranja', 'adeudo-amarillo', 'adeudo-verde'];
         let rangosAdeudoActivosAdmin = new Set(rangosAdeudoAdmin);
@@ -3733,6 +3792,231 @@
             inicializarFiltroTodasLocalidades();
         }
 
+        function normalizarTelefonoEdicionCliente(input) {
+            if (!input) return;
+            input.value = input.value.replace(/[^0-9]/g, '').slice(0, 10);
+        }
+
+        function obtenerDatosEditablesCliente(cliente = {}) {
+            return {
+                nombre_completo: String(cliente.nombre_completo || '').trim(),
+                alias_cliente: String(cliente.alias_cliente || '').trim(),
+                telefono: String(cliente.telefono || '').replace(/\D/g, '').slice(0, 10),
+                url_portal: String(cliente.url_portal || '').trim(),
+                localidad_id: cliente.localidad_id ? String(cliente.localidad_id) : '',
+                direccion_ip: cliente.direccion_ip ? String(parseInt(cliente.direccion_ip, 10) || '') : '',
+                senal: String(cliente['se\u00f1al'] ?? cliente.senal ?? '').trim(),
+                es_renta: Number(cliente.es_renta) === 1 ? 1 : 0,
+                direccion: String(cliente.direccion || '').trim(),
+                observaciones: String(cliente.observaciones || '').trim()
+            };
+        }
+
+        function establecerValoresFormularioEdicionCliente(datos) {
+            const campos = {
+                'edit-cli-nombre': datos.nombre_completo,
+                'edit-cli-alias': datos.alias_cliente,
+                'edit-cli-telefono': datos.telefono,
+                'edit-cli-url': datos.url_portal,
+                'edit-cli-localidad': datos.localidad_id,
+                'edit-cli-ip': datos.direccion_ip,
+                'edit-cli-senal': datos.senal,
+                'edit-cli-direccion': datos.direccion,
+                'edit-cli-observaciones': datos.observaciones
+            };
+
+            Object.entries(campos).forEach(([id, valor]) => {
+                const campo = document.getElementById(id);
+                if (campo) campo.value = valor || '';
+            });
+
+            const renta = document.getElementById('edit-cli-renta');
+            if (renta) renta.checked = Number(datos.es_renta) === 1;
+            actualizarEstadoGuardarEdicionCliente();
+        }
+
+        function obtenerValoresFormularioEdicionCliente() {
+            return {
+                nombre_completo: document.getElementById('edit-cli-nombre')?.value.trim() || '',
+                alias_cliente: document.getElementById('edit-cli-alias')?.value.trim() || '',
+                telefono: (document.getElementById('edit-cli-telefono')?.value || '').replace(/\D/g, ''),
+                url_portal: document.getElementById('edit-cli-url')?.value.trim() || '',
+                localidad_id: document.getElementById('edit-cli-localidad')?.value || '',
+                direccion_ip: document.getElementById('edit-cli-ip')?.value.trim() || '',
+                senal: document.getElementById('edit-cli-senal')?.value.trim() || '',
+                es_renta: document.getElementById('edit-cli-renta')?.checked ? 1 : 0,
+                direccion: document.getElementById('edit-cli-direccion')?.value.trim() || '',
+                observaciones: document.getElementById('edit-cli-observaciones')?.value.trim() || ''
+            };
+        }
+
+        function validarDatosEdicionCliente(datos) {
+            const errores = [];
+            const ip = parseInt(datos.direccion_ip, 10);
+            const senal = parseInt(datos.senal, 10);
+
+            if (!datos.nombre_completo) errores.push('- El nombre completo es obligatorio.');
+            if (!datos.direccion) errores.push('- La direccion es obligatoria.');
+            if (!datos.telefono) {
+                errores.push('- El telefono es obligatorio.');
+            } else if (!/^\d{10}$/.test(datos.telefono)) {
+                errores.push('- El telefono debe tener exactamente 10 digitos.');
+            }
+            if (!datos.localidad_id) errores.push('- Debes seleccionar una localidad.');
+            if (!Number.isInteger(ip) || ip < 1 || ip > 254) errores.push('- La IP debe ser un numero entre 1 y 254.');
+            if (!Number.isInteger(senal) || senal < 30 || senal > 90) errores.push('- La senal debe ser un valor entre 30 y 90.');
+            if (datos.url_portal && !/^https?:\/\/[^\s]+$/i.test(datos.url_portal)) {
+                errores.push('- La URL del portal debe iniciar con http:// o https://.');
+            }
+
+            return errores;
+        }
+
+        function hayCambiosEdicionCliente(datos) {
+            if (!clienteDetalleOriginal) return false;
+            return Object.keys(clienteDetalleOriginal).some(campo => String(clienteDetalleOriginal[campo] ?? '') !== String(datos[campo] ?? ''));
+        }
+
+        function actualizarEstadoGuardarEdicionCliente() {
+            const boton = document.getElementById('btn-guardar-edicion-cliente');
+            if (!boton) return;
+
+            const datos = obtenerValoresFormularioEdicionCliente();
+            boton.disabled = !clienteDetalleModoEdicion || !hayCambiosEdicionCliente(datos);
+        }
+
+        function poblarLocalidadesEdicionCliente(cliente) {
+            const select = document.getElementById('edit-cli-localidad');
+            if (!select) return;
+
+            const localidadActualId = cliente?.localidad_id ? String(cliente.localidad_id) : '';
+            select.innerHTML = '<option value="">Seleccione una localidad...</option>';
+
+            Object.entries(configLocalidades)
+                .sort(([, a], [, b]) => String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es'))
+                .forEach(([id, localidad]) => {
+                    const activa = Number(localidad.activo) === 1;
+                    if (!activa && id !== localidadActualId) return;
+
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = activa ? localidad.nombre : `${localidad.nombre} (Inactiva actual)`;
+                    select.appendChild(option);
+                });
+
+            const existeActual = Array.from(select.options).some(option => option.value === localidadActualId);
+            if (localidadActualId && !existeActual) {
+                const option = document.createElement('option');
+                option.value = localidadActualId;
+                option.textContent = cliente?.localidad_nombre || 'Localidad actual';
+                select.appendChild(option);
+            }
+
+            select.value = localidadActualId;
+        }
+
+        async function prepararFormularioEdicionClienteDetalle(cliente) {
+            if (Object.keys(configLocalidades).length === 0) {
+                await cargarLocalidades();
+            }
+
+            clienteDetalleOriginal = obtenerDatosEditablesCliente(cliente);
+            poblarLocalidadesEdicionCliente(cliente);
+            establecerValoresFormularioEdicionCliente(clienteDetalleOriginal);
+        }
+
+        function configurarBotonEdicionClienteDetalle() {
+            const boton = document.getElementById('btn-editar-cliente-detalle');
+            if (!boton) return;
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const esAdminGeneral = parseInt(usuarioActual.rol, 10) === 2;
+            boton.classList.toggle('hidden', !esAdminGeneral || clienteDetalleModoEdicion || !clienteSeleccionado);
+        }
+
+        function actualizarModoEdicionClienteDetalle(editando) {
+            clienteDetalleModoEdicion = editando;
+            document.getElementById('detalle-cliente-vista')?.classList.toggle('hidden', editando);
+            document.getElementById('cliente-detalle-edit-form')?.classList.toggle('hidden', !editando);
+            configurarBotonEdicionClienteDetalle();
+            actualizarEstadoGuardarEdicionCliente();
+        }
+
+        async function activarEdicionClienteDetalle() {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            if (parseInt(usuarioActual.rol, 10) !== 2) {
+                alert('Solo el administrador general puede editar clientes.');
+                return;
+            }
+
+            if (!clienteSeleccionado) {
+                alert('Aun no se han cargado los datos del cliente.');
+                return;
+            }
+
+            await prepararFormularioEdicionClienteDetalle(clienteSeleccionado);
+            actualizarModoEdicionClienteDetalle(true);
+        }
+
+        function restaurarEdicionClienteDetalle() {
+            if (!clienteDetalleOriginal) return;
+            establecerValoresFormularioEdicionCliente(clienteDetalleOriginal);
+        }
+
+        function cancelarEdicionClienteDetalle() {
+            restaurarEdicionClienteDetalle();
+            actualizarModoEdicionClienteDetalle(false);
+        }
+
+        async function guardarEdicionClienteDetalle(event) {
+            if (event) event.preventDefault();
+            if (!clienteDetalleActualId) return;
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            if (parseInt(usuarioActual.rol, 10) !== 2) {
+                alert('Solo el administrador general puede editar clientes.');
+                return;
+            }
+
+            const datos = obtenerValoresFormularioEdicionCliente();
+            const errores = validarDatosEdicionCliente(datos);
+            if (errores.length > 0) {
+                alert(`No se puede guardar el cliente:\n\n${errores.join('\n')}`);
+                return;
+            }
+
+            if (!hayCambiosEdicionCliente(datos)) {
+                alert('No hay cambios por guardar.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${urlBase}/api/clientes/${clienteDetalleActualId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...datos,
+                        rol_usuario: usuarioActual.rol,
+                        usuario_actual_id: usuarioActual.id
+                    })
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert(result.error || 'No se pudo actualizar el cliente.');
+                    return;
+                }
+
+                clienteDetalleModoEdicion = false;
+                await cargarVistaAdminClientes();
+                await abrirDetallesCliente(clienteDetalleActualId);
+                alert(result.message || 'Cliente actualizado correctamente.');
+            } catch (error) {
+                console.error('Error actualizando cliente:', error);
+                alert('Error al actualizar cliente.');
+            }
+        }
+
         // Ejecuta esta función al cargar el panel
         cargarLocalidades();
         cargarPaquetes();
@@ -5139,11 +5423,11 @@ ${linkVelocidad}
                 historialPaquetesDetalleActual = historialPaquetes;
 
                 const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
-                        EditarBoxAlias.innerHTML = `
-                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">Alias: ${cliente.alias_cliente} ✏️</i>
-                                    </p>
+                if (EditarBoxAlias) {
+                    EditarBoxAlias.innerHTML = `
+                                    <p class="detalle-alias-cliente">Alias: ${escaparHtml(cliente.alias_cliente || 'Sin alias')}</p>
                         `;
+                }
 
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
@@ -5161,7 +5445,8 @@ ${linkVelocidad}
                 document.getElementById('detalle-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin codigo';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
                 document.getElementById('detalle-ip').href = cliente.url_portal || '#'; 
-                document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
+                const correoDetalle = document.getElementById('detalle-correo');
+                if (correoDetalle) correoDetalle.textContent = cliente.correo || 'Sin correo';
                 
                 // Ahora usamos los nombres reales que trajimos del servidor
                 const loc = cliente.localidad_nombre || 'Sin localidad';
@@ -5174,6 +5459,8 @@ ${linkVelocidad}
                 const tel = cliente.telefono || '';
                 document.getElementById('detalle-telefono').textContent = tel || 'Sin teléfono';
                 const btnWhatsapp = document.getElementById('btn-whatsapp');
+                const EditarBox = document.getElementById('editar-box');
+                if (EditarBox) EditarBox.innerHTML = '';
 
                 if (tel) {
                     btnWhatsapp.href = '#';
@@ -5183,13 +5470,6 @@ ${linkVelocidad}
                     };
                     btnWhatsapp.title = 'Enviar mensaje de WhatsApp al cliente';
                     btnWhatsapp.style.display = 'inline-block';
-                    const EditarBox = document.getElementById('editar-box')
-                        EditarBox.innerHTML = `
-                        
-                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">✏️</i>
-                                    </button>
-                        `;
                 } else {
                     btnWhatsapp.onclick = null;
                     btnWhatsapp.removeAttribute('href');
@@ -6132,6 +6412,9 @@ ${linkVelocidad}
         // Función para abrir el modal y cargar desde Node.js
         async function abrirDetallesCliente(idCliente) {
             clienteDetalleActualId = idCliente;
+            clienteSeleccionado = null;
+            clienteDetalleOriginal = null;
+            actualizarModoEdicionClienteDetalle(false);
             // 1. Mostrar el Modal primero y poner un mensaje de carga
             document.getElementById('modal-detalles-cliente').classList.remove('hidden');
             restaurarSeccionesDetalleAbiertas();
@@ -6153,11 +6436,13 @@ ${linkVelocidad}
                 historialPaquetesDetalleActual = historialPaquetes;
 
                 const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
-                        EditarBoxAlias.innerHTML = `
-                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">Alias: ${cliente.alias_cliente} ✏️</i>
-                                    </p>
+                if (EditarBoxAlias) {
+                    EditarBoxAlias.innerHTML = `
+                                    <p class="detalle-alias-cliente">Alias: ${escaparHtml(cliente.alias_cliente || 'Sin alias')}</p>
                         `;
+                }
+                await prepararFormularioEdicionClienteDetalle(cliente);
+                actualizarModoEdicionClienteDetalle(false);
 
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
@@ -6175,7 +6460,8 @@ ${linkVelocidad}
                 document.getElementById('detalle-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin codigo';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
                 document.getElementById('detalle-ip').href = cliente.url_portal || '#';
-                document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
+                const correoDetalle = document.getElementById('detalle-correo');
+                if (correoDetalle) correoDetalle.textContent = cliente.correo || 'Sin correo';
                 
                 // Ahora usamos los nombres reales que trajimos del servidor
                 const loc = cliente.localidad_nombre || 'Sin localidad';
@@ -6188,6 +6474,8 @@ ${linkVelocidad}
                 const tel = cliente.telefono || '';
                 document.getElementById('detalle-telefono').textContent = tel || 'Sin teléfono';
                 const btnWhatsapp = document.getElementById('btn-whatsapp');
+                const EditarBox = document.getElementById('editar-box');
+                if (EditarBox) EditarBox.innerHTML = '';
 
                 if (tel) {
                     btnWhatsapp.href = '#';
@@ -6197,13 +6485,6 @@ ${linkVelocidad}
                     };
                     btnWhatsapp.title = 'Enviar mensaje de WhatsApp al cliente';
                     btnWhatsapp.style.display = 'inline-block';
-                    const EditarBox = document.getElementById('editar-box')
-                        EditarBox.innerHTML = `
-
-                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">✏️</i>
-                                    </button>
-                        `;
                 } else {
                     btnWhatsapp.onclick = null;
                     btnWhatsapp.removeAttribute('href');
@@ -6410,6 +6691,9 @@ ${linkVelocidad}
 
         // Función para cerrar el modal
         function cerrarModalDetalles() {
+            clienteDetalleModoEdicion = false;
+            clienteDetalleOriginal = null;
+            actualizarModoEdicionClienteDetalle(false);
             document.getElementById('modal-detalles-cliente').classList.add('hidden');
         }
 

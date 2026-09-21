@@ -106,8 +106,17 @@ button {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 16px;
     border-bottom: 2px solid #eeeeee;
     padding-bottom: 10px;
+}
+
+.header-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 /* Acciones */
@@ -314,6 +323,17 @@ button {
     background: #6b7280;
 }
 
+.usuarios-admin-toolbar {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 12px;
+}
+
+.btn-agregar-usuario {
+    width: auto;
+    background: #15803d;
+}
+
 .paquetes-admin-table-wrap {
     margin-top: 16px;
     overflow-x: auto;
@@ -400,12 +420,22 @@ button {
     background: #eff6ff;
 }
 
+.usuario-localidad-item.inactivo {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.usuario-localidad-item.inactivo strong,
+.usuario-localidad-item.inactivo span {
+    color: #6b7280;
+}
+
 .usuario-localidad-item strong,
 .usuario-localidad-editor-header h5 {
     display: block;
     margin: 0;
     color: #1f2937;
-    font-size: 0.98rem;
+    font-size: 1.1rem;
 }
 
 .usuario-localidad-item span,
@@ -425,6 +455,178 @@ button {
     margin-bottom: 12px;
 }
 
+.usuario-admin-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.usuario-admin-view-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.usuario-admin-icon-btn,
+.usuario-admin-key-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 0;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.usuario-admin-icon-btn {
+    background: #1a73e8;
+    color: #fff;
+}
+
+.usuario-admin-key-btn {
+    background: #475569;
+    color: #fff;
+}
+
+.usuario-admin-action-icon {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.usuario-admin-estado-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.usuario-admin-estado-badge.activo {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.usuario-admin-estado-badge.inactivo {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.usuario-admin-vista {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.usuario-admin-read-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.usuario-admin-read-item {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+}
+
+.usuario-admin-read-item span {
+    display: block;
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.usuario-admin-read-item strong {
+    display: block;
+    color: #1f2937;
+    font-size: 0.94rem;
+    overflow-wrap: anywhere;
+}
+
+.usuario-admin-read-localidades-box {
+    min-width: 0;
+}
+
+.usuario-admin-read-localidades {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.usuario-admin-read-localidad {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    max-width: 100%;
+    padding: 7px 9px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #1f2937;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.usuario-admin-read-localidad.general {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.usuario-admin-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.usuario-admin-form-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #34495e;
+    font-weight: 600;
+    min-width: 0;
+}
+
+.usuario-admin-form-grid input,
+.usuario-admin-form-grid select {
+    width: 100%;
+    margin: 0;
+}
+
+.usuario-admin-form-grid input.readonly {
+    background: #f3f4f6;
+    color: #64748b;
+}
+
+.usuario-admin-localidades-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 6px 0 10px;
+}
+
+.usuario-admin-localidades-header strong {
+    color: #1f2937;
+    font-size: 0.94rem;
+}
+
 .usuario-localidad-acciones {
     display: flex;
     flex-wrap: wrap;
@@ -440,6 +642,10 @@ button {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 10px;
+}
+
+.usuario-localidad-checkboxes-disabled .usuario-localidad-check {
+    opacity: 0.62;
 }
 
 .usuario-localidad-check {
@@ -460,6 +666,10 @@ button {
     margin: 0;
 }
 
+.usuario-localidad-check input:disabled {
+    cursor: not-allowed;
+}
+
 .usuario-localidad-color {
     width: 12px;
     height: 12px;
@@ -475,6 +685,18 @@ button {
     font-size: 0.8rem;
 }
 
+.usuario-admin-acciones {
+    margin-top: 12px;
+}
+
+.btn-toggle-usuario {
+    background: #b91c1c;
+}
+
+.btn-toggle-usuario.btn-reactivar-usuario {
+    background: #15803d;
+}
+
 .localidad-color-admin {
     margin-top: 18px;
     border: 1px solid #d8dee4;
@@ -483,19 +705,88 @@ button {
     background: #fff;
 }
 
+.localidad-admin-form {
+    border: 1px solid #d8dee4;
+    border-radius: 8px;
+    padding: 14px;
+    background: #fff;
+}
+
+.localidad-admin-form-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(90px, 0.5fr) minmax(90px, 0.4fr);
+    gap: 10px;
+}
+
+.localidad-admin-form-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #34495e;
+    font-weight: 700;
+    min-width: 0;
+}
+
+.localidad-admin-form-grid input {
+    margin: 0;
+}
+
+.localidad-admin-color-control {
+    display: grid;
+    grid-template-columns: 70px auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.localidad-admin-color-control input[type="color"] {
+    width: 70px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.localidad-admin-color-preview {
+    display: block;
+    min-width: 92px;
+    height: 36px;
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.localidad-admin-color-control strong {
+    color: #475569;
+    font-family: monospace;
+    font-size: 0.85rem;
+}
+
+.localidad-admin-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.localidad-admin-form-actions .button {
+    width: auto;
+}
+
 .localidad-color-title {
     margin-bottom: 10px;
 }
 
 .localidad-color-lista {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 10px;
 }
 
 .localidad-color-item {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     gap: 10px;
     align-items: center;
     min-height: 52px;
@@ -503,6 +794,10 @@ button {
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     background: #f8fafc;
+}
+
+.localidad-color-item.inactivo {
+    background: #f3f4f6;
 }
 
 .localidad-color-info strong {
@@ -519,6 +814,29 @@ button {
     font-size: 0.8rem;
 }
 
+.localidad-estado-badge {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    margin-top: 6px;
+    min-height: 24px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.localidad-estado-badge.activo {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.localidad-estado-badge.inactivo {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 .localidad-color-input {
     width: 42px;
     height: 34px;
@@ -532,6 +850,66 @@ button {
     width: auto;
     padding: 8px 10px;
     font-size: 0.84rem;
+}
+
+.localidad-icon-btn,
+.localidad-estado-icon-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.localidad-icon-btn {
+    background: #1a73e8;
+}
+
+.localidad-icon-btn:disabled {
+    background: #e5e7eb;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.localidad-icon-btn:disabled:hover {
+    background: #e5e7eb;
+}
+
+.localidad-action-icon {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.localidad-estado-icon-btn {
+    color: #b91c1c;
+}
+
+.localidad-reactivar-icon-btn {
+    background: none;
+    color: #15803d;
+}
+
+.localidad-reactivar-icon-btn:hover {
+    color: #0f7a34;
+    transform: scale(1.2);
+}
+
+.localidad-estado-btn {
+    width: auto;
+    padding: 8px 10px;
+    background: #b91c1c;
+    font-size: 0.84rem;
+}
+
+.localidad-estado-btn.btn-reactivar-usuario {
+    background: #15803d;
 }
 
 .paquete-admin-table-actions {
@@ -579,6 +957,21 @@ td {
     background-color: #dc3545;
     width: auto;
     padding: 5px 15px;
+}
+
+.btn-password-personal {
+    width: auto;
+    padding: 5px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    background: #475569;
+}
+
+.btn-password-personal .usuario-admin-action-icon {
+    width: 15px;
+    height: 15px;
 }
 
 .fila-localidad-renta {
@@ -823,6 +1216,18 @@ td {
 }
 
 @media (max-width: 520px) {
+    .header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .header-actions,
+    .header-actions .button,
+    .password-modal-acciones,
+    .password-modal-acciones .button {
+        width: 100%;
+    }
+
     .admin-tabs-toggle {
         display: inline-flex;
     }
@@ -861,11 +1266,53 @@ td {
         grid-template-columns: 1fr;
     }
 
+    .usuario-admin-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .usuario-admin-read-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .localidad-admin-form-grid,
+    .localidad-color-lista,
+    .localidad-color-item {
+        grid-template-columns: 1fr;
+    }
+
+    .localidad-admin-form-actions .button,
+    .localidad-color-item .button:not(.localidad-icon-btn) {
+        width: 100%;
+    }
+
+    .localidad-icon-btn,
+    .localidad-estado-icon-btn {
+        justify-self: end;
+    }
+
+    .localidad-color-input {
+        width: 100%;
+    }
+
+    .localidad-admin-color-control {
+        grid-template-columns: 48px minmax(0, 1fr);
+    }
+
+    .localidad-admin-color-control strong {
+        grid-column: 1 / -1;
+    }
+
+    .usuario-admin-header-actions {
+        align-self: stretch;
+        justify-content: flex-start;
+    }
+
     .paquete-admin-acciones {
         flex-direction: column;
     }
 
-    .paquete-admin-acciones .button {
+    .paquete-admin-acciones .button,
+    .usuario-admin-acciones .button {
         width: 100%;
     }
 
@@ -921,7 +1368,7 @@ td {
     padding: 4px 14px;
     border-radius: 20px; /* Lo hace ver como una p�ldora */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ligera sombra para resaltar */
-    width: 45px;
+    width: auto;
     text-align: center;
 }
 
@@ -2768,6 +3215,164 @@ td {
 }
 .btn-cerrar-modal:hover { background-color: #c82333; }
 
+.modal-password-caja {
+    max-width: 460px;
+}
+
+.password-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.password-modal-ayuda {
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+.password-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #34495e;
+    font-weight: 700;
+}
+
+.password-input-wrap {
+    position: relative;
+    min-width: 0;
+}
+
+.password-input-wrap input {
+    margin: 0;
+    padding-right: 46px;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    width: 34px;
+    height: 34px;
+    min-width: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: transparent;
+    color: #64748b;
+    transform: translateY(-50%);
+}
+
+.password-toggle-btn:hover {
+    color: #1a73e8;
+}
+
+.password-toggle-btn.visible {
+    color: #475569;
+}
+
+.password-toggle-btn.visible:hover {
+    color: #1a73e8;
+}
+
+.password-toggle-btn.visible::after {
+    content: '';
+    position: absolute;
+    width: 22px;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    transform: rotate(-45deg);
+}
+
+.password-eye-icon {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.password-strength {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.password-strength-bars {
+    display: inline-flex;
+    gap: 5px;
+}
+
+.password-strength-bars span {
+    width: 24px;
+    height: 9px;
+    border-radius: 3px;
+    background: #e5e7eb;
+}
+
+.password-strength-label {
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.password-strength.debil .password-strength-bars span:nth-child(1) {
+    background: #dc2626;
+}
+
+.password-strength.debil .password-strength-label {
+    color: #b91c1c;
+}
+
+.password-strength.media .password-strength-bars span:nth-child(-n+2) {
+    background: #f59e0b;
+}
+
+.password-strength.media .password-strength-label {
+    color: #b45309;
+}
+
+.password-strength.fuerte .password-strength-bars span {
+    background: #16a34a;
+}
+
+.password-strength.fuerte .password-strength-label {
+    color: #15803d;
+}
+
+.password-tip {
+    margin: -3px 0 0;
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    font-weight: 600;
+}
+
+.password-modal-error {
+    min-height: 18px;
+    color: #b91c1c;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.password-modal-acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.password-modal-acciones .button {
+    width: auto;
+}
+
 .grupo-botones-pago {
     display: flex;
     flex-direction: column; /* Apila uno sobre otro */
@@ -2872,6 +3477,190 @@ td {
 
 .detalle-observaciones p {
     white-space: pre-wrap;
+}
+
+.detalle-alias-cliente {
+    margin-top: 6px;
+    color: #59636e;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.btn-editar-cliente-detalle {
+    width: auto;
+    min-width: 0;
+    height: 36px;
+    padding: 8px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 6px;
+    background: #1a73e8;
+    color: #fff;
+    font-size: 0.86rem;
+}
+
+.btn-editar-cliente-detalle:hover {
+    background: #1557b0;
+}
+
+.btn-editar-cliente-detalle.hidden,
+.cliente-detalle-edit-form.hidden {
+    display: none !important;
+}
+
+.cliente-detalle-action-icon {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.cliente-detalle-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.cliente-detalle-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+}
+
+.cliente-detalle-edit-field {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #34495e;
+    font-weight: 600;
+}
+
+.cliente-detalle-edit-field span,
+.cliente-detalle-renta > span:first-child {
+    color: #34495e;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.cliente-detalle-edit-field input,
+.cliente-detalle-edit-field select,
+.cliente-detalle-edit-field textarea {
+    width: 100%;
+    margin: 0;
+    color: #2c3e50;
+}
+
+.cliente-detalle-edit-field textarea {
+    min-height: 74px;
+    resize: vertical;
+}
+
+.cliente-detalle-edit-full {
+    width: 100%;
+}
+
+.cliente-detalle-renta {
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 6px;
+    margin: 0;
+}
+
+.cliente-detalle-renta-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cliente-renta-lock-icon {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: #64748b;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.cliente-detalle-renta .slider-renta {
+    flex: 0 0 auto;
+}
+
+.cliente-detalle-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cliente-detalle-icon-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.cliente-detalle-icon-btn:hover {
+    transform: scale(1.08);
+}
+
+.cliente-detalle-guardar-btn {
+    background: #1a73e8;
+}
+
+.cliente-detalle-guardar-btn:hover {
+    background: #1557b0;
+}
+
+.cliente-detalle-guardar-btn:disabled {
+    background: #e5e7eb;
+    color: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.cliente-detalle-restaurar-btn {
+    background: #2563eb;
+}
+
+.cliente-detalle-restaurar-btn:hover {
+    background: #1d4ed8;
+}
+
+.cliente-detalle-cancelar-btn {
+    background: #64748b;
+}
+
+.cliente-detalle-cancelar-btn:hover {
+    background: #475569;
+}
+
+@media (max-width: 640px) {
+    .btn-editar-cliente-detalle span {
+        display: none;
+    }
+
+    .cliente-detalle-edit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cliente-detalle-edit-actions {
+        justify-content: flex-end;
+    }
 }
 
 /* Detalles resaltados */
@@ -4244,6 +5033,12 @@ td {
     gap: 12px;
 }
 
+.cambios-admin-lista {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
 .bitacora-evento {
     padding: 12px 14px;
     border: 1px solid #e5e7eb;
@@ -4270,6 +5065,14 @@ td {
 .bitacora-evento.cambio-fecha {
     border-left-color: #7c3aed;
     background: #fbfaff;
+}
+
+.cambio-admin-evento {
+    padding: 12px 14px;
+    border: 1px solid #e5e7eb;
+    border-left: 5px solid #2563eb;
+    border-radius: 8px;
+    background: #f8fbff;
 }
 
 .bitacora-evento-header {
@@ -4316,6 +5119,115 @@ td {
     line-height: 1.25;
 }
 
+.cambio-admin-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.cambio-admin-meta span {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #eef2ff;
+}
+
+.cambio-admin-campos {
+    display: grid;
+    gap: 10px;
+}
+
+.cambio-admin-fila {
+    padding-top: 10px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.cambio-admin-fila:first-child {
+    padding-top: 0;
+    border-top: none;
+}
+
+.cambio-admin-fila > strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #1f2937;
+    font-size: 0.9rem;
+}
+
+.cambio-admin-fila-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.cambio-admin-fila-header > strong {
+    color: #1f2937;
+    font-size: 0.9rem;
+}
+
+.cambio-admin-revertir-btn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    background: #2563eb;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.cambio-admin-revertir-btn:hover {
+    background: #1d4ed8;
+    transform: scale(1.08);
+}
+
+.cambio-admin-revertir-btn .cliente-detalle-action-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.cambio-admin-valores {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.cambio-admin-valores div {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+}
+
+.cambio-admin-valores span {
+    display: block;
+    margin-bottom: 5px;
+    color: #7f8c8d;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.cambio-admin-valores p {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
 .bitacora-observaciones {
     margin: 12px 0 0;
     padding-top: 10px;
@@ -4358,7 +5270,8 @@ td {
     }
 
     .bitacora-servicio-lista,
-    .bitacora-evento-grid {
+    .bitacora-evento-grid,
+    .cambio-admin-valores {
         grid-template-columns: 1fr;
     }
 }

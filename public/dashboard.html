@@ -15,7 +15,18 @@
                 <h1>Bienvenido, <span id="user-name">...</span></h1>
                 <h3 id="perfil">Gestión de Clientes (Solo Admin)</h3>
             </div>
-            <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
+            <div class="header-actions">
+                <button class="btn-password-personal button" type="button" onclick="abrirModalPasswordPersonal()">
+                    <svg class="usuario-admin-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="7.5" cy="15.5" r="5"></circle>
+                        <path d="M12 12l8-8"></path>
+                        <path d="M17 7l3 3"></path>
+                        <path d="M14.5 9.5l3 3"></path>
+                    </svg>
+                    <span>Mi contrasena</span>
+                </button>
+                <button class="btn-logout button" onclick="logout()">Cerrar Sesión</button>
+            </div>
         </div>
 
         <div id="widget-corte" class="widget-corte">
@@ -78,7 +89,8 @@
                             <button type="button" class="admin-tab active" data-admin-tool="supervision-cobradores" onclick="cambiarHerramientaAdmin('supervision-cobradores')" role="tab" aria-selected="true">Supervisión cobradores</button>
                             <button type="button" class="admin-tab" data-admin-tool="agregar-cliente" onclick="cambiarHerramientaAdmin('agregar-cliente')" role="tab" aria-selected="false">Agregar cliente</button>
                             <button type="button" class="admin-tab" data-admin-tool="paquetes" onclick="cambiarHerramientaAdmin('paquetes')" role="tab" aria-selected="false">Administrar paquetes</button>
-                            <button type="button" class="admin-tab" data-admin-tool="usuario-localidad" onclick="cambiarHerramientaAdmin('usuario-localidad')" role="tab" aria-selected="false">Usuario Localidad</button>
+                            <button type="button" class="admin-tab" data-admin-tool="usuarios" onclick="cambiarHerramientaAdmin('usuarios')" role="tab" aria-selected="false">Usuarios</button>
+                            <button type="button" class="admin-tab" data-admin-tool="localidades" onclick="cambiarHerramientaAdmin('localidades')" role="tab" aria-selected="false">Localidades</button>
                         </div>
                     </div>
 
@@ -223,10 +235,13 @@
                             </div>
                         </section>
 
-                        <section id="admin-tool-usuario-localidad" class="admin-tool-panel hidden" role="tabpanel">
+                        <section id="admin-tool-usuarios" class="admin-tool-panel hidden" role="tabpanel">
                             <div class="admin-tool-title">
-                                <h4>Usuario Localidad</h4>
-                                <p>Administra las localidades visibles para cada usuario al iniciar sesión.</p>
+                                <h4>Usuarios</h4>
+                            </div>
+
+                            <div class="usuarios-admin-toolbar">
+                                <button type="button" class="button btn-agregar-usuario" onclick="mostrarFormularioUsuarioAdmin()">Agregar usuario</button>
                             </div>
 
                             <div class="usuario-localidad-admin">
@@ -241,33 +256,136 @@
 
                                 <div class="usuario-localidad-editor">
                                     <div id="usuario-localidad-empty" class="usuario-localidad-empty">
-                                        Selecciona un usuario para editar sus localidades.
+                                        Selecciona un usuario o agrega uno nuevo.
                                     </div>
 
-                                    <div id="usuario-localidad-form" class="hidden">
+                                    <div id="usuario-admin-vista" class="usuario-admin-vista hidden">
+                                        <div class="usuario-localidad-editor-header">
+                                            <div>
+                                                <h5 id="usuario-admin-vista-nombre">Usuario</h5>
+                                                
+                                            </div>
+                                            <div class="usuario-admin-header-actions usuario-admin-view-actions">
+                                                <button type="button" class="usuario-admin-icon-btn" title="Editar usuario" aria-label="Editar usuario" onclick="editarUsuarioAdmin()">
+                                                    <svg class="usuario-admin-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M12 20h9"></path>
+                                                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                                                    </svg>
+                                                </button>
+                                                <button type="button" class="usuario-admin-key-btn" title="Restablecer contrasena" aria-label="Restablecer contrasena" onclick="abrirModalPasswordAdmin()">
+                                                    <svg class="usuario-admin-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <circle cx="7.5" cy="15.5" r="5"></circle>
+                                                        <path d="M12 12l8-8"></path>
+                                                        <path d="M17 7l3 3"></path>
+                                                        <path d="M14.5 9.5l3 3"></path>
+                                                    </svg>
+                                                </button>
+                                                <span id="usuario-admin-vista-estado" class="usuario-admin-estado-badge activo">Activo</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="usuario-admin-read-grid">
+                                            <div class="usuario-admin-read-item">
+                                                <span>Usuario / correo</span>
+                                                <strong id="usuario-admin-vista-correo">-</strong>
+                                            </div>
+                                            <div class="usuario-admin-read-item">
+                                                <span>Rol</span>
+                                                <strong id="usuario-admin-vista-rol">-</strong>
+                                            </div>
+                                        </div>
+
+                                        <div class="usuario-admin-read-localidades-box">
+                                            <div class="usuario-admin-localidades-header">
+                                                <strong>Localidades</strong>
+                                                <span id="usuario-admin-vista-localidades-contador" class="contador-badge">0</span>
+                                            </div>
+                                            <div id="usuario-admin-vista-localidades" class="usuario-admin-read-localidades"></div>
+                                        </div>
+
+                                        <div class="usuario-localidad-acciones usuario-admin-acciones">
+                                            <button type="button" class="button btn-toggle-usuario" id="btn-toggle-usuario-vista" onclick="cambiarEstadoUsuarioAdmin()">Desactivar</button>
+                                        </div>
+                                    </div>
+
+                                    <form id="usuario-localidad-form" class="hidden" onsubmit="guardarUsuarioAdmin(event)">
+                                        <input type="hidden" id="usuario-admin-id">
                                         <div class="usuario-localidad-editor-header">
                                             <div>
                                                 <h5 id="usuario-localidad-nombre">Usuario</h5>
-                                                <p id="usuario-localidad-detalle">-</p>
                                             </div>
-                                            <span id="usuario-localidad-contador" class="contador-badge">0 localidades</span>
+                                            <div class="usuario-admin-header-actions">
+                                                <span id="usuario-admin-estado" class="usuario-admin-estado-badge activo">Activo</span>
+                                            </div>
                                         </div>
 
-                                        <div class="usuario-localidad-acciones">
-                                            <button type="button" class="button btn-secundario-paquete" onclick="seleccionarTodasLocalidadesUsuarioAdmin()">Todas</button>
-                                            <button type="button" class="button btn-secundario-paquete" onclick="limpiarLocalidadesUsuarioAdmin()">Limpiar</button>
-                                            <button type="button" class="button" onclick="guardarUsuarioLocalidadAdmin()">Guardar permisos</button>
+                                        <div class="usuario-admin-form-grid">
+                                            <label>
+                                                <span>Nombre</span>
+                                                <input type="text" id="usuario-admin-nombre" required>
+                                            </label>
+                                            <label>
+                                                <span>Usuario / correo</span>
+                                                <input type="text" id="usuario-admin-correo" required>
+                                            </label>
+                                            <label id="usuario-admin-password-wrap">
+                                                <span>Contraseña inicial</span>
+                                                <input type="password" id="usuario-admin-password" autocomplete="new-password">
+                                            </label>
+                                            <label>
+                                                <span>Rol</span>
+                                                <select id="usuario-admin-rol" required onchange="actualizarEstadoFormularioUsuarioAdmin()"></select>
+                                            </label>
                                         </div>
 
+                                        <div class="usuario-admin-localidades-header">
+                                            <strong>Localidades</strong>
+                                            <span id="usuario-localidad-contador" class="contador-badge">0 </span>
+                                        </div>
                                         <div id="usuario-localidad-checkboxes" class="usuario-localidad-checkboxes"></div>
-                                    </div>
+
+                                        <div class="usuario-localidad-acciones usuario-admin-acciones">
+                                            <button type="button" class="button btn-secundario-paquete" onclick="restaurarFormularioUsuarioAdmin()">Limpiar</button>
+                                            <button type="submit" class="button" id="btn-guardar-usuario-admin">Guardar usuario</button>
+                                            <button type="button" class="button btn-secundario-paquete" onclick="cancelarFormularioUsuarioAdmin()">Cancelar</button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
+                        </section>
 
+                        <section id="admin-tool-localidades" class="admin-tool-panel hidden" role="tabpanel">
+                            <div class="admin-tool-title">
+                                <h4>Localidades</h4>
+                            </div>
+                            <form id="localidad-admin-form" class="localidad-admin-form" onsubmit="crearLocalidadAdmin(event)">
+                                <div class="localidad-admin-form-grid">
+                                    <label>
+                                        <span>Nombre</span>
+                                        <input type="text" id="localidad-admin-nombre" maxlength="100" required>
+                                    </label>
+                                    <label>
+                                        <span>Codigo</span>
+                                        <input type="text" id="localidad-admin-codigo" maxlength="2" required oninput="normalizarCodigoLocalidadInput(this)">
+                                    </label>
+                                    <label>
+                                        <span>Color</span>
+                                        <div class="localidad-admin-color-control">
+                                            <input type="color" id="localidad-admin-color" value="#cccccc" oninput="actualizarVistaColorLocalidadFormulario()" onchange="actualizarVistaColorLocalidadFormulario()">
+                                            <!-- <span id="localidad-admin-color-preview" class="localidad-admin-color-preview" style="background: #cccccc;"></span> -->
+                                            <strong id="localidad-admin-color-texto">#cccccc</strong>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="localidad-admin-form-actions">
+                                    <button type="button" class="button btn-secundario-paquete" onclick="sugerirColorLocalidadFormulario()">Sugerir color</button>
+                                    <button type="submit" class="button btn-agregar-usuario">Crear localidad</button>
+                                </div>
+                            </form>
                             <div class="localidad-color-admin">
                                 <div class="admin-tool-title localidad-color-title">
-                                    <h4>Colores de localidad</h4>
-                                    <p>Estos colores se usan en las tarjetas y filtros del panel.</p>
+                                    <h4>Listado de localidades</h4>
+                                    <p>El nombre y codigo no se editan; solo color y estado.</p>
                                 </div>
                                 <div id="localidad-color-lista" class="localidad-color-lista">
                                     <p class="usuario-localidad-empty">Cargando localidades...</p>
@@ -737,6 +855,77 @@
         </div>
     </div>
 
+    <div id="modal-password-usuario" class="hidden modal-fondo" onclick="cerrarModalPorFondo(event, 'modal-password-usuario', cerrarModalPasswordUsuario)">
+        <div class="modal-caja modal-password-caja">
+            <div class="modal-cabecera">
+                <h4 id="modal-password-titulo">Cambiar contrasena</h4>
+                <span class="cerrar-x-modal" onclick="cerrarModalPasswordUsuario()">&times;</span>
+            </div>
+
+            <form id="form-password-usuario" class="password-form" onsubmit="guardarPasswordUsuario(event)">
+                <input type="hidden" id="password-modo">
+                <input type="hidden" id="password-usuario-id">
+
+                <p id="password-modal-ayuda" class="password-modal-ayuda"></p>
+
+                <label id="password-actual-wrap" class="password-field">
+                    <span>Contrasena actual</span>
+                    <div class="password-input-wrap">
+                        <input type="password" id="password-actual" autocomplete="current-password">
+                        <button type="button" class="password-toggle-btn" tabindex="-1" onclick="togglePasswordVisible('password-actual', this)" aria-label="Mostrar contrasena">
+                            <svg class="password-eye-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </label>
+
+                <label class="password-field">
+                    <span>Nueva contrasena</span>
+                    <div class="password-input-wrap">
+                        <input type="password" id="password-nueva" autocomplete="new-password" required oninput="actualizarSeguridadPasswordUsuario()">
+                        <button type="button" class="password-toggle-btn" tabindex="-1" onclick="togglePasswordVisible('password-nueva', this)" aria-label="Mostrar contrasena">
+                            <svg class="password-eye-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="password-strength" class="password-strength" aria-live="polite">
+                        <div class="password-strength-bars" aria-hidden="true">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span id="password-strength-label" class="password-strength-label">Seguridad: sin evaluar</span>
+                    </div>
+                    <p class="password-tip">Tip: usa mas de 8 caracteres con letras, numeros y un signo.</p>
+                </label>
+
+                <label class="password-field">
+                    <span>Confirmar contrasena</span>
+                    <div class="password-input-wrap">
+                        <input type="password" id="password-confirmar" autocomplete="new-password" required>
+                        <button type="button" class="password-toggle-btn" tabindex="-1" onclick="togglePasswordVisible('password-confirmar', this)" aria-label="Mostrar contrasena">
+                            <svg class="password-eye-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </label>
+
+                <p id="password-modal-error" class="password-modal-error"></p>
+
+                <div class="password-modal-acciones">
+                    <button type="button" class="button btn-secundario-paquete" onclick="cerrarModalPasswordUsuario()">Cancelar</button>
+                    <button type="submit" class="button" id="btn-guardar-password">Guardar contrasena</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="modal-detalles-cliente-cobrador" class="modal-overlay hidden" onclick="cerrarModalPorFondo(event, 'modal-detalles-cliente-cobrador', cerrarModalDetallesClienteCobrador)">
         <div class="modal-content modal-content-cobrador">
             <div class="modal-cabecera modal-cobrador-header">
@@ -823,6 +1012,13 @@
                 <div class="detalle-badges">
                     <span id="detalle-badge-estado" class="badge-estado">Activo</span>
                     <span id="detalle-badge-renta" class="badge-renta hidden">RENTA</span>
+                    <button id="btn-editar-cliente-detalle" type="button" class="btn-editar-cliente-detalle hidden" onclick="activarEdicionClienteDetalle()" title="Editar cliente" aria-label="Editar cliente">
+                        <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                        </svg>
+                        <span>Editar</span>
+                    </button>
                 </div>
                 <span class="cerrar-x-modal" onclick="cerrarModalDetalles()">&times;</span>
             </div>
@@ -831,6 +1027,7 @@
                 
                 <div class="seccion-detalle">
                     <h3>📌 Ficha Técnica</h3>
+                    <div id="detalle-cliente-vista" class="detalle-cliente-vista">
                     <div class="grid-info-cliente">
                         
                         <div class="info-grupo">
@@ -864,17 +1061,89 @@
                             <a id="detalle-ip" class="resaltado-tecnico" href="#" target="_blank">-</a>
                         </div>
 
-                        <div class="info-grupo">
-                            <label>Correo Electrónico</label>
-                            <p id="detalle-correo">-</p>
-                        </div>
-
                     </div>
 
                     <div id="detalle-observaciones-grupo" class="info-grupo detalle-observaciones hidden">
                         <label>Observaciones</label>
                         <p id="detalle-observaciones">-</p>
                     </div>
+                    </div>
+
+                    <form id="cliente-detalle-edit-form" class="cliente-detalle-edit-form hidden" onsubmit="guardarEdicionClienteDetalle(event)">
+                        <div class="cliente-detalle-edit-grid">
+                            <label class="cliente-detalle-edit-field">
+                                <span>Nombre completo</span>
+                                <input type="text" id="edit-cli-nombre" maxlength="150" required oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>Alias</span>
+                                <input type="text" id="edit-cli-alias" maxlength="50" oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>Teléfono</span>
+                                <input type="text" id="edit-cli-telefono" maxlength="10" required oninput="normalizarTelefonoEdicionCliente(this); actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>URL portal</span>
+                                <input type="url" id="edit-cli-url" maxlength="500" placeholder="http://192.168.7.128/" oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>Localidad</span>
+                                <select id="edit-cli-localidad" required onchange="actualizarEstadoGuardarEdicionCliente()"></select>
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>IP</span>
+                                <input type="number" id="edit-cli-ip" min="1" max="254" required oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="cliente-detalle-edit-field">
+                                <span>Señal</span>
+                                <input type="number" id="edit-cli-senal" min="30" max="90" required oninput="actualizarEstadoGuardarEdicionCliente()">
+                            </label>
+                            <label class="switch-renta cliente-detalle-renta">
+                                <span class="cliente-detalle-renta-label">
+                                    Modalidad RENTA
+                                    <svg class="cliente-renta-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                        <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+                                        <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+                                    </svg>
+                                </span>
+                                <input type="checkbox" id="edit-cli-renta" onchange="confirmarCambioRentaEdicionCliente(this)">
+                                <span class="slider-renta" data-off="OFF" data-on="ON"></span>
+                            </label>
+                        </div>
+
+                        <label class="cliente-detalle-edit-field cliente-detalle-edit-full">
+                            <span>Dirección física</span>
+                            <textarea id="edit-cli-direccion" required oninput="actualizarEstadoGuardarEdicionCliente()"></textarea>
+                        </label>
+                        <label class="cliente-detalle-edit-field cliente-detalle-edit-full">
+                            <span>Observaciones</span>
+                            <textarea id="edit-cli-observaciones" oninput="actualizarEstadoGuardarEdicionCliente()"></textarea>
+                        </label>
+
+                        <div class="cliente-detalle-edit-actions">
+                            <button type="button" class="cliente-detalle-icon-btn cliente-detalle-restaurar-btn" onclick="restaurarEdicionClienteDetalle()" title="Restaurar cambios" aria-label="Restaurar cambios">
+                                <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M3 9v6h6"></path>
+                                    <path d="M20 15a8 8 0 0 0-14.4-4.8L3 15"></path>
+                                </svg>
+                            </button>
+                            <button type="submit" class="cliente-detalle-icon-btn cliente-detalle-guardar-btn" id="btn-guardar-edicion-cliente" title="Guardar cambios" aria-label="Guardar cambios" disabled>
+                                <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M5 3h12l2 2v16H5Z"></path>
+                                    <path d="M8 3v6h8V3"></path>
+                                    <path d="M8 14h8v7H8Z"></path>
+                                    <path d="M10 17h4"></path>
+                                </svg>
+                            </button>
+                            <button type="button" class="cliente-detalle-icon-btn cliente-detalle-cancelar-btn" onclick="cancelarEdicionClienteDetalle()" title="Cancelar edición" aria-label="Cancelar edición">
+                                <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M18 6L6 18"></path>
+                                    <path d="M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
 
                     <div class="acciones-contacto">
                         <a id="btn-whatsapp" href="#" target="_blank" class="btn-contacto whatsapp">
@@ -1015,6 +1284,20 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="seccion-cambios-admin" class="seccion-detalle hidden">
+                    <div class="bitacora-servicio-header" role="button" tabindex="0" onclick="toggleHeaderColapsable(event, 'seccion-cambios-admin')" onkeydown="manejarTeclaHeaderColapsable(event, 'seccion-cambios-admin')">
+                        <h3>Historial de cambios administrativos</h3>
+                        <button type="button" class="btn-colapsar-seccion" aria-label="Contraer historial de cambios administrativos" aria-expanded="true" title="Contraer sección">
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
+                    </div>
+                    <div class="seccion-colapsable-contenido">
+                        <div id="detalle-cambios-admin" class="cambios-admin-lista">
+                            <p class="bitacora-vacia">No hay cambios administrativos registrados.</p>
+                        </div>
+                    </div>
+                </div>
                 
             </div>
         </div>
@@ -1036,9 +1319,7 @@
     </button>
    
     <script>
-        const host = window.location.hostname; 
-        const puerto = "3000";
-        const urlBase = `http://${host}:${puerto}`;
+        const urlBase = window.location.origin;
         // 1. Verificar si hay una sesión activa
         const usuarioJson = sessionStorage.getItem('usuario');
         const buscadorInput = document.getElementById('buscador-nombre');
@@ -1050,7 +1331,11 @@
         let paquetesAdminCatalogo = [];
         let usuariosLocalidadAdmin = [];
         let localidadesUsuarioAdmin = [];
+        let localidadesAdminCatalogo = [];
+        let rolesUsuarioAdmin = [];
         let usuarioLocalidadSeleccionadoId = null;
+        let usuarioAdminModoCreacion = false;
+        let usuarioAdminModoEdicion = false;
         let perfilUsuario ="";
         let detallePago;
         let ultimoDetallePago = null;
@@ -1061,6 +1346,8 @@
         let suspensionServicioActual = null;
         let estadoCuentaDetalleActual = null;
         let historialPaquetesDetalleActual = [];
+        let clienteDetalleOriginal = null;
+        let clienteDetalleModoEdicion = false;
         let filtroLocalidadTodasSeleccionadoAntes = false;
         const rangosAdeudoAdmin = ['adeudo-rojo', 'adeudo-naranja', 'adeudo-amarillo', 'adeudo-verde'];
         let rangosAdeudoActivosAdmin = new Set(rangosAdeudoAdmin);
@@ -1399,15 +1686,19 @@
             }
 
             if (herramienta === 'paquetes') cargarPaquetesAdmin();
-            if (herramienta === 'usuario-localidad') cargarUsuarioLocalidadAdmin();
+            if (herramienta === 'usuarios') cargarUsuarioLocalidadAdmin();
+            if (herramienta === 'localidades') cargarLocalidadesAdmin();
             if (herramienta === 'supervision-cobradores') cargarSupervisionCobradores();
         }
 
         function obtenerTextoRolUsuarioAdmin(rolId) {
+            const rolCatalogo = rolesUsuarioAdmin.find(rol => parseInt(rol.id, 10) === parseInt(rolId, 10));
+            if (rolCatalogo) return rolCatalogo.nombre_rol;
+
             const roles = {
-                1: 'Cobrador',
+                1: 'Recepcionista',
                 2: 'Administrador',
-                3: 'Supervisor'
+                3: 'Administrador Local'
             };
             return roles[parseInt(rolId, 10)] || `Rol ${rolId || '-'}`;
         }
@@ -1422,21 +1713,24 @@
             if (lista) lista.innerHTML = '<p class="usuario-localidad-empty">Cargando usuarios...</p>';
 
             try {
-                const response = await fetch(`${urlBase}/api/admin/usuario-localidad?rol_usuario=${usuarioActual.rol}`);
+                const response = await fetch(`${urlBase}/api/admin/usuarios?rol_usuario=${usuarioActual.rol}&usuario_actual_id=${usuarioActual.id}`);
                 const data = await response.json();
 
                 if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'No se pudieron cargar los permisos.');
+                    throw new Error(data.error || 'No se pudieron cargar los usuarios.');
                 }
 
                 usuariosLocalidadAdmin = Array.isArray(data.usuarios) ? data.usuarios : [];
                 localidadesUsuarioAdmin = Array.isArray(data.localidades) ? data.localidades : [];
+                rolesUsuarioAdmin = Array.isArray(data.roles) ? data.roles : [];
 
                 if (
                     usuarioLocalidadSeleccionadoId
                     && !usuariosLocalidadAdmin.some(usuario => usuario.id === usuarioLocalidadSeleccionadoId)
                 ) {
                     usuarioLocalidadSeleccionadoId = null;
+                    usuarioAdminModoCreacion = false;
+                    usuarioAdminModoEdicion = false;
                 }
 
                 renderizarUsuariosLocalidadAdmin();
@@ -1477,9 +1771,11 @@
             }
 
             usuariosFiltrados.forEach(usuario => {
+                const activo = parseInt(usuario.activo, 10) === 1;
                 const boton = document.createElement('button');
                 boton.type = 'button';
                 boton.className = 'usuario-localidad-item';
+                boton.classList.toggle('inactivo', !activo);
                 boton.classList.toggle('active', usuario.id === usuarioLocalidadSeleccionadoId);
                 boton.onclick = () => seleccionarUsuarioLocalidadAdmin(usuario.id);
 
@@ -1488,7 +1784,10 @@
 
                 const detalle = document.createElement('span');
                 const totalLocalidades = Array.isArray(usuario.localidades) ? usuario.localidades.length : 0;
-                detalle.textContent = `${obtenerTextoRolUsuarioAdmin(usuario.rol_id)} | ${totalLocalidades} localidades`;
+                const textoLocalidades = parseInt(usuario.rol_id, 10) === 2
+                    ? 'todas las localidades'
+                    : `${totalLocalidades} localidades`;
+                detalle.textContent = `${obtenerTextoRolUsuarioAdmin(usuario.rol_id)} | ${textoLocalidades} | ${activo ? 'Activo' : 'Inactivo'}`;
 
                 boton.appendChild(nombre);
                 boton.appendChild(detalle);
@@ -1498,35 +1797,162 @@
 
         function seleccionarUsuarioLocalidadAdmin(usuarioId) {
             usuarioLocalidadSeleccionadoId = parseInt(usuarioId, 10);
+            usuarioAdminModoCreacion = false;
+            usuarioAdminModoEdicion = false;
             renderizarUsuariosLocalidadAdmin();
             renderizarEditorUsuarioLocalidadAdmin();
         }
 
-        function renderizarEditorUsuarioLocalidadAdmin() {
-            const empty = document.getElementById('usuario-localidad-empty');
-            const form = document.getElementById('usuario-localidad-form');
-            const checkboxes = document.getElementById('usuario-localidad-checkboxes');
-            const nombre = document.getElementById('usuario-localidad-nombre');
-            const detalle = document.getElementById('usuario-localidad-detalle');
-            if (!empty || !form || !checkboxes || !nombre || !detalle) return;
+        function obtenerRolesFormularioUsuarioAdmin() {
+            return rolesUsuarioAdmin.length > 0
+                ? rolesUsuarioAdmin
+                : [
+                    { id: 1, nombre_rol: 'Recepcionista' },
+                    { id: 2, nombre_rol: 'Administrador' },
+                    { id: 3, nombre_rol: 'Administrador Local' }
+                ];
+        }
 
-            const usuario = usuariosLocalidadAdmin.find(item => item.id === usuarioLocalidadSeleccionadoId);
+        function renderizarRolesFormularioUsuarioAdmin(rolSeleccionado) {
+            const selectRol = document.getElementById('usuario-admin-rol');
+            if (!selectRol) return;
 
-            empty.classList.toggle('hidden', Boolean(usuario));
-            form.classList.toggle('hidden', !usuario);
+            selectRol.innerHTML = '';
+            obtenerRolesFormularioUsuarioAdmin().forEach(rol => {
+                const option = document.createElement('option');
+                option.value = rol.id;
+                option.textContent = rol.nombre_rol;
+                selectRol.appendChild(option);
+            });
 
-            if (!usuario) {
-                checkboxes.innerHTML = '';
+            selectRol.value = String(rolSeleccionado || 1);
+        }
+
+        function obtenerRolFormularioUsuarioAdmin() {
+            return parseInt(document.getElementById('usuario-admin-rol')?.value, 10) || null;
+        }
+
+        function obtenerUsuarioSeleccionadoAdmin() {
+            return usuariosLocalidadAdmin.find(item => parseInt(item.id, 10) === parseInt(usuarioLocalidadSeleccionadoId, 10)) || null;
+        }
+
+        function obtenerLocalidadesAsignadasUsuarioAdmin(usuario) {
+            const localidades = Array.isArray(usuario?.localidades) ? usuario.localidades : [];
+            const idsAsignados = new Set(localidades.map(id => parseInt(id, 10)));
+            return localidadesUsuarioAdmin.filter(localidad => idsAsignados.has(parseInt(localidad.id, 10)));
+        }
+
+        function crearPildoraLocalidadUsuarioAdmin(localidad) {
+            const chip = document.createElement('span');
+            chip.className = 'usuario-admin-read-localidad';
+
+            const color = document.createElement('span');
+            color.className = 'usuario-localidad-color';
+            color.style.backgroundColor = localidad.color || '#cccccc';
+
+            const nombre = document.createElement('span');
+            nombre.textContent = localidad.nombre || `Localidad ${localidad.id}`;
+
+            const codigo = document.createElement('span');
+            codigo.className = 'usuario-localidad-codigo';
+            codigo.textContent = localidad.codigo_localidad || String(localidad.id);
+
+            chip.appendChild(color);
+            chip.appendChild(nombre);
+            chip.appendChild(codigo);
+            return chip;
+        }
+
+        function renderizarVistaUsuarioAdmin(usuario) {
+            const nombreTitulo = document.getElementById('usuario-admin-vista-nombre');
+            const estadoBadge = document.getElementById('usuario-admin-vista-estado');
+            const correo = document.getElementById('usuario-admin-vista-correo');
+            const rol = document.getElementById('usuario-admin-vista-rol');
+            const contador = document.getElementById('usuario-admin-vista-localidades-contador');
+            const localidades = document.getElementById('usuario-admin-vista-localidades');
+            const btnToggle = document.getElementById('btn-toggle-usuario-vista');
+            if (!usuario || !nombreTitulo ||  !estadoBadge || !correo || !rol || !contador || !localidades || !btnToggle) return;
+
+            const activo = parseInt(usuario.activo, 10) === 1;
+            const rolId = parseInt(usuario.rol_id, 10);
+            const nombreUsuario = usuario.nombre || `Usuario ${usuario.id}`;
+
+            nombreTitulo.textContent = nombreUsuario;
+            correo.textContent = usuario.correo || 'Sin usuario';
+            rol.textContent = obtenerTextoRolUsuarioAdmin(rolId);
+
+            estadoBadge.textContent = activo ? 'Activo' : 'Inactivo';
+            estadoBadge.classList.toggle('activo', activo);
+            estadoBadge.classList.toggle('inactivo', !activo);
+
+            btnToggle.textContent = activo ? 'Desactivar' : 'Reactivar';
+            btnToggle.classList.toggle('btn-reactivar-usuario', !activo);
+
+            localidades.innerHTML = '';
+
+            if (rolId === 2) {
+                contador.textContent = 'General';
+                const accesoGeneral = document.createElement('span');
+                accesoGeneral.className = 'usuario-admin-read-localidad general';
+                accesoGeneral.textContent = 'Acceso general a localidades';
+                localidades.appendChild(accesoGeneral);
                 return;
             }
 
-            nombre.textContent = usuario.nombre || `Usuario ${usuario.id}`;
-            detalle.textContent = `${usuario.correo || 'Sin correo'} | ${obtenerTextoRolUsuarioAdmin(usuario.rol_id)}`;
+            const asignadas = obtenerLocalidadesAsignadasUsuarioAdmin(usuario);
+            contador.textContent = `${asignadas.length}`;
 
-            const localidadesAsignadas = new Set((usuario.localidades || []).map(id => parseInt(id, 10)));
+            if (asignadas.length === 0) {
+                const mensaje = document.createElement('p');
+                mensaje.className = 'usuario-localidad-empty';
+                mensaje.textContent = 'Sin localidades asignadas.';
+                localidades.appendChild(mensaje);
+                return;
+            }
+
+            asignadas.forEach(localidad => {
+                localidades.appendChild(crearPildoraLocalidadUsuarioAdmin(localidad));
+            });
+        }
+
+        function renderizarFormularioUsuarioAdmin(usuario) {
+            const checkboxes = document.getElementById('usuario-localidad-checkboxes');
+            const nombreTitulo = document.getElementById('usuario-localidad-nombre');
+            const inputId = document.getElementById('usuario-admin-id');
+            const inputNombre = document.getElementById('usuario-admin-nombre');
+            const inputCorreo = document.getElementById('usuario-admin-correo');
+            const passwordWrap = document.getElementById('usuario-admin-password-wrap');
+            const inputPassword = document.getElementById('usuario-admin-password');
+            const estadoBadge = document.getElementById('usuario-admin-estado');
+            const btnGuardar = document.getElementById('btn-guardar-usuario-admin');
+            if (!checkboxes || !nombreTitulo  || !inputId || !inputNombre || !inputCorreo || !passwordWrap || !inputPassword || !estadoBadge || !btnGuardar) return;
+
+            const rolSeleccionado = usuario ? parseInt(usuario.rol_id, 10) : 1;
+            const activo = usuario ? parseInt(usuario.activo, 10) === 1 : true;
+
+            inputId.value = usuario?.id || '';
+            inputNombre.value = usuario?.nombre || '';
+            inputCorreo.value = usuario?.correo || '';
+            inputCorreo.readOnly = Boolean(usuario);
+            inputCorreo.classList.toggle('readonly', Boolean(usuario));
+            inputPassword.value = '';
+            passwordWrap.classList.toggle('hidden', Boolean(usuario));
+
+            nombreTitulo.textContent = usuario ? (usuario.nombre || `Usuario ${usuario.id}`) : 'Nuevo usuario';
+         
+            btnGuardar.textContent = usuario ? 'Guardar cambios' : 'Crear usuario';
+            estadoBadge.textContent = activo ? 'Activo' : 'Inactivo';
+            estadoBadge.classList.toggle('activo', activo);
+            estadoBadge.classList.toggle('inactivo', !activo);
+
+            renderizarRolesFormularioUsuarioAdmin(rolSeleccionado);
+
+            const localidadesAsignadas = new Set((usuario?.localidades || []).map(id => parseInt(id, 10)));
             checkboxes.innerHTML = '';
 
-            localidadesUsuarioAdmin.forEach(localidad => {
+            localidadesUsuarioAdmin
+                .filter(localidad => parseInt(localidad.activo, 10) === 1)
+                .forEach(localidad => {
                 const label = document.createElement('label');
                 label.className = 'usuario-localidad-check';
 
@@ -1554,23 +1980,221 @@
                 checkboxes.appendChild(label);
             });
 
+            actualizarEstadoFormularioUsuarioAdmin();
+        }
+
+        function renderizarEditorUsuarioLocalidadAdmin() {
+            const empty = document.getElementById('usuario-localidad-empty');
+            const vista = document.getElementById('usuario-admin-vista');
+            const form = document.getElementById('usuario-localidad-form');
+            const checkboxes = document.getElementById('usuario-localidad-checkboxes');
+            if (!empty || !vista || !form || !checkboxes) return;
+
+            const usuario = usuarioAdminModoCreacion ? null : obtenerUsuarioSeleccionadoAdmin();
+            if (!usuario && usuarioAdminModoEdicion) usuarioAdminModoEdicion = false;
+
+            const mostrarFormulario = usuarioAdminModoCreacion || usuarioAdminModoEdicion;
+            const mostrarVista = Boolean(usuario) && !mostrarFormulario;
+
+            empty.classList.toggle('hidden', mostrarFormulario || mostrarVista);
+            vista.classList.toggle('hidden', !mostrarVista);
+            form.classList.toggle('hidden', !mostrarFormulario);
+
+            if (mostrarVista) {
+                form.reset();
+                checkboxes.innerHTML = '';
+                renderizarVistaUsuarioAdmin(usuario);
+                return;
+            }
+
+            if (mostrarFormulario) {
+                renderizarFormularioUsuarioAdmin(usuarioAdminModoCreacion ? null : usuario);
+                return;
+            }
+
+            form.reset();
+            checkboxes.innerHTML = '';
+        }
+
+        function actualizarEstadoFormularioUsuarioAdmin() {
+            const rolId = obtenerRolFormularioUsuarioAdmin();
+            const esAdministradorGeneral = rolId === 2;
+            const checkboxes = document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]');
+            const contenedor = document.getElementById('usuario-localidad-checkboxes');
+
+            checkboxes.forEach(input => {
+                if (esAdministradorGeneral) input.checked = false;
+                input.disabled = esAdministradorGeneral;
+            });
+
+            if (contenedor) {
+                contenedor.classList.toggle('usuario-localidad-checkboxes-disabled', esAdministradorGeneral);
+            }
+
             actualizarContadorLocalidadesUsuarioAdmin();
         }
 
+        const paletaLocalidadesAdmin = [
+            '#2563eb', '#16a34a', '#dc2626', '#f59e0b', '#7c3aed',
+            '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4f46e5',
+            '#0f766e', '#be123c', '#9333ea', '#0284c7', '#84cc16'
+        ];
+        let indiceColorSugeridoLocalidad = 0;
+
+        function normalizarCodigoLocalidadInput(input) {
+            if (!input) return;
+            input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+        }
+
+        function generarColorLocalidadPorIndice(indice) {
+            const tono = (indice * 137) % 360;
+            return hslAHexLocalidad(tono, 62, 48);
+        }
+
+        function hslAHexLocalidad(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const k = n => (n + h / 30) % 12;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            return `#${[f(0), f(8), f(4)]
+                .map(valor => Math.round(255 * valor).toString(16).padStart(2, '0'))
+                .join('')}`;
+        }
+
+        function obtenerColorSugeridoLocalidadAdmin(colorActual = '') {
+            const usados = new Set(
+                localidadesAdminCatalogo
+                    .map(localidad => String(localidad.color || '').toLowerCase())
+                    .filter(Boolean)
+            );
+            const actual = String(colorActual || '').toLowerCase();
+
+            for (let intento = 0; intento < 150; intento += 1) {
+                const indice = indiceColorSugeridoLocalidad + intento;
+                const color = indice < paletaLocalidadesAdmin.length
+                    ? paletaLocalidadesAdmin[indice]
+                    : generarColorLocalidadPorIndice(localidadesAdminCatalogo.length + indice);
+
+                if (!usados.has(color) && color !== actual) {
+                    indiceColorSugeridoLocalidad = indice + 1;
+                    return color;
+                }
+            }
+
+            indiceColorSugeridoLocalidad += 1;
+            return generarColorLocalidadPorIndice(localidadesAdminCatalogo.length + indiceColorSugeridoLocalidad);
+        }
+
+        function sugerirColorLocalidadFormulario() {
+            const inputColor = document.getElementById('localidad-admin-color');
+            if (inputColor) {
+                inputColor.value = obtenerColorSugeridoLocalidadAdmin(inputColor.value);
+                actualizarVistaColorLocalidadFormulario();
+            }
+        }
+
+        function actualizarVistaColorLocalidadFormulario() {
+            const inputColor = document.getElementById('localidad-admin-color');
+            /* const preview = document.getElementById('localidad-admin-color-preview'); */
+            const texto = document.getElementById('localidad-admin-color-texto');
+            const color = inputColor?.value || '#cccccc';
+
+            //if (preview) preview.style.backgroundColor = color;
+            if (texto) texto.textContent = color.toLowerCase();
+        }
+
+        function crearSvgIconoLocalidad(tipo) {
+            if (tipo === 'guardar') {
+                return `
+                    <svg class="localidad-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 3h12l2 2v16H5Z"></path>
+                        <path d="M8 3v6h8V3"></path>
+                        <path d="M8 14h8v7H8Z"></path>
+                        <path d="M10 17h4"></path>
+                    </svg>`;
+            }
+
+            if (tipo === 'reactivar') {
+                return `
+                    <svg class="localidad-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20 6L9 17l-5-5"></path>
+                    </svg>`;
+            }
+
+            return `
+                <svg class="localidad-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="M6 6l1 15h10l1-15"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                </svg>`;
+        }
+
+        function actualizarEstadoBotonColorLocalidad(localidadId) {
+            const input = document.getElementById(`localidad-color-${localidadId}`);
+            const boton = document.getElementById(`localidad-color-guardar-${localidadId}`);
+            if (!input || !boton) return;
+
+            const colorActual = String(input.value || '').toLowerCase();
+            const colorOriginal = String(input.dataset.colorOriginal || '').toLowerCase();
+            boton.disabled = colorActual === colorOriginal;
+        }
+
+        async function cargarLocalidadesAdmin() {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const contenedor = document.getElementById('localidad-color-lista');
+            if (contenedor) contenedor.innerHTML = '<p class="usuario-localidad-empty">Cargando localidades...</p>';
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/localidades?rol_usuario=${usuarioActual.rol}&usuario_actual_id=${usuarioActual.id}`);
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudieron cargar las localidades.');
+                }
+
+                localidadesAdminCatalogo = Array.isArray(data.localidades) ? data.localidades : [];
+                localidadesUsuarioAdmin = localidadesAdminCatalogo;
+                indiceColorSugeridoLocalidad = 0;
+                sugerirColorLocalidadFormulario();
+                renderizarLocalidadesAdmin();
+            } catch (error) {
+                console.error('Error cargando localidades administrativas:', error);
+                if (contenedor) {
+                    contenedor.innerHTML = '';
+                    const mensaje = document.createElement('p');
+                    mensaje.className = 'usuario-localidad-empty';
+                    mensaje.textContent = error.message;
+                    contenedor.appendChild(mensaje);
+                }
+            }
+        }
+
         function renderizarColoresLocalidadAdmin() {
+            if (localidadesAdminCatalogo.length === 0 && localidadesUsuarioAdmin.length > 0) {
+                localidadesAdminCatalogo = localidadesUsuarioAdmin;
+            }
+            renderizarLocalidadesAdmin();
+        }
+
+        function renderizarLocalidadesAdmin() {
             const contenedor = document.getElementById('localidad-color-lista');
             if (!contenedor) return;
 
             contenedor.innerHTML = '';
 
-            if (localidadesUsuarioAdmin.length === 0) {
+            if (localidadesAdminCatalogo.length === 0) {
                 contenedor.innerHTML = '<p class="usuario-localidad-empty">No hay localidades para mostrar.</p>';
                 return;
             }
 
-            localidadesUsuarioAdmin.forEach(localidad => {
+            localidadesAdminCatalogo.forEach(localidad => {
+                const activo = parseInt(localidad.activo, 10) === 1;
                 const item = document.createElement('div');
                 item.className = 'localidad-color-item';
+                item.classList.toggle('inactivo', !activo);
 
                 const info = document.createElement('div');
                 info.className = 'localidad-color-info';
@@ -1579,7 +2203,12 @@
                 nombre.textContent = localidad.nombre || `Localidad ${localidad.id}`;
 
                 const codigo = document.createElement('span');
-                codigo.textContent = localidad.codigo_localidad || String(localidad.id);
+                const clientes = parseInt(localidad.clientes_count, 10) || 0;
+                codigo.textContent = `${localidad.codigo_localidad || String(localidad.id)} | ${clientes} clientes`;
+
+                const estado = document.createElement('span');
+                estado.className = `localidad-estado-badge ${activo ? 'activo' : 'inactivo'}`;
+                estado.textContent = activo ? 'Activa' : 'Inactiva';
 
                 const input = document.createElement('input');
                 input.type = 'color';
@@ -1588,21 +2217,88 @@
                 input.value = /^#[0-9a-fA-F]{6}$/.test(localidad.color || '')
                     ? localidad.color
                     : '#cccccc';
+                input.dataset.colorOriginal = input.value;
                 input.title = `Color de ${localidad.nombre || 'localidad'}`;
+                input.oninput = () => actualizarEstadoBotonColorLocalidad(localidad.id);
+                input.onchange = () => actualizarEstadoBotonColorLocalidad(localidad.id);
 
                 const boton = document.createElement('button');
                 boton.type = 'button';
-                boton.className = 'button localidad-color-guardar';
-                boton.textContent = 'Guardar';
+                boton.className = 'button localidad-icon-btn localidad-color-guardar';
+                boton.id = `localidad-color-guardar-${localidad.id}`;
+                boton.title = 'Guardar color';
+                boton.setAttribute('aria-label', `Guardar color de ${localidad.nombre || 'localidad'}`);
+                boton.innerHTML = crearSvgIconoLocalidad('guardar');
+                boton.disabled = true;
                 boton.onclick = () => guardarColorLocalidadAdmin(localidad.id);
+
+                const botonEstado = document.createElement('button');
+                botonEstado.type = 'button';
+                botonEstado.className = activo
+                    ? 'btn-eliminar-pago localidad-estado-icon-btn'
+                    : 'localidad-reactivar-icon-btn localidad-estado-icon-btn btn-reactivar-usuario';
+                botonEstado.title = activo ? 'Desactivar localidad' : 'Reactivar localidad';
+                botonEstado.setAttribute('aria-label', `${activo ? 'Desactivar' : 'Reactivar'} ${localidad.nombre || 'localidad'}`);
+                botonEstado.innerHTML = activo ? crearSvgIconoLocalidad('eliminar') : crearSvgIconoLocalidad('reactivar');
+                botonEstado.onclick = () => cambiarEstadoLocalidadAdmin(localidad.id);
 
                 info.appendChild(nombre);
                 info.appendChild(codigo);
+                info.appendChild(estado);
                 item.appendChild(info);
                 item.appendChild(input);
                 item.appendChild(boton);
+                item.appendChild(botonEstado);
                 contenedor.appendChild(item);
             });
+        }
+
+        async function crearLocalidadAdmin(event) {
+            if (event) event.preventDefault();
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const nombre = document.getElementById('localidad-admin-nombre')?.value.trim() || '';
+            const codigo = document.getElementById('localidad-admin-codigo')?.value.trim().toUpperCase() || '';
+            const color = document.getElementById('localidad-admin-color')?.value || obtenerColorSugeridoLocalidadAdmin();
+            const errores = [];
+
+            if (!nombre) errores.push('El nombre de la localidad es obligatorio.');
+            if (!/^[A-Z]{2}$/.test(codigo)) errores.push('El codigo debe tener exactamente 2 letras, sin espacios.');
+
+            if (errores.length > 0) {
+                alert(`No se puede crear la localidad:\n\n${errores.join('\n')}`);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/localidades`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rol_usuario: usuarioActual.rol,
+                        usuario_actual_id: usuarioActual.id,
+                        nombre,
+                        codigo_localidad: codigo,
+                        color
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo crear la localidad.');
+                }
+
+                localidadesAdminCatalogo = Array.isArray(data.localidades) ? data.localidades : localidadesAdminCatalogo;
+                localidadesUsuarioAdmin = localidadesAdminCatalogo;
+                document.getElementById('localidad-admin-form')?.reset();
+                sugerirColorLocalidadFormulario();
+                renderizarLocalidadesAdmin();
+                await cargarLocalidades();
+                alert(data.message || 'Localidad creada correctamente.');
+            } catch (error) {
+                console.error('Error creando localidad:', error);
+                alert(error.message);
+            }
         }
 
         async function guardarColorLocalidadAdmin(localidadId) {
@@ -1616,6 +2312,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         rol_usuario: usuarioActual.rol,
+                        usuario_actual_id: usuarioActual.id,
                         color
                     })
                 });
@@ -1625,15 +2322,20 @@
                     throw new Error(data.error || 'No se pudo guardar el color.');
                 }
 
-                const localidad = localidadesUsuarioAdmin.find(item => parseInt(item.id, 10) === parseInt(localidadId, 10));
-                if (localidad) localidad.color = color;
+                if (Array.isArray(data.localidades)) {
+                    localidadesAdminCatalogo = data.localidades;
+                    localidadesUsuarioAdmin = data.localidades;
+                } else {
+                    const localidad = localidadesAdminCatalogo.find(item => parseInt(item.id, 10) === parseInt(localidadId, 10));
+                    if (localidad) localidad.color = color;
+                }
 
                 if (configLocalidades[localidadId]) {
                     configLocalidades[localidadId].color = color;
                 }
 
                 renderizarEditorUsuarioLocalidadAdmin();
-                renderizarColoresLocalidadAdmin();
+                renderizarLocalidadesAdmin();
                 cargarVistaAdminClientes();
                 alert(data.message || 'Color actualizado correctamente.');
             } catch (error) {
@@ -1642,7 +2344,52 @@
             }
         }
 
+        async function cambiarEstadoLocalidadAdmin(localidadId) {
+            const localidad = localidadesAdminCatalogo.find(item => parseInt(item.id, 10) === parseInt(localidadId, 10));
+            if (!localidad) {
+                alert('Selecciona una localidad valida.');
+                return;
+            }
+
+            const activoActual = parseInt(localidad.activo, 10) === 1;
+            const nuevoActivo = activoActual ? 0 : 1;
+            const accion = activoActual ? 'desactivar' : 'reactivar';
+            const confirmar = confirm(`¿Confirmas ${accion} la localidad ${localidad.nombre}?`);
+            if (!confirmar) return;
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/localidades/${localidadId}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rol_usuario: usuarioActual.rol,
+                        usuario_actual_id: usuarioActual.id,
+                        activo: nuevoActivo
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `No se pudo ${accion} la localidad.`);
+                }
+
+                localidadesAdminCatalogo = Array.isArray(data.localidades) ? data.localidades : localidadesAdminCatalogo;
+                localidadesUsuarioAdmin = localidadesAdminCatalogo;
+                renderizarLocalidadesAdmin();
+                renderizarEditorUsuarioLocalidadAdmin();
+                await cargarLocalidades();
+                alert(data.message || `Localidad ${nuevoActivo ? 'reactivada' : 'desactivada'} correctamente.`);
+            } catch (error) {
+                console.error('Error cambiando estado de localidad:', error);
+                alert(error.message);
+            }
+        }
+
         function obtenerLocalidadesSeleccionadasUsuarioAdmin() {
+            if (obtenerRolFormularioUsuarioAdmin() === 2) return [];
+
             return Array.from(document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]:checked'))
                 .map(input => parseInt(input.value, 10))
                 .filter(Boolean);
@@ -1652,61 +2399,438 @@
             const contador = document.getElementById('usuario-localidad-contador');
             if (!contador) return;
 
-            const total = obtenerLocalidadesSeleccionadasUsuarioAdmin().length;
-            contador.textContent = `${total} ${total === 1 ? 'localidad' : 'localidades'}`;
-        }
-
-        function seleccionarTodasLocalidadesUsuarioAdmin() {
-            document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]').forEach(input => {
-                input.checked = true;
-            });
-            actualizarContadorLocalidadesUsuarioAdmin();
-        }
-
-        function limpiarLocalidadesUsuarioAdmin() {
-            document.querySelectorAll('#usuario-localidad-checkboxes input[type="checkbox"]').forEach(input => {
-                input.checked = false;
-            });
-            actualizarContadorLocalidadesUsuarioAdmin();
-        }
-
-        async function guardarUsuarioLocalidadAdmin() {
-            const usuario = usuariosLocalidadAdmin.find(item => item.id === usuarioLocalidadSeleccionadoId);
-            if (!usuario) {
-                alert('Selecciona un usuario.');
+            if (obtenerRolFormularioUsuarioAdmin() === 2) {
+                contador.textContent = 'General';
                 return;
             }
 
+            const total = obtenerLocalidadesSeleccionadasUsuarioAdmin().length;
+            contador.textContent = `${total}`;
+        }
+
+        function mostrarFormularioUsuarioAdmin() {
+            usuarioLocalidadSeleccionadoId = null;
+            usuarioAdminModoCreacion = true;
+            usuarioAdminModoEdicion = false;
+            renderizarUsuariosLocalidadAdmin();
+            renderizarEditorUsuarioLocalidadAdmin();
+        }
+
+        function editarUsuarioAdmin() {
+            const usuario = obtenerUsuarioSeleccionadoAdmin();
+            if (!usuario) {
+                alert('Selecciona un usuario antes de editar.');
+                return;
+            }
+
+            usuarioAdminModoCreacion = false;
+            usuarioAdminModoEdicion = true;
+            renderizarUsuariosLocalidadAdmin();
+            renderizarEditorUsuarioLocalidadAdmin();
+        }
+
+        function restaurarFormularioUsuarioAdmin() {
+            if (usuarioAdminModoCreacion) {
+                renderizarFormularioUsuarioAdmin(null);
+                return;
+            }
+
+            const usuario = obtenerUsuarioSeleccionadoAdmin();
+            if (!usuario) {
+                alert('No hay un usuario seleccionado para restaurar.');
+                return;
+            }
+
+            renderizarFormularioUsuarioAdmin(usuario);
+        }
+
+        function cancelarFormularioUsuarioAdmin() {
+            const veniaDeAlta = usuarioAdminModoCreacion;
+            usuarioAdminModoCreacion = false;
+            usuarioAdminModoEdicion = false;
+            if (veniaDeAlta) usuarioLocalidadSeleccionadoId = null;
+            renderizarUsuariosLocalidadAdmin();
+            renderizarEditorUsuarioLocalidadAdmin();
+        }
+
+        function setErrorPasswordUsuario(mensaje = '') {
+            const error = document.getElementById('password-modal-error');
+            if (error) error.textContent = mensaje;
+        }
+
+        function resetVisibilidadPasswordUsuario() {
+            ['password-actual', 'password-nueva', 'password-confirmar'].forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input) input.type = 'password';
+            });
+
+            document.querySelectorAll('#modal-password-usuario .password-toggle-btn').forEach(boton => {
+                boton.setAttribute('aria-label', 'Mostrar contrasena');
+                boton.classList.remove('visible');
+            });
+        }
+
+        function evaluarSeguridadPasswordUsuario(password) {
+            const valor = String(password || '');
+            if (!valor) {
+                return { nivel: 0, etiqueta: 'Sin evaluar', clase: 'vacia' };
+            }
+
+            const tieneLetra = /[a-zA-Z]/.test(valor);
+            const tieneNumero = /[0-9]/.test(valor);
+            const tieneSigno = /[^\w\s]/.test(valor);
+            const longitudValida = valor.length > 8;
+
+            if (longitudValida && tieneLetra && tieneNumero && tieneSigno) {
+                return { nivel: 3, etiqueta: 'Fuerte', clase: 'fuerte' };
+            }
+
+            if (longitudValida && tieneLetra && tieneNumero) {
+                return { nivel: 2, etiqueta: 'Media', clase: 'media' };
+            }
+
+            return { nivel: 1, etiqueta: 'Debil', clase: 'debil' };
+        }
+
+        function actualizarSeguridadPasswordUsuario() {
+            const input = document.getElementById('password-nueva');
+            const medidor = document.getElementById('password-strength');
+            const etiqueta = document.getElementById('password-strength-label');
+            if (!input || !medidor || !etiqueta) return;
+
+            const seguridad = evaluarSeguridadPasswordUsuario(input.value);
+            medidor.classList.remove('vacia', 'debil', 'media', 'fuerte');
+            medidor.classList.add(seguridad.clase);
+            medidor.dataset.nivel = String(seguridad.nivel);
+            etiqueta.textContent = `Seguridad: ${seguridad.etiqueta}`;
+        }
+
+        function prepararModalPasswordUsuario({ modo, usuarioId, titulo, ayuda, requiereActual, textoBoton }) {
+            const modal = document.getElementById('modal-password-usuario');
+            const form = document.getElementById('form-password-usuario');
+            const inputModo = document.getElementById('password-modo');
+            const inputUsuarioId = document.getElementById('password-usuario-id');
+            const tituloModal = document.getElementById('modal-password-titulo');
+            const ayudaModal = document.getElementById('password-modal-ayuda');
+            const actualWrap = document.getElementById('password-actual-wrap');
+            const actualInput = document.getElementById('password-actual');
+            const btnGuardar = document.getElementById('btn-guardar-password');
+            if (!modal || !form || !inputModo || !inputUsuarioId || !tituloModal || !ayudaModal || !actualWrap || !actualInput || !btnGuardar) return;
+
+            form.reset();
+            resetVisibilidadPasswordUsuario();
+            actualizarSeguridadPasswordUsuario();
+            setErrorPasswordUsuario('');
+            inputModo.value = modo;
+            inputUsuarioId.value = usuarioId;
+            tituloModal.textContent = titulo;
+            ayudaModal.textContent = ayuda;
+            btnGuardar.textContent = textoBoton;
+            actualWrap.classList.toggle('hidden', !requiereActual);
+            actualInput.required = Boolean(requiereActual);
+            modal.classList.remove('hidden');
+            document.getElementById(requiereActual ? 'password-actual' : 'password-nueva')?.focus();
+        }
+
+        function abrirModalPasswordAdmin() {
+            const usuarioSeleccionado = obtenerUsuarioSeleccionadoAdmin();
+            if (!usuarioSeleccionado) {
+                alert('Selecciona un usuario antes de restablecer su contrasena.');
+                return;
+            }
+
+            prepararModalPasswordUsuario({
+                modo: 'admin',
+                usuarioId: usuarioSeleccionado.id,
+                titulo: 'Restablecer contrasena',
+                ayuda: `Asigna una nueva contrasena temporal para ${usuarioSeleccionado.nombre || usuarioSeleccionado.correo || 'este usuario'}.`,
+                requiereActual: false,
+                textoBoton: 'Restablecer contrasena'
+            });
+        }
+
+        function abrirModalPasswordPersonal() {
             const usuarioActual = obtenerUsuarioActualAdmin();
-            const localidades = obtenerLocalidadesSeleccionadasUsuarioAdmin();
+            if (!usuarioActual.id) {
+                alert('No se encontro tu sesion activa. Vuelve a iniciar sesion.');
+                return;
+            }
+
+            prepararModalPasswordUsuario({
+                modo: 'personal',
+                usuarioId: usuarioActual.id,
+                titulo: 'Cambiar mi contrasena',
+                ayuda: 'Confirma tu contrasena actual y captura una nueva contrasena para tu acceso.',
+                requiereActual: true,
+                textoBoton: 'Guardar contrasena'
+            });
+        }
+
+        function cerrarModalPasswordUsuario() {
+            const modal = document.getElementById('modal-password-usuario');
+            const form = document.getElementById('form-password-usuario');
+            if (form) form.reset();
+            resetVisibilidadPasswordUsuario();
+            actualizarSeguridadPasswordUsuario();
+            setErrorPasswordUsuario('');
+            modal?.classList.add('hidden');
+        }
+
+        function togglePasswordVisible(inputId, boton) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+
+            const mostrar = input.type === 'password';
+            input.type = mostrar ? 'text' : 'password';
+            if (boton) {
+                boton.setAttribute('aria-label', mostrar ? 'Ocultar contrasena' : 'Mostrar contrasena');
+                boton.classList.toggle('visible', mostrar);
+            }
+        }
+
+        function validarModalPasswordUsuario(modo, actual, nueva, confirmar) {
+            const errores = [];
+            const seguridad = evaluarSeguridadPasswordUsuario(nueva);
+            if (modo === 'personal' && !actual) errores.push('Captura tu contrasena actual.');
+            if (!nueva) {
+                errores.push('Captura la nueva contrasena.');
+            } else if (nueva.length <= 8) {
+                errores.push('La nueva contrasena debe tener mas de 8 caracteres.');
+            } else if (seguridad.nivel < 3) {
+                errores.push('La nueva contrasena debe ser fuerte: usa letras, numeros y un signo.');
+            }
+            if (!confirmar) errores.push('Confirma la nueva contrasena.');
+            if (nueva && confirmar && nueva !== confirmar) errores.push('La confirmacion de contrasena no coincide.');
+            if (modo === 'personal' && actual && nueva && actual === nueva) {
+                errores.push('La nueva contrasena debe ser diferente a la actual.');
+            }
+            return errores;
+        }
+
+        async function guardarPasswordUsuario(event) {
+            if (event) event.preventDefault();
+
+            const modo = document.getElementById('password-modo')?.value;
+            const usuarioId = document.getElementById('password-usuario-id')?.value;
+            const actual = document.getElementById('password-actual')?.value.trim() || '';
+            const nueva = document.getElementById('password-nueva')?.value.trim() || '';
+            const confirmar = document.getElementById('password-confirmar')?.value.trim() || '';
+            const btnGuardar = document.getElementById('btn-guardar-password');
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const errores = validarModalPasswordUsuario(modo, actual, nueva, confirmar);
+
+            if (!modo || !usuarioId) errores.push('No se pudo identificar el usuario para cambiar la contrasena.');
+
+            if (errores.length > 0) {
+                setErrorPasswordUsuario(errores.join(' '));
+                return;
+            }
+
+            const esAdmin = modo === 'admin';
+            const url = esAdmin
+                ? `${urlBase}/api/admin/usuarios/${usuarioId}/password`
+                : `${urlBase}/api/usuarios/${usuarioActual.id}/password`;
+            const payload = esAdmin
+                ? {
+                    rol_usuario: usuarioActual.rol,
+                    usuario_actual_id: usuarioActual.id,
+                    password: nueva,
+                    confirmar_password: confirmar
+                }
+                : {
+                    usuario_actual_id: usuarioActual.id,
+                    password_actual: actual,
+                    password: nueva,
+                    confirmar_password: confirmar
+                };
+
+            if (btnGuardar) {
+                btnGuardar.disabled = true;
+                btnGuardar.textContent = esAdmin ? 'Restableciendo...' : 'Guardando...';
+            }
 
             try {
-                const response = await fetch(`${urlBase}/api/admin/usuario-localidad/${usuario.id}`, {
+                const response = await fetch(url, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        rol_usuario: usuarioActual.rol,
-                        localidades
-                    })
+                    body: JSON.stringify(payload)
                 });
                 const data = await response.json();
 
                 if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'No se pudieron guardar los permisos.');
+                    throw new Error(data.error || 'No se pudo guardar la contrasena.');
                 }
 
-                usuario.localidades = localidades;
-
-                if (parseInt(usuarioActual.id, 10) === parseInt(usuario.id, 10)) {
-                    usuarioActual.localidades = localidades;
-                    localStorage.setItem('usuario_actual', JSON.stringify(usuarioActual));
-                }
-
-                renderizarUsuariosLocalidadAdmin();
-                renderizarEditorUsuarioLocalidadAdmin();
-                alert(`${data.message || 'Permisos actualizados.'}\n\nEl usuario verá los cambios al iniciar sesión nuevamente.`);
+                cerrarModalPasswordUsuario();
+                alert(data.message || 'Contrasena guardada correctamente.');
             } catch (error) {
-                console.error('Error guardando usuario-localidad:', error);
+                console.error('Error guardando contrasena:', error);
+                setErrorPasswordUsuario(error.message);
+            } finally {
+                if (btnGuardar) {
+                    btnGuardar.disabled = false;
+                    btnGuardar.textContent = esAdmin ? 'Restablecer contrasena' : 'Guardar contrasena';
+                }
+            }
+        }
+
+        function obtenerPayloadUsuarioAdmin(activoForzado = null) {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const id = document.getElementById('usuario-admin-id').value;
+            const rolId = obtenerRolFormularioUsuarioAdmin();
+            const payload = {
+                rol_usuario: usuarioActual.rol,
+                usuario_actual_id: usuarioActual.id,
+                nombre: document.getElementById('usuario-admin-nombre').value.trim(),
+                rol_id: rolId,
+                activo: activoForzado === null
+                    ? (usuariosLocalidadAdmin.find(usuario => String(usuario.id) === String(id))?.activo ?? 1)
+                    : activoForzado,
+                localidades: obtenerLocalidadesSeleccionadasUsuarioAdmin()
+            };
+
+            if (!id) {
+                payload.correo = document.getElementById('usuario-admin-correo').value.trim();
+                payload.password = document.getElementById('usuario-admin-password').value.trim();
+            }
+
+            return { id, payload };
+        }
+
+        function obtenerPayloadUsuarioAdminDesdeUsuario(usuario, activoForzado = null) {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const rolId = parseInt(usuario?.rol_id, 10) || null;
+            const activo = activoForzado === null
+                ? (parseInt(usuario?.activo, 10) === 1 ? 1 : 0)
+                : activoForzado;
+
+            return {
+                id: usuario?.id || '',
+                payload: {
+                    rol_usuario: usuarioActual.rol,
+                    usuario_actual_id: usuarioActual.id,
+                    nombre: (usuario?.nombre || '').trim(),
+                    rol_id: rolId,
+                    activo,
+                    localidades: rolId === 2
+                        ? []
+                        : (Array.isArray(usuario?.localidades) ? usuario.localidades : [])
+                            .map(id => parseInt(id, 10))
+                            .filter(Boolean)
+                }
+            };
+        }
+
+        function validarPayloadUsuarioAdmin(id, payload) {
+            const errores = [];
+            if (!payload.nombre) errores.push('El nombre del usuario es obligatorio.');
+            if (!payload.rol_id) errores.push('Selecciona un rol valido.');
+            if (!id && (!payload.correo || /\s/.test(payload.correo))) {
+                errores.push('Captura un usuario/correo valido, sin espacios.');
+            }
+            if (!id && !payload.password) {
+                errores.push('Captura la contrasena inicial.');
+            } else if (!id && evaluarSeguridadPasswordUsuario(payload.password).nivel < 3) {
+                errores.push('La contrasena inicial debe ser fuerte: usa mas de 8 caracteres, letras, numeros y un signo.');
+            }
+            if (parseInt(payload.activo, 10) === 1 && parseInt(payload.rol_id, 10) !== 2 && payload.localidades.length === 0) {
+                errores.push('Recepcionista y Administrador Local activos deben tener al menos una localidad asignada.');
+            }
+            return errores;
+        }
+
+        function actualizarUsuarioSesionSiAplica(usuarioActualizado) {
+            const usuarioSesion = obtenerUsuarioActualAdmin();
+            if (!usuarioActualizado || parseInt(usuarioSesion.id, 10) !== parseInt(usuarioActualizado.id, 10)) return;
+
+            usuarioSesion.nombre = usuarioActualizado.nombre;
+            usuarioSesion.rol = parseInt(usuarioActualizado.rol_id, 10);
+            usuarioSesion.localidades = usuarioActualizado.localidades || [];
+            localStorage.setItem('usuario_actual', JSON.stringify(usuarioSesion));
+            sessionStorage.setItem('usuario', JSON.stringify(usuarioSesion));
+            document.getElementById('user-name').innerText = usuarioSesion.nombre;
+        }
+
+        async function guardarUsuarioAdmin(event) {
+            if (event) event.preventDefault();
+
+            const { id, payload } = obtenerPayloadUsuarioAdmin();
+            const errores = validarPayloadUsuarioAdmin(id, payload);
+
+            if (errores.length > 0) {
+                alert(`No se puede guardar el usuario:\n\n${errores.join('\n')}`);
+                return;
+            }
+
+            const url = id
+                ? `${urlBase}/api/admin/usuarios/${id}`
+                : `${urlBase}/api/admin/usuarios`;
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo guardar el usuario.');
+                }
+
+                usuarioAdminModoCreacion = false;
+                usuarioAdminModoEdicion = false;
+                usuarioLocalidadSeleccionadoId = data.usuario?.id || usuarioLocalidadSeleccionadoId;
+                actualizarUsuarioSesionSiAplica(data.usuario);
+                await cargarUsuarioLocalidadAdmin();
+                alert(data.message || 'Usuario guardado correctamente.');
+            } catch (error) {
+                console.error('Error guardando usuario:', error);
+                alert(error.message);
+            }
+        }
+
+        async function cambiarEstadoUsuarioAdmin() {
+            const usuario = obtenerUsuarioSeleccionadoAdmin();
+            if (!usuario) {
+                alert('Selecciona un usuario antes de cambiar su estado.');
+                return;
+            }
+
+            const activoActual = parseInt(usuario.activo, 10) === 1;
+            const nuevoActivo = activoActual ? 0 : 1;
+            const accion = activoActual ? 'desactivar' : 'reactivar';
+            const confirmar = confirm(`¿Confirmas ${accion} el usuario ${usuario.nombre || usuario.correo || usuario.id}?`);
+            if (!confirmar) return;
+
+            const { id, payload } = obtenerPayloadUsuarioAdminDesdeUsuario(usuario, nuevoActivo);
+            const errores = validarPayloadUsuarioAdmin(id, payload);
+
+            if (errores.length > 0) {
+                alert(`No se puede ${accion} el usuario:\n\n${errores.join('\n')}`);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${urlBase}/api/admin/usuarios/${usuario.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `No se pudo ${accion} el usuario.`);
+                }
+
+                actualizarUsuarioSesionSiAplica(data.usuario);
+                usuarioAdminModoCreacion = false;
+                usuarioAdminModoEdicion = false;
+                await cargarUsuarioLocalidadAdmin();
+                alert(data.message || `Usuario ${nuevoActivo ? 'reactivado' : 'desactivado'} correctamente.`);
+            } catch (error) {
+                console.error('Error cambiando estado de usuario:', error);
                 alert(error.message);
             }
         }
@@ -2699,6 +3823,16 @@
             const localidades = await response.json();
             const select = document.getElementById('selectLocalidad');
             const selectFiltro = document.getElementById('filtro-localidad');
+
+            if (select) {
+                select.innerHTML = '<option value="">Seleccione una localidad...</option>';
+            }
+
+            if (selectFiltro) {
+                selectFiltro.innerHTML = '<option value="todas">Todas las Localidades</option>';
+            }
+
+            configLocalidades = {};
             
             localidades.forEach(loc => {
                 
@@ -2707,9 +3841,10 @@
                 // Si es Supervisor (rol 3), solo ve las que están en su lista de localidades.
                 const esAdmin = usuario.rol === 2;
                 const tienePermiso = usuario.localidades.includes(loc.id);
+                const localidadActiva = parseInt(loc.activo, 10) === 1;
 
                 if (esAdmin || tienePermiso) {
-                    if (select) {
+                    if (select && localidadActiva) {
                         const option = document.createElement('option');
                         option.value = loc.id;
                         option.textContent = loc.nombre;
@@ -2719,19 +3854,277 @@
                     // 1. Llenamos nuestro diccionario global de colores
                     configLocalidades[loc.id] = { 
                         nombre: loc.nombre, 
-                        color: loc.color || '#34495e' // Gris si no tiene color
+                        color: loc.color || '#34495e', // Gris si no tiene color
+                        activo: localidadActiva
                     };
                     
                     // 2. Llenamos el menú <select>
-                    const optionFiltro = document.createElement('option');
-                    optionFiltro.value = loc.id;
-                    optionFiltro.textContent = loc.nombre;
-                    selectFiltro.appendChild(optionFiltro);
+                    if (selectFiltro) {
+                        const optionFiltro = document.createElement('option');
+                        optionFiltro.value = loc.id;
+                        optionFiltro.textContent = localidadActiva ? loc.nombre : `${loc.nombre} (Inactiva)`;
+                        selectFiltro.appendChild(optionFiltro);
+                    }
                 }
 
                
             });
             inicializarFiltroTodasLocalidades();
+        }
+
+        function normalizarTelefonoEdicionCliente(input) {
+            if (!input) return;
+            input.value = input.value.replace(/[^0-9]/g, '').slice(0, 10);
+        }
+
+        function obtenerDatosEditablesCliente(cliente = {}) {
+            return {
+                nombre_completo: String(cliente.nombre_completo || '').trim(),
+                alias_cliente: String(cliente.alias_cliente || '').trim(),
+                telefono: String(cliente.telefono || '').replace(/\D/g, '').slice(0, 10),
+                url_portal: String(cliente.url_portal || '').trim(),
+                localidad_id: cliente.localidad_id ? String(cliente.localidad_id) : '',
+                direccion_ip: cliente.direccion_ip ? String(parseInt(cliente.direccion_ip, 10) || '') : '',
+                senal: String(cliente['se\u00f1al'] ?? cliente.senal ?? '').trim(),
+                es_renta: Number(cliente.es_renta) === 1 ? 1 : 0,
+                direccion: String(cliente.direccion || '').trim(),
+                observaciones: String(cliente.observaciones || '').trim()
+            };
+        }
+
+        function establecerValoresFormularioEdicionCliente(datos) {
+            const campos = {
+                'edit-cli-nombre': datos.nombre_completo,
+                'edit-cli-alias': datos.alias_cliente,
+                'edit-cli-telefono': datos.telefono,
+                'edit-cli-url': datos.url_portal,
+                'edit-cli-localidad': datos.localidad_id,
+                'edit-cli-ip': datos.direccion_ip,
+                'edit-cli-senal': datos.senal,
+                'edit-cli-direccion': datos.direccion,
+                'edit-cli-observaciones': datos.observaciones
+            };
+
+            Object.entries(campos).forEach(([id, valor]) => {
+                const campo = document.getElementById(id);
+                if (campo) campo.value = valor || '';
+            });
+
+            const renta = document.getElementById('edit-cli-renta');
+            if (renta) {
+                const rentaActiva = Number(datos.es_renta) === 1;
+                renta.checked = rentaActiva;
+                renta.dataset.valorConfirmado = rentaActiva ? '1' : '0';
+            }
+            actualizarEstadoGuardarEdicionCliente();
+        }
+
+        function confirmarCambioRentaEdicionCliente(input) {
+            if (!input) return;
+
+            const valorAnterior = input.dataset.valorConfirmado === '1';
+            if (input.checked === valorAnterior) {
+                actualizarEstadoGuardarEdicionCliente();
+                return;
+            }
+
+            const accion = input.checked ? 'activar' : 'quitar';
+            const confirmar = confirm(
+                `Vas a ${accion} la modalidad RENTA de este cliente.\n\n` +
+                'Este cambio puede afectar el control administrativo del servicio. ' +
+                'Si aceptas, el cambio quedara pendiente y solo se aplicara al presionar Guardar cambios.\n\n' +
+                '¿Deseas continuar?'
+            );
+
+            if (!confirmar) {
+                input.checked = valorAnterior;
+            } else {
+                input.dataset.valorConfirmado = input.checked ? '1' : '0';
+            }
+
+            actualizarEstadoGuardarEdicionCliente();
+        }
+
+        function obtenerValoresFormularioEdicionCliente() {
+            return {
+                nombre_completo: document.getElementById('edit-cli-nombre')?.value.trim() || '',
+                alias_cliente: document.getElementById('edit-cli-alias')?.value.trim() || '',
+                telefono: (document.getElementById('edit-cli-telefono')?.value || '').replace(/\D/g, ''),
+                url_portal: document.getElementById('edit-cli-url')?.value.trim() || '',
+                localidad_id: document.getElementById('edit-cli-localidad')?.value || '',
+                direccion_ip: document.getElementById('edit-cli-ip')?.value.trim() || '',
+                senal: document.getElementById('edit-cli-senal')?.value.trim() || '',
+                es_renta: document.getElementById('edit-cli-renta')?.checked ? 1 : 0,
+                direccion: document.getElementById('edit-cli-direccion')?.value.trim() || '',
+                observaciones: document.getElementById('edit-cli-observaciones')?.value.trim() || ''
+            };
+        }
+
+        function validarDatosEdicionCliente(datos) {
+            const errores = [];
+            const ip = parseInt(datos.direccion_ip, 10);
+            const senal = parseInt(datos.senal, 10);
+
+            if (!datos.nombre_completo) errores.push('- El nombre completo es obligatorio.');
+            if (!datos.direccion) errores.push('- La direccion es obligatoria.');
+            if (!datos.telefono) {
+                errores.push('- El telefono es obligatorio.');
+            } else if (!/^\d{10}$/.test(datos.telefono)) {
+                errores.push('- El telefono debe tener exactamente 10 digitos.');
+            }
+            if (!datos.localidad_id) errores.push('- Debes seleccionar una localidad.');
+            if (!Number.isInteger(ip) || ip < 1 || ip > 254) errores.push('- La IP debe ser un numero entre 1 y 254.');
+            if (!Number.isInteger(senal) || senal < 30 || senal > 90) errores.push('- La senal debe ser un valor entre 30 y 90.');
+            if (datos.url_portal && !/^https?:\/\/[^\s]+$/i.test(datos.url_portal)) {
+                errores.push('- La URL del portal debe iniciar con http:// o https://.');
+            }
+
+            return errores;
+        }
+
+        function hayCambiosEdicionCliente(datos) {
+            if (!clienteDetalleOriginal) return false;
+            return Object.keys(clienteDetalleOriginal).some(campo => String(clienteDetalleOriginal[campo] ?? '') !== String(datos[campo] ?? ''));
+        }
+
+        function actualizarEstadoGuardarEdicionCliente() {
+            const boton = document.getElementById('btn-guardar-edicion-cliente');
+            if (!boton) return;
+
+            const datos = obtenerValoresFormularioEdicionCliente();
+            boton.disabled = !clienteDetalleModoEdicion || !hayCambiosEdicionCliente(datos);
+        }
+
+        function poblarLocalidadesEdicionCliente(cliente) {
+            const select = document.getElementById('edit-cli-localidad');
+            if (!select) return;
+
+            const localidadActualId = cliente?.localidad_id ? String(cliente.localidad_id) : '';
+            select.innerHTML = '<option value="">Seleccione una localidad...</option>';
+
+            Object.entries(configLocalidades)
+                .sort(([, a], [, b]) => String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es'))
+                .forEach(([id, localidad]) => {
+                    const activa = Number(localidad.activo) === 1;
+                    if (!activa && id !== localidadActualId) return;
+
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = activa ? localidad.nombre : `${localidad.nombre} (Inactiva actual)`;
+                    select.appendChild(option);
+                });
+
+            const existeActual = Array.from(select.options).some(option => option.value === localidadActualId);
+            if (localidadActualId && !existeActual) {
+                const option = document.createElement('option');
+                option.value = localidadActualId;
+                option.textContent = cliente?.localidad_nombre || 'Localidad actual';
+                select.appendChild(option);
+            }
+
+            select.value = localidadActualId;
+        }
+
+        async function prepararFormularioEdicionClienteDetalle(cliente) {
+            if (Object.keys(configLocalidades).length === 0) {
+                await cargarLocalidades();
+            }
+
+            clienteDetalleOriginal = obtenerDatosEditablesCliente(cliente);
+            poblarLocalidadesEdicionCliente(cliente);
+            establecerValoresFormularioEdicionCliente(clienteDetalleOriginal);
+        }
+
+        function configurarBotonEdicionClienteDetalle() {
+            const boton = document.getElementById('btn-editar-cliente-detalle');
+            if (!boton) return;
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const esAdminGeneral = parseInt(usuarioActual.rol, 10) === 2;
+            boton.classList.toggle('hidden', !esAdminGeneral || clienteDetalleModoEdicion || !clienteSeleccionado);
+        }
+
+        function actualizarModoEdicionClienteDetalle(editando) {
+            clienteDetalleModoEdicion = editando;
+            document.getElementById('detalle-cliente-vista')?.classList.toggle('hidden', editando);
+            document.getElementById('cliente-detalle-edit-form')?.classList.toggle('hidden', !editando);
+            configurarBotonEdicionClienteDetalle();
+            actualizarEstadoGuardarEdicionCliente();
+        }
+
+        async function activarEdicionClienteDetalle() {
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            if (parseInt(usuarioActual.rol, 10) !== 2) {
+                alert('Solo el administrador general puede editar clientes.');
+                return;
+            }
+
+            if (!clienteSeleccionado) {
+                alert('Aun no se han cargado los datos del cliente.');
+                return;
+            }
+
+            await prepararFormularioEdicionClienteDetalle(clienteSeleccionado);
+            actualizarModoEdicionClienteDetalle(true);
+        }
+
+        function restaurarEdicionClienteDetalle() {
+            if (!clienteDetalleOriginal) return;
+            establecerValoresFormularioEdicionCliente(clienteDetalleOriginal);
+        }
+
+        function cancelarEdicionClienteDetalle() {
+            restaurarEdicionClienteDetalle();
+            actualizarModoEdicionClienteDetalle(false);
+        }
+
+        async function guardarEdicionClienteDetalle(event) {
+            if (event) event.preventDefault();
+            if (!clienteDetalleActualId) return;
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            if (parseInt(usuarioActual.rol, 10) !== 2) {
+                alert('Solo el administrador general puede editar clientes.');
+                return;
+            }
+
+            const datos = obtenerValoresFormularioEdicionCliente();
+            const errores = validarDatosEdicionCliente(datos);
+            if (errores.length > 0) {
+                alert(`No se puede guardar el cliente:\n\n${errores.join('\n')}`);
+                return;
+            }
+
+            if (!hayCambiosEdicionCliente(datos)) {
+                alert('No hay cambios por guardar.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${urlBase}/api/clientes/${clienteDetalleActualId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...datos,
+                        rol_usuario: usuarioActual.rol,
+                        usuario_actual_id: usuarioActual.id
+                    })
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert(result.error || 'No se pudo actualizar el cliente.');
+                    return;
+                }
+
+                clienteDetalleModoEdicion = false;
+                await cargarVistaAdminClientes();
+                await abrirDetallesCliente(clienteDetalleActualId);
+                alert(result.message || 'Cliente actualizado correctamente.');
+            } catch (error) {
+                console.error('Error actualizando cliente:', error);
+                alert('Error al actualizar cliente.');
+            }
         }
 
         // Ejecuta esta función al cargar el panel
@@ -4146,11 +5539,11 @@ ${linkVelocidad}
                 historialPaquetesDetalleActual = historialPaquetes;
 
                 const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
-                        EditarBoxAlias.innerHTML = `
-                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">Alias: ${cliente.alias_cliente} ✏️</i>
-                                    </p>
+                if (EditarBoxAlias) {
+                    EditarBoxAlias.innerHTML = `
+                                    <p class="detalle-alias-cliente">Alias: ${escaparHtml(cliente.alias_cliente || 'Sin alias')}</p>
                         `;
+                }
 
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
@@ -4168,7 +5561,8 @@ ${linkVelocidad}
                 document.getElementById('detalle-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin codigo';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
                 document.getElementById('detalle-ip').href = cliente.url_portal || '#'; 
-                document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
+                const correoDetalle = document.getElementById('detalle-correo');
+                if (correoDetalle) correoDetalle.textContent = cliente.correo || 'Sin correo';
                 
                 // Ahora usamos los nombres reales que trajimos del servidor
                 const loc = cliente.localidad_nombre || 'Sin localidad';
@@ -4181,6 +5575,8 @@ ${linkVelocidad}
                 const tel = cliente.telefono || '';
                 document.getElementById('detalle-telefono').textContent = tel || 'Sin teléfono';
                 const btnWhatsapp = document.getElementById('btn-whatsapp');
+                const EditarBox = document.getElementById('editar-box');
+                if (EditarBox) EditarBox.innerHTML = '';
 
                 if (tel) {
                     btnWhatsapp.href = '#';
@@ -4190,13 +5586,6 @@ ${linkVelocidad}
                     };
                     btnWhatsapp.title = 'Enviar mensaje de WhatsApp al cliente';
                     btnWhatsapp.style.display = 'inline-block';
-                    const EditarBox = document.getElementById('editar-box')
-                        EditarBox.innerHTML = `
-                        
-                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">✏️</i>
-                                    </button>
-                        `;
                 } else {
                     btnWhatsapp.onclick = null;
                     btnWhatsapp.removeAttribute('href');
@@ -4811,6 +6200,197 @@ ${linkVelocidad}
             }).join('');
         }
 
+        function formatearFechaHoraCambioAdmin(fecha) {
+            if (!fecha) return '-';
+            const fechaObj = new Date(fecha);
+            if (Number.isNaN(fechaObj.getTime())) return '-';
+
+            return fechaObj.toLocaleString('es-MX', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatearValorCambioAdmin(cambio, valor) {
+            if (valor === null || valor === undefined || valor === '') return 'Sin valor';
+
+            if (cambio.campo === 'es_renta') {
+                return parseInt(valor, 10) === 1 ? 'RENTA activa' : 'RENTA inactiva';
+            }
+
+            if (cambio.campo === 'localidad_id') {
+                return configLocalidades[valor]?.nombre || `Localidad ${valor}`;
+            }
+
+            return String(valor);
+        }
+
+        function agruparCambiosAdministrativos(cambios) {
+            const grupos = [];
+            const indiceGrupos = new Map();
+
+            cambios.forEach(cambio => {
+                const clave = cambio.grupo_cambio_id || [
+                    cambio.fecha_cambio || '',
+                    cambio.usuario_id || '',
+                    cambio.origen || '',
+                    cambio.ip || ''
+                ].join('|');
+
+                if (!indiceGrupos.has(clave)) {
+                    indiceGrupos.set(clave, grupos.length);
+                    grupos.push({
+                        grupo_cambio_id: cambio.grupo_cambio_id,
+                        fecha_cambio: cambio.fecha_cambio,
+                        usuario_nombre: cambio.usuario_nombre,
+                        ip: cambio.ip,
+                        origen: cambio.origen,
+                        cambios: []
+                    });
+                }
+
+                grupos[indiceGrupos.get(clave)].cambios.push(cambio);
+            });
+
+            return grupos;
+        }
+
+        function renderizarHistorialCambiosAdmin(cambios) {
+            const contenedor = document.getElementById('detalle-cambios-admin');
+            if (!contenedor) return;
+
+            const registros = Array.isArray(cambios) ? cambios : [];
+            if (registros.length === 0) {
+                contenedor.innerHTML = '<p class="bitacora-vacia">No hay cambios administrativos registrados.</p>';
+                return;
+            }
+
+            const grupos = agruparCambiosAdministrativos(registros);
+            contenedor.innerHTML = grupos.map(grupo => {
+                const usuario = grupo.usuario_nombre || 'Usuario no identificado';
+                const fecha = formatearFechaHoraCambioAdmin(grupo.fecha_cambio);
+                const totalCambios = grupo.cambios.length;
+                const tituloCambios = totalCambios === 1 ? '1 campo modificado' : `${totalCambios} campos modificados`;
+                const filasCambios = grupo.cambios.map(cambio => {
+                    const valorAnterior = formatearValorCambioAdmin(cambio, cambio.valor_anterior);
+                    const valorNuevo = formatearValorCambioAdmin(cambio, cambio.valor_nuevo);
+                    const etiqueta = cambio.etiqueta || cambio.campo || 'Cambio';
+
+                    return `
+                        <div class="cambio-admin-fila">
+                            <div class="cambio-admin-fila-header">
+                                <strong>${escaparHtml(etiqueta)}</strong>
+                                <button type="button" class="cambio-admin-revertir-btn" data-etiqueta="${escaparHtml(etiqueta)}" onclick="revertirCambioAdministrativoCliente(${cambio.id}, this.dataset.etiqueta)" title="Revertir este campo" aria-label="Revertir ${escaparHtml(etiqueta)}">
+                                    <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M3 9v6h6"></path>
+                                        <path d="M20 15a8 8 0 0 0-14.4-4.8L3 15"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="cambio-admin-valores">
+                                <div>
+                                    <span>Antes</span>
+                                    <p>${escaparHtml(valorAnterior)}</p>
+                                </div>
+                                <div>
+                                    <span>Después</span>
+                                    <p>${escaparHtml(valorNuevo)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <article class="cambio-admin-evento">
+                        <div class="bitacora-evento-header">
+                            <strong>${escaparHtml(tituloCambios)}</strong>
+                            <span class="bitacora-estado">${escaparHtml(fecha)}</span>
+                        </div>
+                        <div class="cambio-admin-meta">
+                            <span>${escaparHtml(usuario)}</span>
+                            <span>${escaparHtml(grupo.ip || 'IP no disponible')}</span>
+                        </div>
+                        <div class="cambio-admin-campos">${filasCambios}</div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        async function revertirCambioAdministrativoCliente(cambioId, etiquetaCampo = 'este campo') {
+            if (!clienteDetalleActualId) return;
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            if (parseInt(usuarioActual.rol, 10) !== 2) {
+                alert('Solo el administrador general puede revertir cambios administrativos.');
+                return;
+            }
+
+            const confirmar = confirm(
+                `Se restaurara el valor anterior de ${etiquetaCampo}.\n\n` +
+                'La reversion quedara registrada en la bitacora administrativa. ¿Confirmas el cambio?'
+            );
+            if (!confirmar) return;
+
+            try {
+                const response = await fetch(
+                    `${urlBase}/api/clientes/${clienteDetalleActualId}/bitacora-cambios/${cambioId}/revertir`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            rol_usuario: usuarioActual.rol,
+                            usuario_actual_id: usuarioActual.id
+                        })
+                    }
+                );
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    alert(data.error || 'No se pudo revertir el cambio.');
+                    return;
+                }
+
+                await cargarVistaAdminClientes();
+                await abrirDetallesCliente(clienteDetalleActualId);
+                alert(data.message || 'Cambio revertido correctamente.');
+            } catch (error) {
+                console.error('Error revirtiendo cambio administrativo:', error);
+                alert('Error al revertir cambio administrativo.');
+            }
+        }
+
+        async function cargarHistorialCambiosAdminCliente(idCliente) {
+            const seccion = document.getElementById('seccion-cambios-admin');
+            const contenedor = document.getElementById('detalle-cambios-admin');
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const esAdminGeneral = parseInt(usuarioActual.rol, 10) === 2;
+
+            if (seccion) seccion.classList.toggle('hidden', !esAdminGeneral);
+            if (!esAdminGeneral || !contenedor) return;
+
+            contenedor.innerHTML = '<p class="bitacora-vacia">Cargando cambios administrativos...</p>';
+
+            try {
+                const response = await fetch(
+                    `${urlBase}/api/clientes/${idCliente}/bitacora-cambios?rol_usuario=${usuarioActual.rol}&usuario_actual_id=${usuarioActual.id}`
+                );
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo cargar la bitacora administrativa.');
+                }
+
+                renderizarHistorialCambiosAdmin(data.cambios || []);
+            } catch (error) {
+                console.error('Error cargando cambios administrativos:', error);
+                contenedor.innerHTML = `<p class="bitacora-vacia">${escaparHtml(error.message)}</p>`;
+            }
+        }
+
         async function registrarEventoServicio() {
             if (!clienteDetalleActualId) return;
 
@@ -5127,7 +6707,7 @@ ${linkVelocidad}
         }
 
         function restaurarSeccionesDetalleAbiertas() {
-            ['seccion-finanzas', 'seccion-bitacora-servicio'].forEach(idSeccion => {
+            ['seccion-finanzas', 'seccion-bitacora-servicio', 'seccion-cambios-admin'].forEach(idSeccion => {
                 const seccion = document.getElementById(idSeccion);
                 if (!seccion) return;
 
@@ -5139,6 +6719,9 @@ ${linkVelocidad}
         // Función para abrir el modal y cargar desde Node.js
         async function abrirDetallesCliente(idCliente) {
             clienteDetalleActualId = idCliente;
+            clienteSeleccionado = null;
+            clienteDetalleOriginal = null;
+            actualizarModoEdicionClienteDetalle(false);
             // 1. Mostrar el Modal primero y poner un mensaje de carga
             document.getElementById('modal-detalles-cliente').classList.remove('hidden');
             restaurarSeccionesDetalleAbiertas();
@@ -5160,11 +6743,13 @@ ${linkVelocidad}
                 historialPaquetesDetalleActual = historialPaquetes;
 
                 const EditarBoxAlias = document.getElementById('editar-box-alias-detalles')
-                        EditarBoxAlias.innerHTML = `
-                                    <p class="button-alias-editar" onclick='modificaAliasCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">Alias: ${cliente.alias_cliente} ✏️</i>
-                                    </p>
+                if (EditarBoxAlias) {
+                    EditarBoxAlias.innerHTML = `
+                                    <p class="detalle-alias-cliente">Alias: ${escaparHtml(cliente.alias_cliente || 'Sin alias')}</p>
                         `;
+                }
+                await prepararFormularioEdicionClienteDetalle(cliente);
+                actualizarModoEdicionClienteDetalle(false);
 
                 // 3. Inyectar datos en la FICHA TÉCNICA
                 document.getElementById('detalle-nombre-cliente').textContent = cliente.nombre_completo || 'Sin nombre';
@@ -5182,7 +6767,8 @@ ${linkVelocidad}
                 document.getElementById('detalle-codigo-cliente').textContent = cliente.codigo_cliente || 'Sin codigo';
                 document.getElementById('detalle-ip').textContent = cliente.direccion_ip || 'No asignada';
                 document.getElementById('detalle-ip').href = cliente.url_portal || '#';
-                document.getElementById('detalle-correo').textContent = cliente.correo_electronico || 'Sin correo';
+                const correoDetalle = document.getElementById('detalle-correo');
+                if (correoDetalle) correoDetalle.textContent = cliente.correo || 'Sin correo';
                 
                 // Ahora usamos los nombres reales que trajimos del servidor
                 const loc = cliente.localidad_nombre || 'Sin localidad';
@@ -5195,6 +6781,8 @@ ${linkVelocidad}
                 const tel = cliente.telefono || '';
                 document.getElementById('detalle-telefono').textContent = tel || 'Sin teléfono';
                 const btnWhatsapp = document.getElementById('btn-whatsapp');
+                const EditarBox = document.getElementById('editar-box');
+                if (EditarBox) EditarBox.innerHTML = '';
 
                 if (tel) {
                     btnWhatsapp.href = '#';
@@ -5204,13 +6792,6 @@ ${linkVelocidad}
                     };
                     btnWhatsapp.title = 'Enviar mensaje de WhatsApp al cliente';
                     btnWhatsapp.style.display = 'inline-block';
-                    const EditarBox = document.getElementById('editar-box')
-                        EditarBox.innerHTML = `
-
-                                    <button class="btn-detalles-slim" onclick='modificaTelefonoCliente(${idCliente},1)'>
-                                        <i class="fas fa-eye">✏️</i>
-                                    </button>
-                        `;
                 } else {
                     btnWhatsapp.onclick = null;
                     btnWhatsapp.removeAttribute('href');
@@ -5238,6 +6819,7 @@ ${linkVelocidad}
                 configurarGestionServicio(cliente, estadoCuenta.servicio);
                 configurarInfoCuentaServicio(estadoCuenta);
                 renderizarBitacoraServicio(bitacoraServicio);
+                await cargarHistorialCambiosAdminCliente(idCliente);
 
                 // Dejamos un mensaje oculto en la consola para saber que los pagos llegaron bien
                 console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);
@@ -5417,6 +6999,9 @@ ${linkVelocidad}
 
         // Función para cerrar el modal
         function cerrarModalDetalles() {
+            clienteDetalleModoEdicion = false;
+            clienteDetalleOriginal = null;
+            actualizarModoEdicionClienteDetalle(false);
             document.getElementById('modal-detalles-cliente').classList.add('hidden');
         }
 

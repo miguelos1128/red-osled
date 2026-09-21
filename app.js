@@ -4,6 +4,7 @@ const mysql = require('mysql2');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -127,6 +128,37 @@ db.getConnection()
     .catch(err => {
         console.error('❌ Error al conectar a MySQL: ', err.message);
     });
+
+function obtenerIpCliente(req) {
+    const forwardedFor = req.headers?.['x-forwarded-for'];
+    if (Array.isArray(forwardedFor) && forwardedFor.length > 0) {
+        return String(forwardedFor[0]).split(',')[0].trim();
+    }
+    if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
+        return forwardedFor.split(',')[0].trim();
+    }
+
+    return req.ip || req.socket?.remoteAddress || '';
+}
+
+function registrarUso(evento, datos = {}) {
+    try {
+        console.log('[USO]', JSON.stringify({
+            fecha: new Date().toISOString(),
+            evento,
+            ...datos
+        }));
+    } catch (error) {
+        console.warn('No se pudo registrar el uso:', error.message);
+    }
+}
+
+function registrarError(evento, error, datos = {}) {
+    console.error('[ERROR]', evento, {
+        mensaje: error?.message || String(error),
+        ...datos
+    });
+}
 
 // 4. Rutas de prueba (Endpoints)
 
@@ -264,13 +296,27 @@ app.post('/api/login', async (req, res) => {
     const { correo, password } = req.body;
     
     // Consulta 1: Verificamos credenciales
-    const queryUsuario = 'SELECT id, nombre, rol_id FROM usuarios WHERE correo = ? AND password = ?';
+    const queryUsuario = 'SELECT id, nombre, rol_id, activo FROM usuarios WHERE correo = ? AND password = ?';
 
     try {
         const [results] = await db.query(queryUsuario, [correo, password]);
 
         if (results.length > 0) {
             const usuario = results[0];
+
+            if (parseInt(usuario.activo, 10) !== 1) {
+                registrarUso('LOGIN_USUARIO_INACTIVO', {
+                    usuario_id: usuario.id,
+                    usuario: usuario.nombre,
+                    rol: usuario.rol_id,
+                    ip: obtenerIpCliente(req)
+                });
+
+                return res.status(403).json({
+                    success: false,
+                    mensaje: "Usuario inactivo. Solicita a un administrador general que reactive tu acceso."
+                });
+            }
             
             // --- NUEVO CÓDIGO: Buscar localidades autorizadas ---
             const queryLocalidades = 'SELECT localidad_id FROM usuario_localidad WHERE usuario_id = ?';
@@ -327,11 +373,7 @@ app.post('/api/logout', (req, res) => {
 
     res.json({ success: true });
 });
-// 5. Iniciar el servidor
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`📡 Servidor corriendo en http://localhost:${PORT}`);
-});
 
 async function obtenerPaqueteActivoPorId(paqueteId, ejecutor = db) {
     const id = parseInt(paqueteId, 10);
@@ -361,6 +403,278 @@ function validarAdministradorRequest(req, res) {
         error: 'Acceso denegado: solo el administrador puede usar herramientas administrativas.'
     });
     return false;
+}
+
+async function asegurarColumnaActivoUsuarios() {
+    const [columnas] = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'usuarios'
+           AND COLUMN_NAME = 'activo'`
+    );
+
+    if (parseInt(columnas[0]?.total, 10) > 0) return;
+
+    await db.query(
+        'ALTER TABLE usuarios ADD COLUMN activo TINYINT(1) NOT NULL DEFAULT 1 AFTER rol_id'
+    );
+
+    registrarUso('MIGRACION_USUARIOS_ACTIVO_APLICADA', {
+        tabla: 'usuarios',
+        columna: 'activo'
+    });
+}
+
+async function asegurarColumnaActivoLocalidades() {
+    const [columnas] = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'localidades'
+           AND COLUMN_NAME = 'activo'`
+    );
+
+    if (parseInt(columnas[0]?.total, 10) > 0) return;
+
+    await db.query(
+        'ALTER TABLE localidades ADD COLUMN activo TINYINT(1) NOT NULL DEFAULT 1 AFTER codigo_localidad'
+    );
+
+    registrarUso('MIGRACION_LOCALIDADES_ACTIVO_APLICADA', {
+        tabla: 'localidades',
+        columna: 'activo'
+    });
+}
+
+async function asegurarTablaClientesBitacoraCambios() {
+    await db.query(
+        `CREATE TABLE IF NOT EXISTS clientes_bitacora_cambios (
+            id INT NOT NULL AUTO_INCREMENT,
+            grupo_cambio_id VARCHAR(36) NOT NULL,
+            cliente_id INT NOT NULL,
+            usuario_id INT NULL,
+            campo VARCHAR(64) NOT NULL,
+            etiqueta VARCHAR(100) NULL,
+            valor_anterior TEXT NULL,
+            valor_nuevo TEXT NULL,
+            origen VARCHAR(50) NOT NULL DEFAULT 'edicion_cliente',
+            ip VARCHAR(64) NULL,
+            fecha_cambio DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            INDEX idx_grupo_cambio (grupo_cambio_id),
+            INDEX idx_cliente_fecha (cliente_id, fecha_cambio),
+            INDEX idx_usuario_fecha (usuario_id, fecha_cambio),
+            INDEX idx_campo (campo)
+        )`
+    );
+
+    const [columnas] = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'clientes_bitacora_cambios'
+           AND COLUMN_NAME = 'grupo_cambio_id'`
+    );
+
+    if (parseInt(columnas[0]?.total, 10) === 0) {
+        await db.query(
+            'ALTER TABLE clientes_bitacora_cambios ADD COLUMN grupo_cambio_id VARCHAR(36) NULL AFTER id'
+        );
+    }
+
+    await db.query(
+        `UPDATE clientes_bitacora_cambios
+         SET grupo_cambio_id = MD5(CONCAT_WS('|',
+            cliente_id,
+            COALESCE(usuario_id, ''),
+            COALESCE(origen, ''),
+            COALESCE(ip, ''),
+            DATE_FORMAT(fecha_cambio, '%Y-%m-%d %H:%i:%s')
+         ))
+         WHERE grupo_cambio_id IS NULL`
+    );
+    await db.query(
+        'ALTER TABLE clientes_bitacora_cambios MODIFY grupo_cambio_id VARCHAR(36) NOT NULL'
+    );
+
+    const [indices] = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM INFORMATION_SCHEMA.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'clientes_bitacora_cambios'
+           AND INDEX_NAME = 'idx_grupo_cambio'`
+    );
+
+    if (parseInt(indices[0]?.total, 10) === 0) {
+        await db.query(
+            'ALTER TABLE clientes_bitacora_cambios ADD INDEX idx_grupo_cambio (grupo_cambio_id)'
+        );
+    }
+}
+
+function obtenerRolRequest(req) {
+    return req.body?.rol_usuario ?? req.query?.rol_usuario ?? req.query?.rol;
+}
+
+function obtenerUsuarioActualIdRequest(req) {
+    return parseInt(
+        req.body?.usuario_actual_id ?? req.query?.usuario_actual_id ?? req.query?.usuario_id,
+        10
+    ) || null;
+}
+
+async function validarAdministradorGeneralRequest(req, res) {
+    const rol = obtenerRolRequest(req);
+    if (!esRolAdministrador(rol)) {
+        res.status(403).json({
+            success: false,
+            error: 'Acceso denegado: solo el administrador general puede usar estas herramientas administrativas.'
+        });
+        return false;
+    }
+
+    const usuarioActualId = obtenerUsuarioActualIdRequest(req);
+    if (!usuarioActualId) {
+        res.status(400).json({
+            success: false,
+            error: 'No se recibio el usuario administrador que solicita la accion.'
+        });
+        return false;
+    }
+
+    const [usuarios] = await db.query(
+        `SELECT id
+         FROM usuarios
+         WHERE id = ? AND rol_id = 2 AND activo = 1
+         LIMIT 1`,
+        [usuarioActualId]
+    );
+
+    if (usuarios.length === 0) {
+        res.status(403).json({
+            success: false,
+            error: 'Acceso denegado: tu usuario no esta activo como administrador general.'
+        });
+        return false;
+    }
+
+    return true;
+}
+
+function normalizarLocalidadesUsuario(localidades) {
+    if (!Array.isArray(localidades)) return [];
+
+    return [...new Set(
+        localidades
+            .map(id => parseInt(id, 10))
+            .filter(id => Number.isInteger(id) && id > 0)
+    )];
+}
+
+function normalizarRolSistema(rolId) {
+    const rol = parseInt(rolId, 10);
+    return [1, 2, 3].includes(rol) ? rol : null;
+}
+
+function normalizarActivoUsuario(valor, valorDefecto = 1) {
+    if (valor === undefined || valor === null || valor === '') return valorDefecto ? 1 : 0;
+    return parseInt(valor, 10) ? 1 : 0;
+}
+
+function validarCorreoUsuario(correo) {
+    const valor = String(correo || '').trim();
+    return valor.length > 0 && valor.length <= 100 && !/\s/.test(valor);
+}
+
+function normalizarPasswordUsuario(password) {
+    return String(password || '').trim();
+}
+
+function validarPasswordNuevaUsuario(password, etiqueta = 'La nueva contrasena') {
+    const errores = [];
+    if (!password) {
+        errores.push(`Captura ${etiqueta.toLowerCase()}.`);
+    } else if (password.length <= 8) {
+        errores.push(`${etiqueta} debe tener mas de 8 caracteres.`);
+    } else if (
+        !/[a-zA-Z]/.test(password)
+        || !/[0-9]/.test(password)
+        || !/[^\w\s]/.test(password)
+    ) {
+        errores.push(`${etiqueta} debe ser fuerte: usa letras, numeros y un signo.`);
+    }
+
+    return errores;
+}
+
+async function validarLocalidadesExistentes(ejecutor, localidades) {
+    if (localidades.length === 0) return true;
+
+    const [rows] = await ejecutor.query(
+        'SELECT id FROM localidades WHERE id IN (?) AND activo = 1',
+        [localidades]
+    );
+
+    const idsValidos = new Set(rows.map(localidad => parseInt(localidad.id, 10)));
+    return localidades.every(localidadId => idsValidos.has(localidadId));
+}
+
+function mapearUsuarioAdmin(usuario) {
+    return {
+        ...usuario,
+        activo: parseInt(usuario.activo, 10) ? 1 : 0,
+        localidades: String(usuario.localidades || '')
+            .split(',')
+            .filter(Boolean)
+            .map(id => parseInt(id, 10))
+    };
+}
+
+async function consultarUsuarioAdminPorId(ejecutor, usuarioId) {
+    const [usuarios] = await ejecutor.query(
+        `SELECT
+            u.id,
+            u.nombre,
+            u.correo,
+            u.rol_id,
+            u.activo,
+            COALESCE(GROUP_CONCAT(ul.localidad_id ORDER BY ul.localidad_id SEPARATOR ','), '') AS localidades
+         FROM usuarios u
+         LEFT JOIN usuario_localidad ul ON ul.usuario_id = u.id
+         WHERE u.id = ?
+         GROUP BY u.id, u.nombre, u.correo, u.rol_id, u.activo
+         LIMIT 1`,
+        [usuarioId]
+    );
+
+    return usuarios[0] ? mapearUsuarioAdmin(usuarios[0]) : null;
+}
+
+function mapearLocalidadAdmin(localidad) {
+    return {
+        ...localidad,
+        activo: parseInt(localidad.activo, 10) ? 1 : 0,
+        clientes_count: parseInt(localidad.clientes_count, 10) || 0
+    };
+}
+
+async function consultarLocalidadesAdmin(ejecutor = db) {
+    const [localidades] = await ejecutor.query(
+        `SELECT
+            l.id,
+            l.nombre,
+            l.color,
+            l.codigo_localidad,
+            l.activo,
+            COUNT(c.id) AS clientes_count
+         FROM localidades l
+         LEFT JOIN clientes c ON c.localidad_id = l.id
+         GROUP BY l.id, l.nombre, l.color, l.codigo_localidad, l.activo
+         ORDER BY l.activo DESC, l.nombre ASC`
+    );
+
+    return localidades.map(mapearLocalidadAdmin);
 }
 
 function normalizarDatosPaquete(body = {}) {
@@ -405,14 +719,81 @@ function normalizarCodigoLocalidad(codigo) {
     return /^[A-Z0-9]{2}$/.test(codigoNormalizado) ? codigoNormalizado : null;
 }
 
+function normalizarCodigoLocalidadNueva(codigo) {
+    const codigoNormalizado = String(codigo || '').trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(codigoNormalizado) ? codigoNormalizado : null;
+}
+
+function normalizarColorLocalidad(color) {
+    const valor = String(color || '').trim();
+    return /^#[0-9a-fA-F]{6}$/.test(valor) ? valor.toLowerCase() : null;
+}
+
+function normalizarActivoLocalidad(valor, valorDefecto = 1) {
+    if (valor === undefined || valor === null || valor === '') return valorDefecto ? 1 : 0;
+    return parseInt(valor, 10) ? 1 : 0;
+}
+
+const PALETA_LOCALIDADES = [
+    '#2563eb', '#16a34a', '#dc2626', '#f59e0b', '#7c3aed',
+    '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4f46e5',
+    '#0f766e', '#be123c', '#9333ea', '#0284c7', '#84cc16'
+];
+
+function generarColorLocalidadPorIndice(indice) {
+    const tono = (indice * 137) % 360;
+    const c = 0.62;
+    const x = c * (1 - Math.abs(((tono / 60) % 2) - 1));
+    const m = 0.28;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+
+    if (tono < 60) [r, g, b] = [c, x, 0];
+    else if (tono < 120) [r, g, b] = [x, c, 0];
+    else if (tono < 180) [r, g, b] = [0, c, x];
+    else if (tono < 240) [r, g, b] = [0, x, c];
+    else if (tono < 300) [r, g, b] = [x, 0, c];
+    else [r, g, b] = [c, 0, x];
+
+    return `#${[r, g, b]
+        .map(valor => Math.round((valor + m) * 255).toString(16).padStart(2, '0'))
+        .join('')}`;
+}
+
+async function sugerirColorLocalidad(ejecutor = db) {
+    const [localidades] = await ejecutor.query(
+        `SELECT LOWER(color) AS color
+         FROM localidades
+         WHERE color IS NOT NULL`
+    );
+    const usados = new Set(localidades.map(localidad => localidad.color).filter(Boolean));
+
+    const colorDisponible = PALETA_LOCALIDADES.find(color => !usados.has(color));
+    if (colorDisponible) return colorDisponible;
+
+    let intento = localidades.length;
+    let color = generarColorLocalidadPorIndice(intento);
+    while (usados.has(color) && intento < localidades.length + 100) {
+        intento += 1;
+        color = generarColorLocalidadPorIndice(intento);
+    }
+
+    return color;
+}
+
 async function obtenerCodigoLocalidad(ejecutor, localidadId) {
     const [localidades] = await ejecutor.query(
-        'SELECT codigo_localidad FROM localidades WHERE id = ? LIMIT 1',
+        'SELECT codigo_localidad, activo FROM localidades WHERE id = ? LIMIT 1',
         [localidadId]
     );
 
     if (localidades.length === 0) {
         throw new Error('La localidad seleccionada no existe.');
+    }
+
+    if (parseInt(localidades[0].activo, 10) !== 1) {
+        throw new Error('La localidad seleccionada esta inactiva y no puede usarse para nuevos clientes.');
     }
 
     const codigoLocalidad = normalizarCodigoLocalidad(localidades[0].codigo_localidad);
@@ -468,6 +849,154 @@ async function generarCodigoCliente(ejecutor, localidadId, fechaInstalacion) {
     const codigoLocalidad = await obtenerCodigoLocalidad(ejecutor, localidadId);
     const consecutivo = await obtenerSiguienteConsecutivoCodigoCliente(ejecutor, periodo);
     return `${codigoLocalidad}${periodo}${consecutivo}`;
+}
+
+function normalizarTextoClienteEdicion(valor) {
+    return String(valor ?? '').trim();
+}
+
+function normalizarDatosClienteEdicion(body = {}) {
+    const nombre = normalizarTextoClienteEdicion(body.nombre_completo);
+    const alias = normalizarTextoClienteEdicion(body.alias_cliente);
+    const telefono = normalizarTextoClienteEdicion(body.telefono).replace(/\D/g, '');
+    const direccion = normalizarTextoClienteEdicion(body.direccion);
+    const observaciones = normalizarTextoClienteEdicion(body.observaciones);
+    const urlPortal = normalizarTextoClienteEdicion(body.url_portal);
+    const direccionIp = parseInt(body.direccion_ip, 10);
+    const senal = parseInt(body['se\u00f1al'] ?? body.senal, 10);
+    const localidadId = parseInt(body.localidad_id, 10);
+    const esRenta = parseInt(body.es_renta, 10) ? 1 : 0;
+    const errores = [];
+
+    if (!nombre) errores.push('El nombre completo es obligatorio.');
+    if (nombre.length > 150) errores.push('El nombre completo no puede superar 150 caracteres.');
+    if (alias.length > 50) errores.push('El alias no puede superar 50 caracteres.');
+    if (urlPortal.length > 500) errores.push('La URL del portal no puede superar 500 caracteres.');
+    if (!direccion) errores.push('La direccion es obligatoria.');
+    if (!telefono) {
+        errores.push('El telefono es obligatorio.');
+    } else if (!/^\d{10}$/.test(telefono)) {
+        errores.push('El telefono debe tener exactamente 10 digitos.');
+    }
+    if (!Number.isInteger(localidadId) || localidadId <= 0) {
+        errores.push('Selecciona una localidad valida.');
+    }
+    if (!Number.isInteger(direccionIp) || direccionIp < 1 || direccionIp > 254) {
+        errores.push('La IP debe ser un numero entre 1 y 254.');
+    }
+    if (!Number.isInteger(senal) || senal < 30 || senal > 90) {
+        errores.push('La senal debe ser un valor entre 30 y 90.');
+    }
+    if (urlPortal && !/^https?:\/\/[^\s]+$/i.test(urlPortal)) {
+        errores.push('La URL del portal debe iniciar con http:// o https://.');
+    }
+
+    return {
+        datos: {
+            nombre_completo: nombre,
+            alias_cliente: alias || null,
+            telefono,
+            direccion,
+            observaciones: observaciones || null,
+            url_portal: urlPortal || null,
+            direccion_ip: String(direccionIp),
+            senal: String(senal),
+            es_renta: esRenta,
+            localidad_id: localidadId
+        },
+        errores
+    };
+}
+
+const CAMPOS_BITACORA_CLIENTE = [
+    { campo: 'nombre_completo', etiqueta: 'Nombre completo' },
+    { campo: 'alias_cliente', etiqueta: 'Alias' },
+    { campo: 'telefono', etiqueta: 'Telefono' },
+    { campo: 'url_portal', etiqueta: 'URL portal' },
+    { campo: 'direccion', etiqueta: 'Direccion' },
+    { campo: 'observaciones', etiqueta: 'Observaciones' },
+    { campo: 'es_renta', etiqueta: 'Modalidad RENTA' },
+    { campo: 'direccion_ip', etiqueta: 'Direccion IP' },
+    { campo: 'senal', etiqueta: 'Senal' },
+    { campo: 'localidad_id', etiqueta: 'Localidad' }
+];
+
+const CAMPOS_REVERTIBLES_CLIENTE = {
+    nombre_completo: { columnaSql: 'nombre_completo', etiqueta: 'Nombre completo', requerido: true },
+    alias_cliente: { columnaSql: 'alias_cliente', etiqueta: 'Alias' },
+    telefono: { columnaSql: 'telefono', etiqueta: 'Telefono' },
+    url_portal: { columnaSql: 'url_portal', etiqueta: 'URL portal' },
+    direccion: { columnaSql: 'direccion', etiqueta: 'Direccion' },
+    observaciones: { columnaSql: 'observaciones', etiqueta: 'Observaciones' },
+    es_renta: { columnaSql: 'es_renta', etiqueta: 'Modalidad RENTA' },
+    direccion_ip: { columnaSql: 'direccion_ip', etiqueta: 'Direccion IP' },
+    senal: { columnaSql: '`se\u00f1al`', etiqueta: 'Senal' },
+    localidad_id: { columnaSql: 'localidad_id', etiqueta: 'Localidad', requerido: true }
+};
+
+function mapearDatosClienteActualEdicion(cliente = {}) {
+    const direccionIp = parseInt(cliente.direccion_ip, 10);
+    const senal = parseInt(cliente.senal, 10);
+    const localidadId = parseInt(cliente.localidad_id, 10);
+
+    return {
+        nombre_completo: normalizarTextoClienteEdicion(cliente.nombre_completo),
+        alias_cliente: normalizarTextoClienteEdicion(cliente.alias_cliente) || null,
+        telefono: normalizarTextoClienteEdicion(cliente.telefono).replace(/\D/g, ''),
+        direccion: normalizarTextoClienteEdicion(cliente.direccion),
+        observaciones: normalizarTextoClienteEdicion(cliente.observaciones) || null,
+        url_portal: normalizarTextoClienteEdicion(cliente.url_portal) || null,
+        direccion_ip: Number.isInteger(direccionIp) ? String(direccionIp) : '',
+        senal: Number.isInteger(senal) ? String(senal) : '',
+        es_renta: parseInt(cliente.es_renta, 10) ? 1 : 0,
+        localidad_id: Number.isInteger(localidadId) ? localidadId : null
+    };
+}
+
+function normalizarValorComparacionCliente(valor) {
+    return String(valor ?? '');
+}
+
+function serializarValorBitacoraCliente(valor) {
+    if (valor === null || valor === undefined || valor === '') return null;
+    return String(valor);
+}
+
+function normalizarValorReversionCliente(campo, valor) {
+    if (valor === null || valor === undefined || valor === '') return null;
+
+    if (campo === 'es_renta') return parseInt(valor, 10) ? 1 : 0;
+
+    if (campo === 'localidad_id') {
+        const localidadId = parseInt(valor, 10);
+        return Number.isInteger(localidadId) && localidadId > 0 ? localidadId : null;
+    }
+
+    if (campo === 'direccion_ip') {
+        const ip = parseInt(valor, 10);
+        return Number.isInteger(ip) ? String(ip) : null;
+    }
+
+    if (campo === 'senal') {
+        const senal = parseInt(valor, 10);
+        return Number.isInteger(senal) ? String(senal) : null;
+    }
+
+    return String(valor);
+}
+
+function obtenerCambiosBitacoraCliente(datosAnteriores, datosNuevos) {
+    return CAMPOS_BITACORA_CLIENTE
+        .filter(({ campo }) => (
+            normalizarValorComparacionCliente(datosAnteriores[campo])
+            !== normalizarValorComparacionCliente(datosNuevos[campo])
+        ))
+        .map(({ campo, etiqueta }) => ({
+            campo,
+            etiqueta,
+            valor_anterior: serializarValorBitacoraCliente(datosAnteriores[campo]),
+            valor_nuevo: serializarValorBitacoraCliente(datosNuevos[campo])
+        }));
 }
 
 // Ruta para agregar un nuevo cliente (POST)
@@ -588,6 +1117,325 @@ app.post('/api/clientes', async (req, res) => {
             });
         }
         res.status(500).json({ error: "Error al guardar en la BD: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.put('/api/clientes/:id', async (req, res) => {
+    let connection;
+
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const clienteId = parseInt(req.params.id, 10);
+        if (!Number.isInteger(clienteId) || clienteId <= 0) {
+            return res.status(400).json({ success: false, error: 'Cliente no valido.' });
+        }
+
+        const { datos, errores } = normalizarDatosClienteEdicion(req.body);
+        if (errores.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: `No se puede actualizar el cliente:\n\n${errores.join('\n')}`
+            });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [clientes] = await connection.query(
+            `SELECT id, codigo_cliente, nombre_completo, alias_cliente, url_portal, telefono,
+                    direccion, observaciones, es_renta, direccion_ip, \`se\u00f1al\` AS senal,
+                    localidad_id
+             FROM clientes
+             WHERE id = ?
+             FOR UPDATE`,
+            [clienteId]
+        );
+
+        if (clientes.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+        }
+
+        const clienteActual = clientes[0];
+        const datosAnteriores = mapearDatosClienteActualEdicion(clienteActual);
+        const cambiosBitacora = obtenerCambiosBitacoraCliente(datosAnteriores, datos);
+
+        if (cambiosBitacora.length === 0) {
+            await connection.rollback();
+            return res.json({
+                success: true,
+                message: 'No hubo cambios por guardar.'
+            });
+        }
+
+        const localidadActualId = parseInt(clienteActual.localidad_id, 10);
+        const cambiaLocalidad = localidadActualId !== datos.localidad_id;
+        const queryLocalidad = cambiaLocalidad
+            ? 'SELECT id FROM localidades WHERE id = ? AND activo = 1 LIMIT 1'
+            : 'SELECT id FROM localidades WHERE id = ? LIMIT 1';
+        const [localidades] = await connection.query(queryLocalidad, [datos.localidad_id]);
+
+        if (localidades.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: cambiaLocalidad
+                    ? 'La localidad seleccionada no existe o esta inactiva.'
+                    : 'La localidad actual del cliente ya no existe.'
+            });
+        }
+
+        await connection.query(
+            `UPDATE clientes
+             SET nombre_completo = ?,
+                 alias_cliente = ?,
+                 url_portal = ?,
+                 telefono = ?,
+                 direccion = ?,
+                 observaciones = ?,
+                 es_renta = ?,
+                 direccion_ip = ?,
+                 \`se\u00f1al\` = ?,
+                 localidad_id = ?
+             WHERE id = ?`,
+            [
+                datos.nombre_completo,
+                datos.alias_cliente,
+                datos.url_portal,
+                datos.telefono,
+                datos.direccion,
+                datos.observaciones,
+                datos.es_renta,
+                datos.direccion_ip,
+                datos.senal,
+                datos.localidad_id,
+                clienteId
+            ]
+        );
+
+        const usuarioAdminId = obtenerUsuarioActualIdRequest(req);
+        const grupoCambioId = crypto.randomUUID();
+        await connection.query(
+            `INSERT INTO clientes_bitacora_cambios
+                (grupo_cambio_id, cliente_id, usuario_id, campo, etiqueta, valor_anterior, valor_nuevo, origen, ip)
+             VALUES ?`,
+            [cambiosBitacora.map(cambio => [
+                grupoCambioId,
+                clienteId,
+                usuarioAdminId,
+                cambio.campo,
+                cambio.etiqueta,
+                cambio.valor_anterior,
+                cambio.valor_nuevo,
+                'edicion_cliente',
+                obtenerIpCliente(req)
+            ])]
+        );
+
+        await connection.commit();
+
+        registrarUso('CLIENTE_ACTUALIZADO', {
+            usuario_admin_id: usuarioAdminId,
+            cliente_id: clienteId,
+            grupo_cambio_id: grupoCambioId,
+            localidad_anterior_id: localidadActualId || null,
+            localidad_nueva_id: datos.localidad_id,
+            codigo_cliente: clienteActual.codigo_cliente,
+            campos_modificados: cambiosBitacora.map(cambio => cambio.campo),
+            total_cambios: cambiosBitacora.length,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Cliente actualizado correctamente.'
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir actualizacion de cliente:", rollbackError);
+            }
+        }
+
+        console.error("Error al actualizar cliente:", error);
+        res.status(500).json({ success: false, error: "Error al actualizar cliente: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.get('/api/clientes/:id/bitacora-cambios', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const clienteId = parseInt(req.params.id, 10);
+        if (!Number.isInteger(clienteId) || clienteId <= 0) {
+            return res.status(400).json({ success: false, error: 'Cliente no valido.' });
+        }
+
+        const [cambios] = await db.query(
+            `SELECT
+                b.id,
+                b.grupo_cambio_id,
+                b.cliente_id,
+                b.usuario_id,
+                u.nombre AS usuario_nombre,
+                b.campo,
+                b.etiqueta,
+                b.valor_anterior,
+                b.valor_nuevo,
+                b.origen,
+                b.ip,
+                b.fecha_cambio
+             FROM clientes_bitacora_cambios b
+             LEFT JOIN usuarios u ON u.id = b.usuario_id
+             WHERE b.cliente_id = ?
+             ORDER BY b.fecha_cambio DESC, b.id DESC
+             LIMIT 100`,
+            [clienteId]
+        );
+
+        res.json({
+            success: true,
+            cambios
+        });
+    } catch (error) {
+        console.error('Error al consultar bitacora administrativa de cliente:', error);
+        res.status(500).json({ success: false, error: 'Error al consultar bitacora administrativa: ' + error.message });
+    }
+});
+
+app.post('/api/clientes/:id/bitacora-cambios/:cambioId/revertir', async (req, res) => {
+    let connection;
+
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const clienteId = parseInt(req.params.id, 10);
+        const cambioId = parseInt(req.params.cambioId, 10);
+        if (!Number.isInteger(clienteId) || clienteId <= 0 || !Number.isInteger(cambioId) || cambioId <= 0) {
+            return res.status(400).json({ success: false, error: 'Cambio no valido.' });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [cambios] = await connection.query(
+            `SELECT id, cliente_id, grupo_cambio_id, campo, etiqueta, valor_anterior, valor_nuevo
+             FROM clientes_bitacora_cambios
+             WHERE id = ? AND cliente_id = ?
+             FOR UPDATE`,
+            [cambioId, clienteId]
+        );
+
+        if (cambios.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Cambio administrativo no encontrado.' });
+        }
+
+        const cambio = cambios[0];
+        const definicionCampo = CAMPOS_REVERTIBLES_CLIENTE[cambio.campo];
+        if (!definicionCampo) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'Este campo no se puede revertir automaticamente.' });
+        }
+
+        const valorRestaurar = normalizarValorReversionCliente(cambio.campo, cambio.valor_anterior);
+        if (definicionCampo.requerido && (valorRestaurar === null || valorRestaurar === '')) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'No se puede revertir este campo porque el valor anterior no es valido.' });
+        }
+
+        if (cambio.campo === 'localidad_id') {
+            const [localidades] = await connection.query(
+                'SELECT id FROM localidades WHERE id = ? AND activo = 1 LIMIT 1',
+                [valorRestaurar]
+            );
+
+            if (localidades.length === 0) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    error: 'No se puede revertir la localidad porque la localidad anterior no esta activa o no existe. Antes de hacer este cambio debes reactivar la localidad.'
+                });
+            }
+        }
+
+        const [clientes] = await connection.query(
+            `SELECT ${definicionCampo.columnaSql} AS valor_actual
+             FROM clientes
+             WHERE id = ?
+             FOR UPDATE`,
+            [clienteId]
+        );
+
+        if (clientes.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+        }
+
+        const valorActual = normalizarValorReversionCliente(cambio.campo, clientes[0].valor_actual);
+        if (normalizarValorComparacionCliente(valorActual) === normalizarValorComparacionCliente(valorRestaurar)) {
+            await connection.rollback();
+            return res.json({ success: true, message: 'El campo ya tiene el valor anterior.' });
+        }
+
+        await connection.query(
+            `UPDATE clientes SET ${definicionCampo.columnaSql} = ? WHERE id = ?`,
+            [valorRestaurar, clienteId]
+        );
+
+        const usuarioAdminId = obtenerUsuarioActualIdRequest(req);
+        const grupoReversionId = crypto.randomUUID();
+        await connection.query(
+            `INSERT INTO clientes_bitacora_cambios
+                (grupo_cambio_id, cliente_id, usuario_id, campo, etiqueta, valor_anterior, valor_nuevo, origen, ip)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                grupoReversionId,
+                clienteId,
+                usuarioAdminId,
+                cambio.campo,
+                cambio.etiqueta || definicionCampo.etiqueta,
+                serializarValorBitacoraCliente(valorActual),
+                serializarValorBitacoraCliente(valorRestaurar),
+                'reversion_cambio',
+                obtenerIpCliente(req)
+            ]
+        );
+
+        await connection.commit();
+
+        registrarUso('CLIENTE_CAMBIO_REVERTIDO', {
+            usuario_admin_id: usuarioAdminId,
+            cliente_id: clienteId,
+            cambio_id: cambioId,
+            grupo_cambio_id: cambio.grupo_cambio_id,
+            grupo_reversion_id: grupoReversionId,
+            campo: cambio.campo,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Cambio revertido correctamente.'
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error('Error al revertir rollback de cambio administrativo:', rollbackError);
+            }
+        }
+
+        console.error('Error al revertir cambio administrativo:', error);
+        res.status(500).json({ success: false, error: 'Error al revertir cambio: ' + error.message });
     } finally {
         if (connection) connection.release();
     }
@@ -3352,10 +4200,415 @@ app.get('/api/historico-cortes/:usuarioId', async (req, res) => {
     }
 }); */
 
+app.get('/api/admin/usuarios', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const [usuarios] = await db.query(
+            `SELECT
+                u.id,
+                u.nombre,
+                u.correo,
+                u.rol_id,
+                u.activo,
+                COALESCE(GROUP_CONCAT(ul.localidad_id ORDER BY ul.localidad_id SEPARATOR ','), '') AS localidades
+             FROM usuarios u
+             LEFT JOIN usuario_localidad ul ON ul.usuario_id = u.id
+             GROUP BY u.id, u.nombre, u.correo, u.rol_id, u.activo
+             ORDER BY u.activo DESC, u.rol_id ASC, u.nombre ASC`
+        );
+
+        const [roles] = await db.query(
+            `SELECT id, nombre_rol
+             FROM roles
+             WHERE id IN (1, 2, 3)
+             ORDER BY id ASC`
+        );
+
+        const localidades = await consultarLocalidadesAdmin(db);
+
+        res.json({
+            success: true,
+            usuarios: usuarios.map(mapearUsuarioAdmin),
+            roles,
+            localidades
+        });
+    } catch (error) {
+        console.error("Error al obtener usuarios administrativos:", error);
+        res.status(500).json({ success: false, error: "Error al cargar usuarios: " + error.message });
+    }
+});
+
+app.post('/api/admin/usuarios', async (req, res) => {
+    let connection;
+
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const nombre = String(req.body.nombre || '').trim();
+        const correo = String(req.body.correo || '').trim().toLowerCase();
+        const password = String(req.body.password || '').trim();
+        const rolId = normalizarRolSistema(req.body.rol_id);
+        const activo = 1;
+        const localidades = normalizarLocalidadesUsuario(req.body.localidades);
+        const errores = [];
+
+        if (!nombre) errores.push('El nombre del usuario es obligatorio.');
+        if (!validarCorreoUsuario(correo)) errores.push('Captura un usuario/correo valido para iniciar sesion, sin espacios.');
+        errores.push(...validarPasswordNuevaUsuario(password, 'La contrasena inicial'));
+        if (!rolId) errores.push('Selecciona un rol valido.');
+        if (rolId && rolId !== 2 && localidades.length === 0) {
+            errores.push('Recepcionista y Administrador Local deben tener al menos una localidad asignada.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [rolRows] = await connection.query(
+            'SELECT id FROM roles WHERE id = ? LIMIT 1',
+            [rolId]
+        );
+        if (rolRows.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'El rol seleccionado no existe en la base de datos.' });
+        }
+
+        const [usuariosCorreo] = await connection.query(
+            'SELECT id FROM usuarios WHERE correo = ? LIMIT 1',
+            [correo]
+        );
+        if (usuariosCorreo.length > 0) {
+            await connection.rollback();
+            return res.status(409).json({ success: false, error: 'Ya existe un usuario con ese correo.' });
+        }
+
+        const localidadesValidas = await validarLocalidadesExistentes(connection, localidades);
+        if (!localidadesValidas) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'Una o mas localidades seleccionadas no existen o estan inactivas.' });
+        }
+
+        const [result] = await connection.query(
+            `INSERT INTO usuarios (nombre, correo, password, rol_id, activo)
+             VALUES (?, ?, ?, ?, ?)`,
+            [nombre, correo, password, rolId, activo]
+        );
+
+        if (rolId !== 2 && localidades.length > 0) {
+            await connection.query(
+                'INSERT INTO usuario_localidad (usuario_id, localidad_id) VALUES ?',
+                [localidades.map(localidadId => [result.insertId, localidadId])]
+            );
+        }
+
+        await connection.commit();
+
+        const usuarioCreado = await consultarUsuarioAdminPorId(db, result.insertId);
+        registrarUso('USUARIO_CREADO', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            usuario_id: result.insertId,
+            rol_id: rolId,
+            localidades,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Usuario creado correctamente.',
+            usuario: usuarioCreado
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir creacion de usuario:", rollbackError);
+            }
+        }
+
+        console.error("Error al crear usuario:", error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: 'Ya existe un usuario con ese correo.' });
+        }
+        res.status(500).json({ success: false, error: "Error al crear usuario: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.put('/api/admin/usuarios/:id', async (req, res) => {
+    let connection;
+
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const usuarioId = parseInt(req.params.id, 10);
+        const usuarioActualId = obtenerUsuarioActualIdRequest(req);
+        const nombre = String(req.body.nombre || '').trim();
+        const rolId = normalizarRolSistema(req.body.rol_id);
+        const activo = normalizarActivoUsuario(req.body.activo, 1);
+        const localidades = normalizarLocalidadesUsuario(req.body.localidades);
+        const errores = [];
+
+        if (!usuarioId) errores.push('Usuario no valido.');
+        if (!nombre) errores.push('El nombre del usuario es obligatorio.');
+        if (!rolId) errores.push('Selecciona un rol valido.');
+        if (activo === 1 && rolId && rolId !== 2 && localidades.length === 0) {
+            errores.push('Recepcionista y Administrador Local activos deben tener al menos una localidad asignada.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [usuarios] = await connection.query(
+            `SELECT id, nombre, correo, rol_id, activo
+             FROM usuarios
+             WHERE id = ?
+             FOR UPDATE`,
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
+        }
+
+        const usuarioActual = usuarios[0];
+
+        if (usuarioId === usuarioActualId && activo === 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'No puedes desactivar tu propio usuario mientras estas usando el sistema.'
+            });
+        }
+
+        const dejaDeSerAdminActivo = parseInt(usuarioActual.rol_id, 10) === 2
+            && (rolId !== 2 || activo === 0);
+
+        if (dejaDeSerAdminActivo) {
+            const [admins] = await connection.query(
+                `SELECT COUNT(*) AS total
+                 FROM usuarios
+                 WHERE rol_id = 2 AND activo = 1 AND id <> ?`,
+                [usuarioId]
+            );
+
+            if ((parseInt(admins[0]?.total, 10) || 0) === 0) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    error: 'No se puede completar la accion porque el sistema se quedaria sin administrador general activo.'
+                });
+            }
+        }
+
+        const [rolRows] = await connection.query(
+            'SELECT id FROM roles WHERE id = ? LIMIT 1',
+            [rolId]
+        );
+        if (rolRows.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'El rol seleccionado no existe en la base de datos.' });
+        }
+
+        const localidadesValidas = await validarLocalidadesExistentes(connection, localidades);
+        if (!localidadesValidas) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'Una o mas localidades seleccionadas no existen o estan inactivas.' });
+        }
+
+        await connection.query(
+            `UPDATE usuarios
+             SET nombre = ?, rol_id = ?, activo = ?
+             WHERE id = ?`,
+            [nombre, rolId, activo, usuarioId]
+        );
+
+        await connection.query('DELETE FROM usuario_localidad WHERE usuario_id = ?', [usuarioId]);
+
+        if (rolId !== 2 && localidades.length > 0) {
+            await connection.query(
+                'INSERT INTO usuario_localidad (usuario_id, localidad_id) VALUES ?',
+                [localidades.map(localidadId => [usuarioId, localidadId])]
+            );
+        }
+
+        await connection.commit();
+
+        const usuarioActualizado = await consultarUsuarioAdminPorId(db, usuarioId);
+        registrarUso('USUARIO_ACTUALIZADO', {
+            usuario_admin_id: usuarioActualId,
+            usuario_id: usuarioId,
+            rol_id: rolId,
+            activo,
+            localidades,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Usuario actualizado correctamente.',
+            usuario: usuarioActualizado
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir actualizacion de usuario:", rollbackError);
+            }
+        }
+
+        console.error("Error al actualizar usuario:", error);
+        res.status(500).json({ success: false, error: "Error al actualizar usuario: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.put('/api/admin/usuarios/:id/password', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const usuarioId = parseInt(req.params.id, 10);
+        const password = normalizarPasswordUsuario(req.body.password || req.body.nueva_password);
+        const confirmarPassword = normalizarPasswordUsuario(req.body.confirmar_password);
+        const errores = [];
+
+        if (!usuarioId) errores.push('Usuario no valido.');
+        errores.push(...validarPasswordNuevaUsuario(password));
+        if (confirmarPassword && password !== confirmarPassword) {
+            errores.push('La confirmacion de contrasena no coincide.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        const [usuarios] = await db.query(
+            'SELECT id FROM usuarios WHERE id = ? LIMIT 1',
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
+        }
+
+        await db.query(
+            'UPDATE usuarios SET password = ? WHERE id = ?',
+            [password, usuarioId]
+        );
+
+        registrarUso('USUARIO_PASSWORD_RESTABLECIDO', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            usuario_id: usuarioId,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Contrasena restablecida correctamente.'
+        });
+    } catch (error) {
+        console.error("Error al restablecer contrasena de usuario:", error);
+        res.status(500).json({ success: false, error: "Error al restablecer contrasena: " + error.message });
+    }
+});
+
+app.put('/api/usuarios/:id/password', async (req, res) => {
+    try {
+        const usuarioId = parseInt(req.params.id, 10);
+        const usuarioActualId = obtenerUsuarioActualIdRequest(req);
+        const passwordActual = normalizarPasswordUsuario(req.body.password_actual);
+        const passwordNueva = normalizarPasswordUsuario(req.body.password || req.body.nueva_password);
+        const confirmarPassword = normalizarPasswordUsuario(req.body.confirmar_password);
+        const errores = [];
+
+        if (!usuarioId || !usuarioActualId || usuarioId !== usuarioActualId) {
+            errores.push('Solo puedes cambiar la contrasena de tu propio usuario.');
+        }
+        if (!passwordActual) errores.push('Captura tu contrasena actual.');
+        errores.push(...validarPasswordNuevaUsuario(passwordNueva));
+        if (confirmarPassword && passwordNueva !== confirmarPassword) {
+            errores.push('La confirmacion de contrasena no coincide.');
+        }
+        if (passwordActual && passwordNueva && passwordActual === passwordNueva) {
+            errores.push('La nueva contrasena debe ser diferente a la actual.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        const [usuarios] = await db.query(
+            `SELECT id, password, activo
+             FROM usuarios
+             WHERE id = ?
+             LIMIT 1`,
+            [usuarioId]
+        );
+
+        if (usuarios.length === 0) {
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
+        }
+
+        const usuario = usuarios[0];
+        if (parseInt(usuario.activo, 10) !== 1) {
+            return res.status(403).json({
+                success: false,
+                error: 'No se puede cambiar la contrasena porque el usuario esta inactivo.'
+            });
+        }
+
+        if (String(usuario.password || '') !== passwordActual) {
+            return res.status(400).json({ success: false, error: 'La contrasena actual no es correcta.' });
+        }
+
+        await db.query(
+            'UPDATE usuarios SET password = ? WHERE id = ?',
+            [passwordNueva, usuarioId]
+        );
+
+        registrarUso('USUARIO_PASSWORD_CAMBIADO', {
+            usuario_id: usuarioId,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Contrasena actualizada correctamente.'
+        });
+    } catch (error) {
+        console.error("Error al cambiar contrasena propia:", error);
+        res.status(500).json({ success: false, error: "Error al cambiar contrasena: " + error.message });
+    }
+});
+
 // Ruta para obtener todas las localidades (para el selector del formulario)
 app.get('/api/localidades', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT id, nombre, color, codigo_localidad FROM localidades ORDER BY nombre ASC');
+        const [rows] = await db.query(
+            `SELECT
+                l.id,
+                l.nombre,
+                l.color,
+                l.codigo_localidad,
+                l.activo,
+                COUNT(c.id) AS clientes_count
+             FROM localidades l
+             LEFT JOIN clientes c ON c.localidad_id = l.id
+             GROUP BY l.id, l.nombre, l.color, l.codigo_localidad, l.activo
+             ORDER BY l.activo DESC, l.nombre ASC`
+        );
         res.json(rows);
     } catch (error) {
         console.error("Error al obtener localidades:", error);
@@ -3407,18 +4660,15 @@ app.get('/api/admin/usuario-localidad', async (req, res) => {
                 u.nombre,
                 u.correo,
                 u.rol_id,
+                u.activo,
                 COALESCE(GROUP_CONCAT(ul.localidad_id ORDER BY ul.localidad_id SEPARATOR ','), '') AS localidades
              FROM usuarios u
              LEFT JOIN usuario_localidad ul ON ul.usuario_id = u.id
-             GROUP BY u.id, u.nombre, u.correo, u.rol_id
-             ORDER BY u.rol_id ASC, u.nombre ASC`
+             GROUP BY u.id, u.nombre, u.correo, u.rol_id, u.activo
+             ORDER BY u.activo DESC, u.rol_id ASC, u.nombre ASC`
         );
 
-        const [localidades] = await db.query(
-            `SELECT id, nombre, color, codigo_localidad
-             FROM localidades
-             ORDER BY nombre ASC`
-        );
+        const localidades = await consultarLocalidadesAdmin(db);
 
         res.json({
             success: true,
@@ -3466,7 +4716,7 @@ app.put('/api/admin/usuario-localidad/:usuarioId', async (req, res) => {
 
         if (localidades.length > 0) {
             const [localidadesValidas] = await connection.query(
-                'SELECT id FROM localidades WHERE id IN (?)',
+                'SELECT id FROM localidades WHERE id IN (?) AND activo = 1',
                 [localidades]
             );
             const idsValidos = new Set(localidadesValidas.map(loc => parseInt(loc.id, 10)));
@@ -3505,21 +4755,186 @@ app.put('/api/admin/usuario-localidad/:usuarioId', async (req, res) => {
     }
 });
 
-app.put('/api/admin/localidades/:id/color', async (req, res) => {
-    if (!validarAdministradorRequest(req, res)) return;
+app.get('/api/admin/localidades', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
 
-    const localidadId = parseInt(req.params.id, 10);
-    const color = String(req.body.color || '').trim();
-
-    if (!localidadId) {
-        return res.status(400).json({ success: false, error: 'Localidad no valida.' });
+        const localidades = await consultarLocalidadesAdmin(db);
+        res.json({ success: true, localidades });
+    } catch (error) {
+        console.error("Error al obtener localidades administrativas:", error);
+        res.status(500).json({ success: false, error: "Error al cargar localidades: " + error.message });
     }
+});
 
-    if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
-        return res.status(400).json({ success: false, error: 'El color debe tener formato hexadecimal, por ejemplo #3498db.' });
+app.post('/api/admin/localidades', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const nombre = String(req.body.nombre || '').trim();
+        const codigo = normalizarCodigoLocalidadNueva(req.body.codigo_localidad);
+        const colorCapturado = normalizarColorLocalidad(req.body.color);
+        const errores = [];
+
+        if (!nombre) errores.push('El nombre de la localidad es obligatorio.');
+        if (!codigo) errores.push('El codigo de localidad debe tener exactamente 2 letras, sin espacios.');
+
+        if (req.body.color && !colorCapturado) {
+            errores.push('El color debe tener formato hexadecimal, por ejemplo #3498db.');
+        }
+
+        if (errores.length > 0) {
+            return res.status(400).json({ success: false, error: errores.join(' ') });
+        }
+
+        const [existentes] = await db.query(
+            'SELECT id FROM localidades WHERE codigo_localidad = ? LIMIT 1',
+            [codigo]
+        );
+
+        if (existentes.length > 0) {
+            return res.status(409).json({ success: false, error: 'Ya existe una localidad con ese codigo.' });
+        }
+
+        const color = colorCapturado || await sugerirColorLocalidad(db);
+        const [result] = await db.query(
+            `INSERT INTO localidades (nombre, color, codigo_localidad, activo)
+             VALUES (?, ?, ?, 1)`,
+            [nombre, color, codigo]
+        );
+
+        registrarUso('LOCALIDAD_CREADA', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            localidad_id: result.insertId,
+            codigo_localidad: codigo,
+            ip: obtenerIpCliente(req)
+        });
+
+        const localidades = await consultarLocalidadesAdmin(db);
+        res.json({
+            success: true,
+            message: 'Localidad creada correctamente.',
+            localidad: localidades.find(localidad => parseInt(localidad.id, 10) === parseInt(result.insertId, 10)),
+            localidades
+        });
+    } catch (error) {
+        console.error("Error al crear localidad:", error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: 'Ya existe una localidad con ese codigo.' });
+        }
+        res.status(500).json({ success: false, error: "Error al crear localidad: " + error.message });
     }
+});
+
+app.put('/api/admin/localidades/:id/estado', async (req, res) => {
+    let connection;
 
     try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const localidadId = parseInt(req.params.id, 10);
+        const activo = normalizarActivoLocalidad(req.body.activo, 1);
+
+        if (!localidadId) {
+            return res.status(400).json({ success: false, error: 'Localidad no valida.' });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [localidades] = await connection.query(
+            'SELECT id, nombre, activo FROM localidades WHERE id = ? FOR UPDATE',
+            [localidadId]
+        );
+
+        if (localidades.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Localidad no encontrada.' });
+        }
+
+        if (activo === 0) {
+            const [usuariosBloqueados] = await connection.query(
+                `SELECT u.id, u.nombre
+                 FROM usuarios u
+                 INNER JOIN usuario_localidad ul_actual
+                    ON ul_actual.usuario_id = u.id
+                   AND ul_actual.localidad_id = ?
+                 WHERE u.activo = 1
+                   AND u.rol_id <> 2
+                   AND (
+                       SELECT COUNT(*)
+                       FROM usuario_localidad ul
+                       INNER JOIN localidades l
+                          ON l.id = ul.localidad_id
+                         AND l.activo = 1
+                       WHERE ul.usuario_id = u.id
+                         AND l.id <> ?
+                   ) = 0
+                 ORDER BY u.nombre ASC
+                 LIMIT 5`,
+                [localidadId, localidadId]
+            );
+
+            if (usuariosBloqueados.length > 0) {
+                await connection.rollback();
+                const nombres = usuariosBloqueados.map(usuario => usuario.nombre || `Usuario ${usuario.id}`).join(', ');
+                return res.status(400).json({
+                    success: false,
+                    error: `No se puede desactivar porque dejaria usuarios activos sin localidades: ${nombres}.`
+                });
+            }
+        }
+
+        await connection.query(
+            'UPDATE localidades SET activo = ? WHERE id = ?',
+            [activo, localidadId]
+        );
+
+        await connection.commit();
+
+        registrarUso(activo ? 'LOCALIDAD_REACTIVADA' : 'LOCALIDAD_DESACTIVADA', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            localidad_id: localidadId,
+            ip: obtenerIpCliente(req)
+        });
+
+        const localidadesActualizadas = await consultarLocalidadesAdmin(db);
+        res.json({
+            success: true,
+            message: activo ? 'Localidad reactivada correctamente.' : 'Localidad desactivada correctamente.',
+            localidades: localidadesActualizadas
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Error al revertir estado de localidad:", rollbackError);
+            }
+        }
+
+        console.error("Error al cambiar estado de localidad:", error);
+        res.status(500).json({ success: false, error: "Error al cambiar estado de localidad: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.put('/api/admin/localidades/:id/color', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const localidadId = parseInt(req.params.id, 10);
+        const color = normalizarColorLocalidad(req.body.color);
+
+        if (!localidadId) {
+            return res.status(400).json({ success: false, error: 'Localidad no valida.' });
+        }
+
+        if (!color) {
+            return res.status(400).json({ success: false, error: 'El color debe tener formato hexadecimal, por ejemplo #3498db.' });
+        }
+
         const [result] = await db.query(
             'UPDATE localidades SET color = ? WHERE id = ?',
             [color, localidadId]
@@ -3529,7 +4944,14 @@ app.put('/api/admin/localidades/:id/color', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Localidad no encontrada.' });
         }
 
-        res.json({ success: true, message: 'Color de localidad actualizado correctamente.' });
+        registrarUso('LOCALIDAD_COLOR_ACTUALIZADO', {
+            usuario_admin_id: obtenerUsuarioActualIdRequest(req),
+            localidad_id: localidadId,
+            ip: obtenerIpCliente(req)
+        });
+
+        const localidades = await consultarLocalidadesAdmin(db);
+        res.json({ success: true, message: 'Color de localidad actualizado correctamente.', localidades });
     } catch (error) {
         console.error("Error al actualizar color de localidad:", error);
         res.status(500).json({ success: false, error: "Error al actualizar color de localidad: " + error.message });
@@ -3845,4 +5267,20 @@ app.post('/api/cancelar-ingreso-extra/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+async function iniciarServidor() {
+    try {
+        await asegurarColumnaActivoUsuarios();
+        await asegurarColumnaActivoLocalidades();
+        await asegurarTablaClientesBitacoraCambios();
+        app.listen(PORT, () => {
+            console.log(`Servidor corriendo en http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        registrarError('SERVIDOR_INICIO_ERROR', error);
+        process.exit(1);
+    }
+}
+
+iniciarServidor();
 

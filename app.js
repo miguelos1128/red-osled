@@ -2,6 +2,7 @@
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -351,6 +352,7 @@ async function asegurarTablaClientesBitacoraCambios() {
     await db.query(
         `CREATE TABLE IF NOT EXISTS clientes_bitacora_cambios (
             id INT NOT NULL AUTO_INCREMENT,
+            grupo_cambio_id VARCHAR(36) NOT NULL,
             cliente_id INT NOT NULL,
             usuario_id INT NULL,
             campo VARCHAR(64) NOT NULL,
@@ -361,11 +363,55 @@ async function asegurarTablaClientesBitacoraCambios() {
             ip VARCHAR(64) NULL,
             fecha_cambio DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
+            INDEX idx_grupo_cambio (grupo_cambio_id),
             INDEX idx_cliente_fecha (cliente_id, fecha_cambio),
             INDEX idx_usuario_fecha (usuario_id, fecha_cambio),
             INDEX idx_campo (campo)
         )`
     );
+
+    const [columnas] = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'clientes_bitacora_cambios'
+           AND COLUMN_NAME = 'grupo_cambio_id'`
+    );
+
+    if (parseInt(columnas[0]?.total, 10) === 0) {
+        await db.query(
+            'ALTER TABLE clientes_bitacora_cambios ADD COLUMN grupo_cambio_id VARCHAR(36) NULL AFTER id'
+        );
+    }
+
+    await db.query(
+        `UPDATE clientes_bitacora_cambios
+         SET grupo_cambio_id = MD5(CONCAT_WS('|',
+            cliente_id,
+            COALESCE(usuario_id, ''),
+            COALESCE(origen, ''),
+            COALESCE(ip, ''),
+            DATE_FORMAT(fecha_cambio, '%Y-%m-%d %H:%i:%s')
+         ))
+         WHERE grupo_cambio_id IS NULL`
+    );
+    await db.query(
+        'ALTER TABLE clientes_bitacora_cambios MODIFY grupo_cambio_id VARCHAR(36) NOT NULL'
+    );
+
+    const [indices] = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM INFORMATION_SCHEMA.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'clientes_bitacora_cambios'
+           AND INDEX_NAME = 'idx_grupo_cambio'`
+    );
+
+    if (parseInt(indices[0]?.total, 10) === 0) {
+        await db.query(
+            'ALTER TABLE clientes_bitacora_cambios ADD INDEX idx_grupo_cambio (grupo_cambio_id)'
+        );
+    }
 }
 
 function obtenerRolRequest(req) {
@@ -776,6 +822,19 @@ const CAMPOS_BITACORA_CLIENTE = [
     { campo: 'localidad_id', etiqueta: 'Localidad' }
 ];
 
+const CAMPOS_REVERTIBLES_CLIENTE = {
+    nombre_completo: { columnaSql: 'nombre_completo', etiqueta: 'Nombre completo', requerido: true },
+    alias_cliente: { columnaSql: 'alias_cliente', etiqueta: 'Alias' },
+    telefono: { columnaSql: 'telefono', etiqueta: 'Telefono' },
+    url_portal: { columnaSql: 'url_portal', etiqueta: 'URL portal' },
+    direccion: { columnaSql: 'direccion', etiqueta: 'Direccion' },
+    observaciones: { columnaSql: 'observaciones', etiqueta: 'Observaciones' },
+    es_renta: { columnaSql: 'es_renta', etiqueta: 'Modalidad RENTA' },
+    direccion_ip: { columnaSql: 'direccion_ip', etiqueta: 'Direccion IP' },
+    senal: { columnaSql: '`se\u00f1al`', etiqueta: 'Senal' },
+    localidad_id: { columnaSql: 'localidad_id', etiqueta: 'Localidad', requerido: true }
+};
+
 function mapearDatosClienteActualEdicion(cliente = {}) {
     const direccionIp = parseInt(cliente.direccion_ip, 10);
     const senal = parseInt(cliente.senal, 10);
@@ -801,6 +860,29 @@ function normalizarValorComparacionCliente(valor) {
 
 function serializarValorBitacoraCliente(valor) {
     if (valor === null || valor === undefined || valor === '') return null;
+    return String(valor);
+}
+
+function normalizarValorReversionCliente(campo, valor) {
+    if (valor === null || valor === undefined || valor === '') return null;
+
+    if (campo === 'es_renta') return parseInt(valor, 10) ? 1 : 0;
+
+    if (campo === 'localidad_id') {
+        const localidadId = parseInt(valor, 10);
+        return Number.isInteger(localidadId) && localidadId > 0 ? localidadId : null;
+    }
+
+    if (campo === 'direccion_ip') {
+        const ip = parseInt(valor, 10);
+        return Number.isInteger(ip) ? String(ip) : null;
+    }
+
+    if (campo === 'senal') {
+        const senal = parseInt(valor, 10);
+        return Number.isInteger(senal) ? String(senal) : null;
+    }
+
     return String(valor);
 }
 
@@ -1019,11 +1101,13 @@ app.put('/api/clientes/:id', async (req, res) => {
         );
 
         const usuarioAdminId = obtenerUsuarioActualIdRequest(req);
+        const grupoCambioId = crypto.randomUUID();
         await connection.query(
             `INSERT INTO clientes_bitacora_cambios
-                (cliente_id, usuario_id, campo, etiqueta, valor_anterior, valor_nuevo, origen, ip)
+                (grupo_cambio_id, cliente_id, usuario_id, campo, etiqueta, valor_anterior, valor_nuevo, origen, ip)
              VALUES ?`,
             [cambiosBitacora.map(cambio => [
+                grupoCambioId,
                 clienteId,
                 usuarioAdminId,
                 cambio.campo,
@@ -1040,6 +1124,7 @@ app.put('/api/clientes/:id', async (req, res) => {
         registrarUso('CLIENTE_ACTUALIZADO', {
             usuario_admin_id: usuarioAdminId,
             cliente_id: clienteId,
+            grupo_cambio_id: grupoCambioId,
             localidad_anterior_id: localidadActualId || null,
             localidad_nueva_id: datos.localidad_id,
             codigo_cliente: clienteActual.codigo_cliente,
@@ -1063,6 +1148,178 @@ app.put('/api/clientes/:id', async (req, res) => {
 
         console.error("Error al actualizar cliente:", error);
         res.status(500).json({ success: false, error: "Error al actualizar cliente: " + error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.get('/api/clientes/:id/bitacora-cambios', async (req, res) => {
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const clienteId = parseInt(req.params.id, 10);
+        if (!Number.isInteger(clienteId) || clienteId <= 0) {
+            return res.status(400).json({ success: false, error: 'Cliente no valido.' });
+        }
+
+        const [cambios] = await db.query(
+            `SELECT
+                b.id,
+                b.grupo_cambio_id,
+                b.cliente_id,
+                b.usuario_id,
+                u.nombre AS usuario_nombre,
+                b.campo,
+                b.etiqueta,
+                b.valor_anterior,
+                b.valor_nuevo,
+                b.origen,
+                b.ip,
+                b.fecha_cambio
+             FROM clientes_bitacora_cambios b
+             LEFT JOIN usuarios u ON u.id = b.usuario_id
+             WHERE b.cliente_id = ?
+             ORDER BY b.fecha_cambio DESC, b.id DESC
+             LIMIT 100`,
+            [clienteId]
+        );
+
+        res.json({
+            success: true,
+            cambios
+        });
+    } catch (error) {
+        console.error('Error al consultar bitacora administrativa de cliente:', error);
+        res.status(500).json({ success: false, error: 'Error al consultar bitacora administrativa: ' + error.message });
+    }
+});
+
+app.post('/api/clientes/:id/bitacora-cambios/:cambioId/revertir', async (req, res) => {
+    let connection;
+
+    try {
+        if (!await validarAdministradorGeneralRequest(req, res)) return;
+
+        const clienteId = parseInt(req.params.id, 10);
+        const cambioId = parseInt(req.params.cambioId, 10);
+        if (!Number.isInteger(clienteId) || clienteId <= 0 || !Number.isInteger(cambioId) || cambioId <= 0) {
+            return res.status(400).json({ success: false, error: 'Cambio no valido.' });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [cambios] = await connection.query(
+            `SELECT id, cliente_id, grupo_cambio_id, campo, etiqueta, valor_anterior, valor_nuevo
+             FROM clientes_bitacora_cambios
+             WHERE id = ? AND cliente_id = ?
+             FOR UPDATE`,
+            [cambioId, clienteId]
+        );
+
+        if (cambios.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Cambio administrativo no encontrado.' });
+        }
+
+        const cambio = cambios[0];
+        const definicionCampo = CAMPOS_REVERTIBLES_CLIENTE[cambio.campo];
+        if (!definicionCampo) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'Este campo no se puede revertir automaticamente.' });
+        }
+
+        const valorRestaurar = normalizarValorReversionCliente(cambio.campo, cambio.valor_anterior);
+        if (definicionCampo.requerido && (valorRestaurar === null || valorRestaurar === '')) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, error: 'No se puede revertir este campo porque el valor anterior no es valido.' });
+        }
+
+        if (cambio.campo === 'localidad_id') {
+            const [localidades] = await connection.query(
+                'SELECT id FROM localidades WHERE id = ? AND activo = 1 LIMIT 1',
+                [valorRestaurar]
+            );
+
+            if (localidades.length === 0) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    error: 'No se puede revertir la localidad porque la localidad anterior no esta activa o no existe. Antes de hacer este cambio debes reactivar la localidad.'
+                });
+            }
+        }
+
+        const [clientes] = await connection.query(
+            `SELECT ${definicionCampo.columnaSql} AS valor_actual
+             FROM clientes
+             WHERE id = ?
+             FOR UPDATE`,
+            [clienteId]
+        );
+
+        if (clientes.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Cliente no encontrado.' });
+        }
+
+        const valorActual = normalizarValorReversionCliente(cambio.campo, clientes[0].valor_actual);
+        if (normalizarValorComparacionCliente(valorActual) === normalizarValorComparacionCliente(valorRestaurar)) {
+            await connection.rollback();
+            return res.json({ success: true, message: 'El campo ya tiene el valor anterior.' });
+        }
+
+        await connection.query(
+            `UPDATE clientes SET ${definicionCampo.columnaSql} = ? WHERE id = ?`,
+            [valorRestaurar, clienteId]
+        );
+
+        const usuarioAdminId = obtenerUsuarioActualIdRequest(req);
+        const grupoReversionId = crypto.randomUUID();
+        await connection.query(
+            `INSERT INTO clientes_bitacora_cambios
+                (grupo_cambio_id, cliente_id, usuario_id, campo, etiqueta, valor_anterior, valor_nuevo, origen, ip)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                grupoReversionId,
+                clienteId,
+                usuarioAdminId,
+                cambio.campo,
+                cambio.etiqueta || definicionCampo.etiqueta,
+                serializarValorBitacoraCliente(valorActual),
+                serializarValorBitacoraCliente(valorRestaurar),
+                'reversion_cambio',
+                obtenerIpCliente(req)
+            ]
+        );
+
+        await connection.commit();
+
+        registrarUso('CLIENTE_CAMBIO_REVERTIDO', {
+            usuario_admin_id: usuarioAdminId,
+            cliente_id: clienteId,
+            cambio_id: cambioId,
+            grupo_cambio_id: cambio.grupo_cambio_id,
+            grupo_reversion_id: grupoReversionId,
+            campo: cambio.campo,
+            ip: obtenerIpCliente(req)
+        });
+
+        res.json({
+            success: true,
+            message: 'Cambio revertido correctamente.'
+        });
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error('Error al revertir rollback de cambio administrativo:', rollbackError);
+            }
+        }
+
+        console.error('Error al revertir cambio administrativo:', error);
+        res.status(500).json({ success: false, error: 'Error al revertir cambio: ' + error.message });
     } finally {
         if (connection) connection.release();
     }

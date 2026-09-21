@@ -1284,6 +1284,20 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="seccion-cambios-admin" class="seccion-detalle hidden">
+                    <div class="bitacora-servicio-header" role="button" tabindex="0" onclick="toggleHeaderColapsable(event, 'seccion-cambios-admin')" onkeydown="manejarTeclaHeaderColapsable(event, 'seccion-cambios-admin')">
+                        <h3>Historial de cambios administrativos</h3>
+                        <button type="button" class="btn-colapsar-seccion" aria-label="Contraer historial de cambios administrativos" aria-expanded="true" title="Contraer sección">
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
+                    </div>
+                    <div class="seccion-colapsable-contenido">
+                        <div id="detalle-cambios-admin" class="cambios-admin-lista">
+                            <p class="bitacora-vacia">No hay cambios administrativos registrados.</p>
+                        </div>
+                    </div>
+                </div>
                 
             </div>
         </div>
@@ -6137,6 +6151,197 @@ ${linkVelocidad}
             }).join('');
         }
 
+        function formatearFechaHoraCambioAdmin(fecha) {
+            if (!fecha) return '-';
+            const fechaObj = new Date(fecha);
+            if (Number.isNaN(fechaObj.getTime())) return '-';
+
+            return fechaObj.toLocaleString('es-MX', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatearValorCambioAdmin(cambio, valor) {
+            if (valor === null || valor === undefined || valor === '') return 'Sin valor';
+
+            if (cambio.campo === 'es_renta') {
+                return parseInt(valor, 10) === 1 ? 'RENTA activa' : 'RENTA inactiva';
+            }
+
+            if (cambio.campo === 'localidad_id') {
+                return configLocalidades[valor]?.nombre || `Localidad ${valor}`;
+            }
+
+            return String(valor);
+        }
+
+        function agruparCambiosAdministrativos(cambios) {
+            const grupos = [];
+            const indiceGrupos = new Map();
+
+            cambios.forEach(cambio => {
+                const clave = cambio.grupo_cambio_id || [
+                    cambio.fecha_cambio || '',
+                    cambio.usuario_id || '',
+                    cambio.origen || '',
+                    cambio.ip || ''
+                ].join('|');
+
+                if (!indiceGrupos.has(clave)) {
+                    indiceGrupos.set(clave, grupos.length);
+                    grupos.push({
+                        grupo_cambio_id: cambio.grupo_cambio_id,
+                        fecha_cambio: cambio.fecha_cambio,
+                        usuario_nombre: cambio.usuario_nombre,
+                        ip: cambio.ip,
+                        origen: cambio.origen,
+                        cambios: []
+                    });
+                }
+
+                grupos[indiceGrupos.get(clave)].cambios.push(cambio);
+            });
+
+            return grupos;
+        }
+
+        function renderizarHistorialCambiosAdmin(cambios) {
+            const contenedor = document.getElementById('detalle-cambios-admin');
+            if (!contenedor) return;
+
+            const registros = Array.isArray(cambios) ? cambios : [];
+            if (registros.length === 0) {
+                contenedor.innerHTML = '<p class="bitacora-vacia">No hay cambios administrativos registrados.</p>';
+                return;
+            }
+
+            const grupos = agruparCambiosAdministrativos(registros);
+            contenedor.innerHTML = grupos.map(grupo => {
+                const usuario = grupo.usuario_nombre || 'Usuario no identificado';
+                const fecha = formatearFechaHoraCambioAdmin(grupo.fecha_cambio);
+                const totalCambios = grupo.cambios.length;
+                const tituloCambios = totalCambios === 1 ? '1 campo modificado' : `${totalCambios} campos modificados`;
+                const filasCambios = grupo.cambios.map(cambio => {
+                    const valorAnterior = formatearValorCambioAdmin(cambio, cambio.valor_anterior);
+                    const valorNuevo = formatearValorCambioAdmin(cambio, cambio.valor_nuevo);
+                    const etiqueta = cambio.etiqueta || cambio.campo || 'Cambio';
+
+                    return `
+                        <div class="cambio-admin-fila">
+                            <div class="cambio-admin-fila-header">
+                                <strong>${escaparHtml(etiqueta)}</strong>
+                                <button type="button" class="cambio-admin-revertir-btn" data-etiqueta="${escaparHtml(etiqueta)}" onclick="revertirCambioAdministrativoCliente(${cambio.id}, this.dataset.etiqueta)" title="Revertir este campo" aria-label="Revertir ${escaparHtml(etiqueta)}">
+                                    <svg class="cliente-detalle-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M3 9v6h6"></path>
+                                        <path d="M20 15a8 8 0 0 0-14.4-4.8L3 15"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="cambio-admin-valores">
+                                <div>
+                                    <span>Antes</span>
+                                    <p>${escaparHtml(valorAnterior)}</p>
+                                </div>
+                                <div>
+                                    <span>Después</span>
+                                    <p>${escaparHtml(valorNuevo)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <article class="cambio-admin-evento">
+                        <div class="bitacora-evento-header">
+                            <strong>${escaparHtml(tituloCambios)}</strong>
+                            <span class="bitacora-estado">${escaparHtml(fecha)}</span>
+                        </div>
+                        <div class="cambio-admin-meta">
+                            <span>${escaparHtml(usuario)}</span>
+                            <span>${escaparHtml(grupo.ip || 'IP no disponible')}</span>
+                        </div>
+                        <div class="cambio-admin-campos">${filasCambios}</div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        async function revertirCambioAdministrativoCliente(cambioId, etiquetaCampo = 'este campo') {
+            if (!clienteDetalleActualId) return;
+
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            if (parseInt(usuarioActual.rol, 10) !== 2) {
+                alert('Solo el administrador general puede revertir cambios administrativos.');
+                return;
+            }
+
+            const confirmar = confirm(
+                `Se restaurara el valor anterior de ${etiquetaCampo}.\n\n` +
+                'La reversion quedara registrada en la bitacora administrativa. ¿Confirmas el cambio?'
+            );
+            if (!confirmar) return;
+
+            try {
+                const response = await fetch(
+                    `${urlBase}/api/clientes/${clienteDetalleActualId}/bitacora-cambios/${cambioId}/revertir`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            rol_usuario: usuarioActual.rol,
+                            usuario_actual_id: usuarioActual.id
+                        })
+                    }
+                );
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    alert(data.error || 'No se pudo revertir el cambio.');
+                    return;
+                }
+
+                await cargarVistaAdminClientes();
+                await abrirDetallesCliente(clienteDetalleActualId);
+                alert(data.message || 'Cambio revertido correctamente.');
+            } catch (error) {
+                console.error('Error revirtiendo cambio administrativo:', error);
+                alert('Error al revertir cambio administrativo.');
+            }
+        }
+
+        async function cargarHistorialCambiosAdminCliente(idCliente) {
+            const seccion = document.getElementById('seccion-cambios-admin');
+            const contenedor = document.getElementById('detalle-cambios-admin');
+            const usuarioActual = obtenerUsuarioActualAdmin();
+            const esAdminGeneral = parseInt(usuarioActual.rol, 10) === 2;
+
+            if (seccion) seccion.classList.toggle('hidden', !esAdminGeneral);
+            if (!esAdminGeneral || !contenedor) return;
+
+            contenedor.innerHTML = '<p class="bitacora-vacia">Cargando cambios administrativos...</p>';
+
+            try {
+                const response = await fetch(
+                    `${urlBase}/api/clientes/${idCliente}/bitacora-cambios?rol_usuario=${usuarioActual.rol}&usuario_actual_id=${usuarioActual.id}`
+                );
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No se pudo cargar la bitacora administrativa.');
+                }
+
+                renderizarHistorialCambiosAdmin(data.cambios || []);
+            } catch (error) {
+                console.error('Error cargando cambios administrativos:', error);
+                contenedor.innerHTML = `<p class="bitacora-vacia">${escaparHtml(error.message)}</p>`;
+            }
+        }
+
         async function registrarEventoServicio() {
             if (!clienteDetalleActualId) return;
 
@@ -6453,7 +6658,7 @@ ${linkVelocidad}
         }
 
         function restaurarSeccionesDetalleAbiertas() {
-            ['seccion-finanzas', 'seccion-bitacora-servicio'].forEach(idSeccion => {
+            ['seccion-finanzas', 'seccion-bitacora-servicio', 'seccion-cambios-admin'].forEach(idSeccion => {
                 const seccion = document.getElementById(idSeccion);
                 if (!seccion) return;
 
@@ -6565,6 +6770,7 @@ ${linkVelocidad}
                 configurarGestionServicio(cliente, estadoCuenta.servicio);
                 configurarInfoCuentaServicio(estadoCuenta);
                 renderizarBitacoraServicio(bitacoraServicio);
+                await cargarHistorialCambiosAdminCliente(idCliente);
 
                 // Dejamos un mensaje oculto en la consola para saber que los pagos llegaron bien
                 console.log("¡Éxito! Pagos listos para la fase 2: ", pagos);

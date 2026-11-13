@@ -3431,9 +3431,12 @@
                         const claseEstado = clasesEstadoPago[mes.estado] || 'pago-futuro';
                         const claseActual = mes.es_mes_actual ? 'mes-actual' : '';
                         const pendiente = parseFloat(mes.pendiente) || 0;
-                        const titulo = pendiente > 0
-                            ? `Pendiente: $${pendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                            : mes.mes_completo;
+                        const montoPendiente = `$${pendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        const titulo = mes.estado === 'parcial'
+                            ? `Cobertura parcial. Pendiente: ${montoPendiente}`
+                            : mes.estado === 'pendiente'
+                                ? `Sin pago. Pendiente: ${montoPendiente}`
+                                : mes.mes_completo;
 
                         return `<div class="pago-burbuja ${claseEstado} ${claseActual}" title="${titulo}">${mes.mes}</div>`;
                     }).join('');

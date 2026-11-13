@@ -1681,17 +1681,20 @@ td {
 
 /* Historial de Pagos (Burbujas tipo imagen 2) */
 .cliente-historial-pagos.dynamic-history {
-    display: flex;
-    flex-wrap: wrap; /* Permite que las burbujas bajen a la siguiente l�nea si no caben */
-    gap: 8px; /* Espacio entre burbujas */
-    padding: 12px 0;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    justify-items: center;
+    gap: 8px;
+    padding: 14px 8px 16px;
     border-top: 1px dashed #ddd;
+    overflow: visible;
 }
 
 .pago-burbuja {
     /* Ajustamos el tama�o para que quepa "Mes A�o" */
-    width: 65px;
-    height: 65px;
+    width: min(65px, 100%);
+    aspect-ratio: 1;
+    height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1708,6 +1711,13 @@ td {
     padding: 5px; /* Peque�o padding interno */
     position: relative;
     transition: box-shadow 160ms ease;
+}
+
+@media (max-width: 520px) {
+    .cliente-historial-pagos.dynamic-history {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+    }
 }
 
 .pago-burbuja:hover {
@@ -4037,15 +4047,6 @@ td {
         justify-content: space-between;
         margin-bottom: 0px;
     }
-    /* 3. Ocultar el Scrollbar (la l�nea gris) de los meses */
-    .cliente-historial-pagos { /* Cambia esto por la clase que envuelve tus c�rculos verdes */
-        overflow-x: auto;
-        display: flex;
-        scrollbar-width: none; /* Para Firefox */
-    }
-    .cliente-historial-pagos::-webkit-scrollbar { /* Cambia esto por la clase que envuelve tus c�rculos verdes */
-        display: none;
-    }
     .cliente-info-principal {
         display: flex;
         flex-direction: column;
@@ -4063,29 +4064,23 @@ td {
     /* 3. La columna central: Los meses */
     .cliente-historial-pagos.dynamic-history {
         flex: 1; /* Ocupa todo el espacio disponible en el medio */
+        min-width: 0;
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        justify-items: center;
         border-top: none; /* Quitamos la l�nea divisoria del celular */
-        padding: 0;
-        flex-wrap: nowrap; /* Obligamos a que est�n en una sola l�nea */
-        overflow-x: auto; /* Si hay much�simos pagos, permite deslizar hacia los lados */
+        padding: 6px 8px 10px;
+        overflow: visible;
         align-items: center;
         gap: 8px;
     }
 
-    /* Opcional: Hacemos la barra de desplazamiento horizontal m�s elegante en PC */
-    .cliente-historial-pagos.dynamic-history::-webkit-scrollbar {
-        height: 6px;
-    }
-    .cliente-historial-pagos.dynamic-history::-webkit-scrollbar-thumb {
-        background-color: #d1d5db;
-        border-radius: 4px;
-    }
-
     /* Hacemos los c�rculos un poquitito m�s peque�os para que quepan m�s en la fila */
     .pago-burbuja {
-        width: 55px;
-        height: 55px;
+        width: min(55px, 100%);
+        aspect-ratio: 1;
+        height: auto;
         font-size: 0.7rem;
-        flex-shrink: 0; /* Evita que los c�rculos se aplasten si el espacio es reducido */
     }
 
     /* 4. La columna final: Botones */

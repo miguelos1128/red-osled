@@ -195,7 +195,14 @@ app.get('/api/admin/clientes-historial', async (req, res) => {
             return {
                 ...cliente,
                 adeudo_actual: estadoCuenta.adeudo_actual,
-                saldo_favor: estadoCuenta.saldo_favor
+                saldo_favor: estadoCuenta.saldo_favor,
+                historial_visual_pagos: construirHistorialVisualPagos(
+                    cliente,
+                    pagosCliente,
+                    estadoCuenta,
+                    bitacoraCliente,
+                    historialPaquetes
+                )
             };
         }));
 
@@ -2410,6 +2417,83 @@ function calcularEstadoCuentaServidor(cliente, pagos, bitacora = [], historialPa
         fecha_proximo_pago: fechaProximoPago,
         servicio: resumenServicio
     };
+}
+
+function construirHistorialVisualPagos(cliente, pagos = [], estadoCuenta = {}, bitacora = [], historialPaquetes = [], hoy = new Date()) {
+    const abreviaturasMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const pagosPorMes = {};
+    const detallePorMes = new Map();
+    const ajustesAplicadosPorMes = estadoCuenta?.servicio?.ajustes?.aplicado_por_mes || {};
+    const fechaInstalacion = crearFechaLocalDesdeValor(cliente.fecha_instalacion) || hoy;
+    const inicioFacturacion = avanzarMesContable(fechaInstalacion.getFullYear(), fechaInstalacion.getMonth(), 1);
+    const diaPago = normalizarDiaPago(cliente.dia_pago)
+        || obtenerDiaPagoDesdeFechaInstalacion(cliente.fecha_instalacion)
+        || 1;
+    const cambiosFechaPago = obtenerCambiosFechaPago(bitacora);
+
+    pagos.forEach(pago => {
+        const mes = String(pago.mes_pagado || '').trim();
+        if (!mes) return;
+        pagosPorMes[mes] = Number((pagosPorMes[mes] || 0) + (parseFloat(pago.monto) || 0));
+    });
+
+    (estadoCuenta.meses_adeudados || []).forEach(detalle => {
+        if (detalle.tipo !== 'cargo_servicio' && detalle.mes) {
+            detallePorMes.set(detalle.mes, detalle);
+        }
+    });
+
+    const inicioVentana = avanzarMesContable(hoy.getFullYear(), hoy.getMonth(), -3);
+
+    return Array.from({ length: 8 }, (_, indice) => {
+        const periodo = avanzarMesContable(inicioVentana.anio, inicioVentana.mesIndex, indice);
+        const etiquetaMes = obtenerEtiquetaMes(periodo.anio, periodo.mesIndex);
+        const detalleMes = detallePorMes.get(etiquetaMes);
+        const reglaPago = obtenerReglaPagoParaMes(periodo.anio, periodo.mesIndex, diaPago, cambiosFechaPago);
+        const costoMensual = obtenerCostoMensualParaMes(
+            historialPaquetes,
+            periodo.anio,
+            periodo.mesIndex,
+            cliente.costo_mensual
+        );
+        const montoPagado = pagosPorMes[etiquetaMes] || 0;
+        const montoAjusteAplicado = parseFloat(ajustesAplicadosPorMes[etiquetaMes]) || 0;
+        const montoCubierto = Number((montoPagado + montoAjusteAplicado).toFixed(2));
+        const enPeriodoFacturable = compararMesContable(
+            periodo.anio,
+            periodo.mesIndex,
+            inicioFacturacion.anio,
+            inicioFacturacion.mesIndex
+        ) >= 0;
+        const estaVencido = enPeriodoFacturable
+            && !reglaPago.omitir_mes
+            && mesEstaVencido(periodo.anio, periodo.mesIndex, reglaPago.dia_pago, hoy, 0);
+        let estado = 'futuro';
+        let pendiente = 0;
+
+        if (detalleMes) {
+            pendiente = Number(Math.max(parseFloat(detalleMes.pendiente) || 0, 0).toFixed(2));
+            estado = pendiente <= 0
+                ? 'completo'
+                : (montoCubierto > 0 ? 'parcial' : 'pendiente');
+        } else if (montoCubierto >= costoMensual && montoCubierto > 0) {
+            estado = 'completo';
+        } else if (montoCubierto > 0) {
+            estado = 'parcial';
+            pendiente = Number(Math.max(costoMensual - montoCubierto, 0).toFixed(2));
+        } else if (estaVencido) {
+            estado = 'pendiente';
+            pendiente = Number(costoMensual.toFixed(2));
+        }
+
+        return {
+            mes: `${abreviaturasMeses[periodo.mesIndex]} ${String(periodo.anio).slice(-2)}`,
+            mes_completo: etiquetaMes,
+            estado,
+            pendiente,
+            es_mes_actual: periodo.anio === hoy.getFullYear() && periodo.mesIndex === hoy.getMonth()
+        };
+    });
 }
 
 app.get('/api/clientes/:id/estado-cuenta-completo', async (req, res) => {

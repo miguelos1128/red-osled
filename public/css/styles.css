@@ -1485,7 +1485,6 @@ td {
 
 /* Opcional pero muy recomendado: Resaltar visualmente cu�l es el mes actual */
 .mes-actual {
-    background-color: #c82333;
     border: 2px solid #2980b9; /* Borde azul fuerte */
     box-shadow: 0 0 8px rgba(41, 128, 185, 0.4); /* Un ligero brillo azul */
     font-weight: bold; /* Hace la letra un poco m�s gruesa */
@@ -1714,6 +1713,20 @@ td {
     background-color: #2ecc71 !important; /* Verde esmeralda */
     color: white !important; /* Texto blanco para buen contraste */
     border-color: #27ae60 !important; /* Borde verde m�s oscuro */
+}
+
+.pago-burbuja.pago-parcial,
+.pago-burbuja.pago-pendiente {
+    background-color: #f1c40f !important;
+    color: #333 !important;
+    border-color: #f39c12 !important;
+    opacity: 1;
+}
+
+.pago-burbuja.pago-futuro {
+    background-color: #f1f5f9 !important;
+    color: #64748b !important;
+    border-color: #cbd5e1 !important;
 }
 
 /* .pago-burbuja.pendiente {

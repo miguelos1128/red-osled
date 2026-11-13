@@ -3416,6 +3416,27 @@
 
                         return `<div class="pago-burbuja ${claseEstado} ${claseActual}">${mesTimeline}</div>`;
                     }).join('');
+
+                    const clasesEstadoPago = {
+                        completo: 'pago-realizado',
+                        parcial: 'pago-parcial',
+                        pendiente: 'pago-pendiente',
+                        futuro: 'pago-futuro'
+                    };
+                    const historialVisual = Array.isArray(cliente.historial_visual_pagos)
+                        ? cliente.historial_visual_pagos
+                        : [];
+
+                    htmlBurbujasPagos = historialVisual.map(mes => {
+                        const claseEstado = clasesEstadoPago[mes.estado] || 'pago-futuro';
+                        const claseActual = mes.es_mes_actual ? 'mes-actual' : '';
+                        const pendiente = parseFloat(mes.pendiente) || 0;
+                        const titulo = pendiente > 0
+                            ? `Pendiente: $${pendiente.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : mes.mes_completo;
+
+                        return `<div class="pago-burbuja ${claseEstado} ${claseActual}" title="${titulo}">${mes.mes}</div>`;
+                    }).join('');
                     
                     // AGREGAMOS LOS DATOS OCULTOS PARA EL FILTRO DE ORDEN
                     const localidadNombre = cliente.localidad_nombre || configLocalidades[cliente.localidad_id]?.nombre || '';

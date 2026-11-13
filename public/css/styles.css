@@ -1682,7 +1682,7 @@ td {
 /* Historial de Pagos (Burbujas tipo imagen 2) */
 .cliente-historial-pagos.dynamic-history {
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     justify-items: center;
     gap: 8px;
     padding: 14px 8px 16px;
@@ -4066,7 +4066,8 @@ td {
         flex: 1; /* Ocupa todo el espacio disponible en el medio */
         min-width: 0;
         display: grid;
-        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-columns: repeat(7, 60px);
+        justify-content: center;
         justify-items: center;
         border-top: none; /* Quitamos la l�nea divisoria del celular */
         padding: 6px 8px 10px;
@@ -4077,7 +4078,7 @@ td {
 
     /* Hacemos los c�rculos un poquitito m�s peque�os para que quepan m�s en la fila */
     .pago-burbuja {
-        width: min(55px, 100%);
+        width: 60px;
         aspect-ratio: 1;
         height: auto;
         font-size: 0.7rem;

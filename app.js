@@ -2445,7 +2445,7 @@ function construirHistorialVisualPagos(cliente, pagos = [], estadoCuenta = {}, b
 
     const inicioVentana = avanzarMesContable(hoy.getFullYear(), hoy.getMonth(), -3);
 
-    return Array.from({ length: 8 }, (_, indice) => {
+    return Array.from({ length: 7 }, (_, indice) => {
         const periodo = avanzarMesContable(inicioVentana.anio, inicioVentana.mesIndex, indice);
         const etiquetaMes = obtenerEtiquetaMes(periodo.anio, periodo.mesIndex);
         const detalleMes = detallePorMes.get(etiquetaMes);
